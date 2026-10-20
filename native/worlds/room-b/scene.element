@@ -1,0 +1,210 @@
+// Native Element document: hierarchical LINK objects and components.
+scene {
+  object laboratory {
+    name: "돌 실험실 · 건축";
+    component laboratory_shell {
+      element lab_floor {
+        geometry: {"type":"box","size":[10,0.24,8]};
+        position: [0,-0.12,0];
+        style: "floor";
+      }
+      element lab_plinth {
+        geometry: {"type":"box","size":[10.2,0.16,8.2]};
+        position: [0,-0.3,0];
+        style: "edge";
+      }
+      element lab_back_wall {
+        geometry: {"type":"box","size":[10,2.55,0.18]};
+        position: [0,1.275,-3.8];
+        style: "edge";
+      }
+      element lab_amber_band {
+        geometry: {"type":"box","size":[4.35,0.08,0.04]};
+        position: [-2.4,1.85,-3.68];
+        style: "amber";
+      }
+      element lab_purple_band {
+        geometry: {"type":"box","size":[4.35,0.08,0.04]};
+        position: [2.4,1.85,-3.68];
+        style: "purple";
+      }
+      element lab_center_line {
+        geometry: {"type":"box","size":[0.035,0.012,5.4]};
+        position: [0,0.012,-0.4];
+        style: "pale";
+      }
+      element lab_front_line {
+        geometry: {"type":"box","size":[8.4,0.015,0.04]};
+        position: [0,0.016,2.8];
+        style: "pale";
+      }
+      element lab_column_left {
+        geometry: {"type":"box","size":[0.3,3.1,0.4]};
+        position: [-4.65,1.55,-3.4];
+        style: "platform";
+      }
+      element lab_column_right {
+        geometry: {"type":"box","size":[0.3,3.1,0.4]};
+        position: [4.65,1.55,-3.4];
+        style: "platform";
+      }
+    }
+    component strength_markers {
+      name: "강도 표시 · 왼쪽 1칸 / 오른쪽 10칸";
+      element soft_marker {
+        geometry: {"type":"box","size":[0.24,0.12,0.18]};
+        position: [-1.8,0.08,1.55];
+        style: "amber";
+        classes: ["marker"];
+      }
+      element hard_marker_01 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [0.99,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_02 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [1.17,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_03 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [1.35,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_04 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [1.53,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_05 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [1.71,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_06 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [1.89,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_07 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [2.07,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_08 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [2.25,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_09 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [2.43,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+      element hard_marker_10 {
+        geometry: {"type":"box","size":[0.12,0.12,0.18]};
+        position: [2.61,0.08,1.55];
+        style: "purple";
+        classes: ["marker"];
+      }
+    }
+  }
+  object stone_soft {
+    name: "돌 A · 초기 강도 10";
+    position: [-1.8,0,0];
+    state: {"strength":10,"broken":false};
+    component stone_soft_platform {
+      element soft_platform_base {
+        geometry: {"type":"box","size":[2.35,0.18,2.2]};
+        position: [0,0.09,0];
+        style: "platform";
+      }
+      element soft_platform_top {
+        geometry: {"type":"box","size":[2.0,0.04,1.85]};
+        position: [0,0.2,0];
+        style: "pale";
+      }
+    }
+    component stone_soft_body {
+      name: "돌 Component · 강도 10";
+      position: [0,0.95,0];
+      state: {"hits":0};
+      script: "scripts/stone.script";
+      config: {"owner":"stone_soft","visual":"stone_soft_core","damage":10};
+      element stone_soft_core {
+        name: "클릭 · 약한 돌";
+        geometry: {"type":"sphere","radius":0.72};
+        scale: [1.15,1,0.95];
+        classes: ["stone"];
+        style: "stone";
+      }
+      element soft_stone_facet {
+        geometry: {"type":"box","size":[0.72,0.75,0.7]};
+        position: [0.14,-0.05,-0.16];
+        rotation: [12,28,18];
+        style: "stone";
+        classes: ["stone"];
+      }
+      element soft_stone_inclusion {
+        geometry: {"type":"box","size":[0.1,0.7,0.1]};
+        position: [0,0.06,0.63];
+        rotation: [0,0,-30];
+        style: "pale";
+      }
+    }
+  }
+  object stone_hard {
+    name: "돌 B · 초기 강도 100";
+    position: [1.8,0,0];
+    state: {"strength":100,"broken":false};
+    component stone_hard_platform {
+      element hard_platform_base {
+        geometry: {"type":"box","size":[2.35,0.18,2.2]};
+        position: [0,0.09,0];
+        style: "platform";
+      }
+      element hard_platform_top {
+        geometry: {"type":"box","size":[2.0,0.04,1.85]};
+        position: [0,0.2,0];
+        style: "pale";
+      }
+    }
+    component stone_hard_body {
+      name: "돌 Component · 강도 100";
+      position: [0,0.95,0];
+      state: {"hits":0};
+      script: "scripts/stone.script";
+      config: {"owner":"stone_hard","visual":"stone_hard_core","damage":10};
+      element stone_hard_core {
+        name: "클릭 · 단단한 돌";
+        geometry: {"type":"sphere","radius":0.72};
+        scale: [1.15,1,0.95];
+        classes: ["stone"];
+        style: "stone";
+      }
+      element hard_stone_facet {
+        geometry: {"type":"box","size":[0.72,0.75,0.7]};
+        position: [0.14,-0.05,-0.16];
+        rotation: [12,28,18];
+        style: "stone";
+        classes: ["stone"];
+      }
+      element hard_stone_inclusion {
+        geometry: {"type":"box","size":[0.1,0.7,0.1]};
+        position: [0,0.06,0.63];
+        rotation: [0,0,-30];
+        style: "pale";
+      }
+    }
+  }
+}

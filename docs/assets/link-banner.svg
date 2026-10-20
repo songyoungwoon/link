@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title description">
+  <title id="title">LINK — Linked Interactive Network</title>
+  <desc id="description">Every World. One Link. A network of geometric worlds connects LINK Protocol, LINK Browser, and the Element, Script, Style world standards.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#07161c"/>
+      <stop offset="1" stop-color="#112b33"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#9af5d2"/>
+      <stop offset="1" stop-color="#55cfe1"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop stop-color="#42b9b0" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#42b9b0" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#8ec9c6" stroke-opacity=".035"/>
+    </pattern>
+  </defs>
+
+  <rect x="1" y="1" width="1198" height="518" rx="24" fill="url(#background)" stroke="#29464c"/>
+  <rect x="24" y="24" width="1152" height="472" rx="14" fill="url(#grid)"/>
+  <ellipse cx="938" cy="205" rx="280" ry="210" fill="url(#glow)"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <g transform="translate(58 45)" fill="none" stroke="url(#accent)" stroke-width="3">
+      <path d="M0 0H26V26H0Z M11 11H37V37H11Z"/>
+      <path d="M0 26H11 M26 0V11" stroke="#07161c" stroke-width="5"/>
+    </g>
+    <text x="113" y="68" fill="#9cb8bc" font-size="13" font-weight="700" letter-spacing="2.3">LINKED INTERACTIVE NETWORK</text>
+    <text x="1138" y="66" text-anchor="end" fill="#79a2aa" font-size="11" letter-spacing="1.7">NATIVE PROTOTYPE · v0.1</text>
+
+    <text x="54" y="207" fill="#f1fbf8" font-size="128" font-weight="700" letter-spacing="-7">LINK</text>
+    <text x="61" y="267" fill="#9af5d2" font-size="30" font-weight="600" letter-spacing="-.5">Every World. One Link.</text>
+    <text x="62" y="309" fill="#a8c2c5" font-size="19">An open standard for connected virtual worlds.</text>
+
+    <g fill="none" stroke="#6bb8b8" stroke-width="1.5">
+      <path d="M749 160C810 113 863 120 909 169" stroke-dasharray="4 8"/>
+      <path d="M939 208C1004 213 1035 243 1084 250" stroke-dasharray="4 8"/>
+      <path d="M902 217C863 271 820 302 766 285" stroke-dasharray="4 8"/>
+      <path d="M746 202C727 230 729 255 752 278" stroke-opacity=".4"/>
+    </g>
+
+    <g transform="translate(692 110)">
+      <path d="M0 40 56 12 112 40 56 68Z" fill="#123e45" stroke="#78d7cf"/>
+      <path d="M0 40V94L56 122V68Z" fill="#102a34" stroke="#4b8d98"/>
+      <path d="M56 68V122L112 94V40Z" fill="#164450" stroke="#4b8d98"/>
+      <path d="M28 40 56 26 84 40 56 54Z" fill="none" stroke="#a2efda" stroke-opacity=".8"/>
+      <path d="M56 54V83" fill="none" stroke="#7dcbbc" stroke-opacity=".5"/>
+    </g>
+
+    <g transform="translate(862 125)">
+      <path d="M0 51 63 19 126 51 63 83Z" fill="#133a41" stroke="#6cbfb9"/>
+      <path d="M0 51V74L63 106 126 74V51" fill="#112d35" stroke="#4b9299"/>
+      <path d="M45 62V10L82 29V81" fill="#24535b" stroke="#a0ebd9" stroke-width="1.5"/>
+      <path d="M52 61V23L75 35V73" fill="#0a202a" stroke="#66c7cb"/>
+      <path d="M82 29 94 23V75L82 81" fill="#173942" stroke="#6ca8ad"/>
+      <circle cx="63" cy="67" r="3" fill="#b9ffe5"/>
+    </g>
+
+    <g transform="translate(1031 200)">
+      <path d="M0 38 48 14 96 38 48 62Z" fill="#153d47" stroke="#81b4ce"/>
+      <path d="M0 38V81L48 105V62Z" fill="#122c39" stroke="#567b9c"/>
+      <path d="M48 62V105L96 81V38Z" fill="#1a3f50" stroke="#6b9cba"/>
+      <path d="M24 24V60M48 14V73M72 26V60" fill="none" stroke="#b3dbec" stroke-opacity=".65"/>
+    </g>
+
+    <g transform="translate(724 260)">
+      <path d="M0 30 40 10 80 30 40 50Z" fill="#153e41" stroke="#9ad8bb"/>
+      <path d="M0 30V46L40 66 80 46V30" fill="#102c33" stroke="#537f79"/>
+      <path d="M27 25V2L53 15V38" fill="#386157" stroke="#b5e8cb"/>
+      <path d="M27 2 38-4 65 9 53 15" fill="#224c4b" stroke="#b5e8cb"/>
+    </g>
+    <text x="928" y="293" fill="#9ad1ce" font-family="Consolas, monospace" font-size="13" letter-spacing="1">link://</text>
+    <circle cx="816" cy="130" r="2.5" fill="#97e2d1"/>
+    <circle cx="1012" cy="224" r="2.5" fill="#8ecbd7"/>
+    <circle cx="842" cy="269" r="2.5" fill="#97e2d1"/>
+
+    <path d="M58 365H1142" stroke="#29464c"/>
+    <g transform="translate(58 390)">
+      <text y="0" fill="#85dcca" font-size="12" font-weight="700" letter-spacing="1.7">LINK PROTOCOL</text>
+      <text y="29" fill="#e3f1ed" font-size="19">Address &amp; connect</text>
+      <text y="53" fill="#7d9da3" font-size="13">A destination for every world.</text>
+    </g>
+    <path d="M408 386V453" stroke="#29464c"/>
+    <g transform="translate(442 390)">
+      <text y="0" fill="#85dcca" font-size="12" font-weight="700" letter-spacing="1.7">LINK BROWSER</text>
+      <text y="29" fill="#e3f1ed" font-size="19">Visit &amp; interact</text>
+      <text y="53" fill="#7d9da3" font-size="13">A native way to step inside.</text>
+    </g>
+    <path d="M790 386V453" stroke="#29464c"/>
+    <g transform="translate(824 390)">
+      <text y="0" fill="#85dcca" font-size="12" font-weight="700" letter-spacing="1.7">WORLD STANDARDS</text>
+      <text y="29" fill="#e3f1ed" font-size="19">Element · Script · Style</text>
+      <text y="53" fill="#7d9da3" font-size="13">Structure. Behavior. Appearance.</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,5 @@
+*.log
+build/
+/dev-notes/
+__pycache__/
+*.py[cod]

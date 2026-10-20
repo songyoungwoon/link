@@ -1,0 +1,8 @@
+// A slow continuous orbit, with no external dependencies.
+on onStart(ctx) {
+  store angle = 0;
+}
+on onUpdate(ctx, deltaSeconds) {
+  angle = (angle + ctx.config.speed * deltaSeconds) % 360;
+  ctx.setTransform({rotation: [0, 0, angle]});
+}

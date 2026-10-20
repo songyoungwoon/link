@@ -1,0 +1,12 @@
+world {
+  version: "0.1";
+  id: "hello-world";
+  name: "Hello World!";
+  elements: "scene.element";
+  style: "appearance.style";
+  scripts: ["scripts/horizon.script","scripts/hologram.script"];
+  entry: {"position":[3.4,1.65,32],"target":[0,10.4,-34]};
+  environment: {"background":"#08171F","grid":false,"fog":{"color":"#08171F","start":85,"end":280}};
+  views: [{"name":"Hello World!","position":[3.4,1.65,32.0],"target":[0.0,10.4,-34.0]},{"name":"The first horizon","position":[0.0,1.65,18.0],"target":[0.0,10.6,-40.0]},{"name":"A world beyond","position":[32.0,19.0,5.0],"target":[0.0,8.5,-33.0]}];
+  walk: {"min":[-15.4,0,-46],"max":[15.4,4,36.5],"eyeHeight":1.65,"speed":5.1};
+}

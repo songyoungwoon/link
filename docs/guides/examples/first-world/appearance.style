@@ -1,0 +1,14 @@
+defaults {
+  color: "#CBD8D1";
+  roughness: .8;
+  metalness: 0;
+  opacity: 1;
+  wireframe: false;
+}
+
+material floor_material { color: "#DCD8CD"; roughness: .95; }
+material pedestal_material { color: "#31484A"; roughness: .85; }
+material cube_material { color: "#4E9C93"; roughness: .6; metalness: .15; }
+
+class interactive { roughness: .35; }
+id sample_cube { color: "#6CCFC1"; }

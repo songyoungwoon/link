@@ -1,0 +1,26 @@
+defaults { color: "#244348"; roughness: .64; metalness: .15; opacity: 1; wireframe: false; }
+material obsidian { color: "#14282F"; roughness: .58; }
+material path { color: "#233E46"; roughness: .65; }
+material landing { color: "#1B353E"; }
+material joint { color: "#4A5D5F"; }
+material stone { color: "#47676C"; metalness: .3; }
+material ring_stone { color: "#527A82"; metalness: .45; }
+material abyss_stone { color: "#0E252C"; }
+material distant_stone { color: "#1C4248"; }
+material island_top { color: "#3C6265"; }
+material letter { color: "#FFF0CE"; roughness: .35; emission: .48; }
+material letter_accent { color: "#B5F7EF"; roughness: .35; emission: .6; }
+material cyan_light { color: "#66E9E0"; emission: 2.1; }
+material soft_cyan { color: "#69C7C7"; emission: .85; }
+material gold_light { color: "#F1CC87"; emission: 1.45; }
+material soft_gold { color: "#B9A57F"; emission: .65; }
+material planet { color: "#8AB4BD"; roughness: .95; emission: .12; }
+material moon { color: "#BAC8BD"; emission: .08; }
+material planet_ring { color: "#B1CED0"; emission: .55; }
+material star { color: "#B1DBE2"; emission: 1.6; }
+material star_gold { color: "#F2D5A5"; emission: 1.3; }
+material holo_glass { color: "#34959E"; opacity: .055; emission: .3; }
+material holo_text { color: "#A3F9F2"; textBackground: false; opacity: .94; }
+material holo_edge { color: "#66DBDE"; opacity: .58; emission: 1.2; }
+material holo_scan { color: "#82F5ED"; opacity: .16; emission: 1.1; }
+material holo_pool { color: "#51B8C3"; opacity: .085; emission: .45; }

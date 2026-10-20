@@ -1,0 +1,11 @@
+// A quiet floating projection, driven by ordinary world transforms.
+on onStart(ctx) {
+  store phase = 0;
+}
+on onUpdate(ctx, deltaSeconds) {
+  phase = (phase + deltaSeconds * .16) % 2;
+  let wave = 1 - abs(phase - 1);
+  let drift = wave * wave * (3 - 2 * wave);
+  ctx.setTransform({position: [0, ctx.config.height + drift * .045, ctx.config.z]});
+  ctx.setTransform("link_hologram_scan", {position: [0, -1.72 + wave * 3.44, .075]});
+}
