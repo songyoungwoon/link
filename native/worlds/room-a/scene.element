@@ -1,0 +1,241 @@
+// Native Element document: hierarchical LINK objects and components.
+scene {
+  object studio {
+    name: "스튜디오 · 건축";
+    component studio_shell {
+      name: "바닥과 벽";
+      element floor {
+        name: "민트 바닥";
+        geometry: {"type":"box","size":[10,0.24,8]};
+        position: [0,-0.12,0];
+        style: "floor";
+      }
+      element floor_plinth {
+        geometry: {"type":"box","size":[10.2,0.16,8.2]};
+        position: [0,-0.3,0];
+        style: "dark";
+      }
+      element back_wall {
+        geometry: {"type":"box","size":[5.8,3.5,0.16]};
+        position: [-2.1,1.75,-3.8];
+        style: "cream";
+      }
+      element left_wall {
+        geometry: {"type":"box","size":[0.16,3.5,3.3]};
+        position: [-4.92,1.75,-2.1];
+        style: "mint";
+        classes: ["soft"];
+      }
+      element wall_stripe {
+        geometry: {"type":"box","size":[5.5,0.06,0.06]};
+        position: [-2.1,0.5,-3.69];
+        style: "brass";
+      }
+      element gallery_square {
+        geometry: {"type":"box","size":[1.45,1.45,0.08]};
+        position: [-2.3,2.15,-3.66];
+        rotation: [0,0,9];
+        style: "dark";
+      }
+      element gallery_inset {
+        geometry: {"type":"box","size":[1.2,1.2,0.09]};
+        position: [-2.3,2.15,-3.6];
+        rotation: [0,0,9];
+        style: "clay";
+      }
+      element gallery_orb {
+        geometry: {"type":"sphere","radius":0.37};
+        position: [-2.3,2.15,-3.49];
+        scale: [1,1,0.2];
+        style: "cream";
+      }
+      element entry_strip {
+        geometry: {"type":"box","size":[2.7,0.015,1.15]};
+        position: [2.0,0.016,1.2];
+        style: "cream";
+      }
+      element entry_mark {
+        geometry: {"type":"box","size":[0.07,0.02,0.75]};
+        position: [2.0,0.03,1.2];
+        style: "brass";
+      }
+    }
+  }
+  object table {
+    name: "탁자";
+    position: [-1.9,0,-0.25];
+    component table_top {
+      name: "상판";
+      position: [0,1.05,0];
+      element table_surface {
+        geometry: {"type":"box","size":[2.9,0.18,1.65]};
+        style: "cream";
+        classes: ["soft"];
+      }
+      element table_rim {
+        geometry: {"type":"box","size":[2.75,0.08,1.5]};
+        position: [0,-0.13,0];
+        style: "brass";
+      }
+    }
+    component table_legs {
+      name: "다리";
+      element table_leg_fl {
+        geometry: {"type":"box","size":[0.13,1.0,0.13]};
+        position: [-1.15,0.5,0.58];
+        style: "dark";
+      }
+      element table_leg_fr {
+        geometry: {"type":"box","size":[0.13,1.0,0.13]};
+        position: [1.15,0.5,0.58];
+        style: "dark";
+      }
+      element table_leg_bl {
+        geometry: {"type":"box","size":[0.13,1.0,0.13]};
+        position: [-1.15,0.5,-0.58];
+        style: "dark";
+      }
+      element table_leg_br {
+        geometry: {"type":"box","size":[0.13,1.0,0.13]};
+        position: [1.15,0.5,-0.58];
+        style: "dark";
+      }
+    }
+  }
+  object sphere {
+    name: "시간 기반 회전 조형물";
+    position: [-1.9,1.92,-0.25];
+    component sphere_spin {
+      name: "회전 구체 · 32°/초";
+      state: {"angle":0};
+      script: "scripts/spin.script";
+      config: {"speed":32};
+      element sphere_core {
+        name: "회전 구체";
+        geometry: {"type":"sphere","radius":0.66};
+        classes: ["orb"];
+      }
+      element sphere_equator {
+        geometry: {"type":"sphere","radius":0.68};
+        scale: [1,0.1,1];
+        style: "brass";
+      }
+      component sphere_accent {
+        name: "회전 방향 표시";
+        rotation: [0,0,24];
+        element sphere_stripe {
+          geometry: {"type":"box","size":[0.12,1.12,0.1]};
+          position: [0,0,0.45];
+          style: "cream";
+        }
+        element sphere_satellite {
+          geometry: {"type":"sphere","radius":0.14};
+          position: [0.84,0.2,0];
+          style: "clay";
+        }
+        element sphere_satellite_arm {
+          geometry: {"type":"box","size":[0.36,0.04,0.04]};
+          position: [0.67,0.2,0];
+          style: "brass";
+        }
+      }
+    }
+    component sphere_base {
+      position: [0,-0.74,0];
+      element sphere_base_block {
+        geometry: {"type":"box","size":[0.74,0.12,0.74]};
+        style: "dark";
+      }
+    }
+  }
+  object door {
+    name: "문 · 클릭하여 열기/닫기";
+    position: [1.1,0,-1.2];
+    state: {"isOpen":false};
+    component door_frame {
+      name: "고정 문틀";
+      element door_frame_left {
+        geometry: {"type":"box","size":[0.15,2.9,0.25]};
+        position: [-0.12,1.45,0];
+        style: "dark";
+      }
+      element door_frame_right {
+        geometry: {"type":"box","size":[0.15,2.9,0.25]};
+        position: [1.67,1.45,0];
+        style: "dark";
+      }
+      element door_frame_top {
+        geometry: {"type":"box","size":[1.94,0.15,0.25]};
+        position: [0.775,2.9,0];
+        style: "dark";
+      }
+      element door_threshold {
+        geometry: {"type":"box","size":[1.94,0.06,0.46]};
+        position: [0.775,0.03,0];
+        style: "brass";
+      }
+    }
+    component door_hinge {
+      name: "힌지 · isOpen 상태";
+      position: [0,0.08,0];
+      state: {"isOpen":false,"clicks":0};
+      script: "scripts/door.script";
+      config: {"openAngle":-100,"speed":165,"owner":"door"};
+      component door_leaf {
+        name: "문짝";
+        position: [0.775,1.36,0];
+        element door_panel {
+          name: "민트 문짝 · 클릭";
+          geometry: {"type":"box","size":[1.55,2.72,0.13]};
+          classes: ["door"];
+        }
+        element door_upper_inset {
+          geometry: {"type":"box","size":[1.12,1.15,0.03]};
+          position: [0,0.48,0.08];
+          style: "cream";
+        }
+        element door_lower_inset {
+          geometry: {"type":"box","size":[1.12,0.68,0.03]};
+          position: [0,-0.72,0.08];
+          style: "mint";
+        }
+        element door_handle {
+          name: "문손잡이";
+          geometry: {"type":"sphere","radius":0.085};
+          position: [0.54,-0.03,0.16];
+          style: "brass";
+        }
+      }
+    }
+  }
+  object planter {
+    name: "스튜디오 장식";
+    position: [-4,0,-2.55];
+    component planter_body {
+      element pot {
+        geometry: {"type":"box","size":[0.6,0.55,0.6]};
+        position: [0,0.275,0];
+        style: "clay";
+      }
+      element stem {
+        geometry: {"type":"box","size":[0.06,0.7,0.06]};
+        position: [0,0.85,0];
+        style: "dark";
+      }
+      element leaf_1 {
+        geometry: {"type":"sphere","radius":0.35};
+        position: [-0.18,1.1,0];
+        scale: [0.7,1.3,0.45];
+        rotation: [0,0,30];
+        style: "mint";
+      }
+      element leaf_2 {
+        geometry: {"type":"sphere","radius":0.35};
+        position: [0.19,1.25,0];
+        scale: [0.7,1.3,0.45];
+        rotation: [0,0,-30];
+        style: "dark";
+      }
+    }
+  }
+}

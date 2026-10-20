@@ -1,0 +1,2613 @@
+// Generated native Element geometry. Edit generator for repeatable changes.
+scene {
+  object hello_world_destination {
+    name: "Hello World!";
+    component hello_architecture {
+      element hello_floor {
+        geometry: {"type":"box","size":[34.0,0.5,86.0]};
+        style: "obsidian";
+        position: [0.0,-0.25,-5.0];
+      }
+      element arrival_causeway {
+        geometry: {"type":"box","size":[10.5,0.025,78.0]};
+        style: "path";
+        position: [0.0,0.0125,-1.0];
+      }
+      element horizon_landing {
+        geometry: {"type":"box","size":[33.9,0.03,20.0]};
+        style: "landing";
+        position: [0.0,0.015,-37.0];
+      }
+      element deck_rim_left {
+        geometry: {"type":"box","size":[0.3,0.48,86.0]};
+        style: "stone";
+        position: [-16.85,-0.05,-5.0];
+      }
+      element deck_edge_light_left {
+        geometry: {"type":"box","size":[0.055,0.022,85.7]};
+        style: "soft_cyan";
+        position: [-16.65,0.2,-5.0];
+      }
+      element causeway_line_left {
+        geometry: {"type":"box","size":[0.055,0.012,75.5]};
+        style: "gold_light";
+        position: [-5.05,0.032,-0.75];
+      }
+      element causeway_trace_left {
+        geometry: {"type":"box","size":[0.022,0.01,75.5]};
+        style: "soft_cyan";
+        position: [-5.36,0.031,-0.75];
+      }
+      element arrival_joint_left_00 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,33.0];
+      }
+      element arrival_joint_left_01 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,26.4];
+      }
+      element arrival_joint_left_02 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,19.8];
+      }
+      element arrival_joint_left_03 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,13.2];
+      }
+      element arrival_joint_left_04 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,6.6];
+      }
+      element arrival_joint_left_05 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,0.0];
+      }
+      element arrival_joint_left_06 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,-6.6];
+      }
+      element arrival_joint_left_07 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,-13.2];
+      }
+      element arrival_joint_left_08 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,-19.8];
+      }
+      element arrival_joint_left_09 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,-26.4];
+      }
+      element arrival_joint_left_10 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [-11.1,0.028,-33.0];
+      }
+      element edge_beacon_base_left_00 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,31.0];
+      }
+      element edge_beacon_left_00 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,31.0];
+      }
+      element edge_beacon_base_left_01 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,21.5];
+      }
+      element edge_beacon_left_01 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,21.5];
+      }
+      element edge_beacon_base_left_02 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,12.0];
+      }
+      element edge_beacon_left_02 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,12.0];
+      }
+      element edge_beacon_base_left_03 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,2.5];
+      }
+      element edge_beacon_left_03 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,2.5];
+      }
+      element edge_beacon_base_left_04 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,-7.0];
+      }
+      element edge_beacon_left_04 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,-7.0];
+      }
+      element edge_beacon_base_left_05 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,-16.5];
+      }
+      element edge_beacon_left_05 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,-16.5];
+      }
+      element edge_beacon_base_left_06 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,-26.0];
+      }
+      element edge_beacon_left_06 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,-26.0];
+      }
+      element edge_beacon_base_left_07 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [-15.45,0.35,-35.5];
+      }
+      element edge_beacon_left_07 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [-15.45,0.715,-35.5];
+      }
+      element deck_rim_right {
+        geometry: {"type":"box","size":[0.3,0.48,86.0]};
+        style: "stone";
+        position: [16.85,-0.05,-5.0];
+      }
+      element deck_edge_light_right {
+        geometry: {"type":"box","size":[0.055,0.022,85.7]};
+        style: "soft_cyan";
+        position: [16.65,0.2,-5.0];
+      }
+      element causeway_line_right {
+        geometry: {"type":"box","size":[0.055,0.012,75.5]};
+        style: "gold_light";
+        position: [5.05,0.032,-0.75];
+      }
+      element causeway_trace_right {
+        geometry: {"type":"box","size":[0.022,0.01,75.5]};
+        style: "soft_cyan";
+        position: [5.36,0.031,-0.75];
+      }
+      element arrival_joint_right_00 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,33.0];
+      }
+      element arrival_joint_right_01 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,26.4];
+      }
+      element arrival_joint_right_02 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,19.8];
+      }
+      element arrival_joint_right_03 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,13.2];
+      }
+      element arrival_joint_right_04 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,6.6];
+      }
+      element arrival_joint_right_05 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,0.0];
+      }
+      element arrival_joint_right_06 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,-6.6];
+      }
+      element arrival_joint_right_07 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,-13.2];
+      }
+      element arrival_joint_right_08 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,-19.8];
+      }
+      element arrival_joint_right_09 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,-26.4];
+      }
+      element arrival_joint_right_10 {
+        geometry: {"type":"box","size":[11.2,0.014,0.022]};
+        style: "joint";
+        position: [11.1,0.028,-33.0];
+      }
+      element edge_beacon_base_right_00 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,31.0];
+      }
+      element edge_beacon_right_00 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,31.0];
+      }
+      element edge_beacon_base_right_01 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,21.5];
+      }
+      element edge_beacon_right_01 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,21.5];
+      }
+      element edge_beacon_base_right_02 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,12.0];
+      }
+      element edge_beacon_right_02 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,12.0];
+      }
+      element edge_beacon_base_right_03 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,2.5];
+      }
+      element edge_beacon_right_03 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,2.5];
+      }
+      element edge_beacon_base_right_04 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,-7.0];
+      }
+      element edge_beacon_right_04 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,-7.0];
+      }
+      element edge_beacon_base_right_05 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,-16.5];
+      }
+      element edge_beacon_right_05 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,-16.5];
+      }
+      element edge_beacon_base_right_06 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,-26.0];
+      }
+      element edge_beacon_right_06 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,-26.0];
+      }
+      element edge_beacon_base_right_07 {
+        geometry: {"type":"box","size":[0.4,0.7,0.52]};
+        style: "stone";
+        position: [15.45,0.35,-35.5];
+      }
+      element edge_beacon_right_07 {
+        geometry: {"type":"box","size":[0.29,0.055,0.4]};
+        style: "cyan_light";
+        position: [15.45,0.715,-35.5];
+      }
+      element causeway_seam_00 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,32.0];
+      }
+      element causeway_marker_00 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,32.0];
+      }
+      element causeway_seam_01 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,26.9];
+      }
+      element causeway_marker_01 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,26.9];
+      }
+      element causeway_seam_02 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,21.8];
+      }
+      element causeway_marker_02 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,21.8];
+      }
+      element causeway_seam_03 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,16.7];
+      }
+      element causeway_marker_03 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,16.7];
+      }
+      element causeway_seam_04 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,11.6];
+      }
+      element causeway_marker_04 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,11.6];
+      }
+      element causeway_seam_05 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,6.5];
+      }
+      element causeway_marker_05 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,6.5];
+      }
+      element causeway_seam_06 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,1.4];
+      }
+      element causeway_marker_06 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,1.4];
+      }
+      element causeway_seam_07 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-3.7];
+      }
+      element causeway_marker_07 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-3.7];
+      }
+      element causeway_seam_08 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-8.8];
+      }
+      element causeway_marker_08 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-8.8];
+      }
+      element causeway_seam_09 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-13.9];
+      }
+      element causeway_marker_09 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-13.9];
+      }
+      element causeway_seam_10 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-19.0];
+      }
+      element causeway_marker_10 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-19.0];
+      }
+      element causeway_seam_11 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-24.1];
+      }
+      element causeway_marker_11 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-24.1];
+      }
+      element causeway_seam_12 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-29.2];
+      }
+      element causeway_marker_12 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-29.2];
+      }
+      element causeway_seam_13 {
+        geometry: {"type":"box","size":[9.95,0.008,0.018]};
+        style: "joint";
+        position: [0.0,0.031,-34.3];
+      }
+      element causeway_marker_13 {
+        geometry: {"type":"box","size":[0.16,0.018,0.66]};
+        style: "soft_gold";
+        position: [0.0,0.038,-34.3];
+      }
+      element arrival_threshold {
+        geometry: {"type":"box","size":[10.1,0.018,0.08]};
+        style: "gold_light";
+        position: [0.0,0.039,35.0];
+      }
+      element landing_foundation {
+        geometry: {"type":"cylinder","radius":5.2,"radiusTop":20.0,"height":11.0};
+        style: "abyss_stone";
+        position: [0.0,-6.1,-29.0];
+        rotation: [0,45,0];
+      }
+      element causeway_spine {
+        geometry: {"type":"box","size":[7.0,2.1,82.0]};
+        style: "abyss_stone";
+        position: [0.0,-1.55,-5.0];
+      }
+      element aperture_foot_left {
+        geometry: {"type":"box","size":[5.8,0.65,7.6]};
+        style: "stone";
+        position: [-15.4,0.325,-43.0];
+      }
+      element aperture_anchor_left {
+        geometry: {"type":"box","size":[1.4,10.6,2.9]};
+        style: "ring_stone";
+        position: [-16.9,5.3,-43.0];
+      }
+      element aperture_anchor_inlay_left {
+        geometry: {"type":"box","size":[0.065,7.9,0.05]};
+        style: "gold_light";
+        position: [-16.9,5.8,-41.52];
+      }
+      element monument_support_left {
+        geometry: {"type":"box","size":[0.42,4.75,1.1]};
+        style: "stone";
+        position: [-15.8,2.375,-24.0];
+      }
+      element monument_support_light_left {
+        geometry: {"type":"box","size":[0.045,3.9,0.03]};
+        style: "soft_gold";
+        position: [-15.8,2.5,-23.43];
+      }
+      element aperture_foot_right {
+        geometry: {"type":"box","size":[5.8,0.65,7.6]};
+        style: "stone";
+        position: [15.4,0.325,-43.0];
+      }
+      element aperture_anchor_right {
+        geometry: {"type":"box","size":[1.4,10.6,2.9]};
+        style: "ring_stone";
+        position: [16.9,5.3,-43.0];
+      }
+      element aperture_anchor_inlay_right {
+        geometry: {"type":"box","size":[0.065,7.9,0.05]};
+        style: "gold_light";
+        position: [16.9,5.8,-41.52];
+      }
+      element monument_support_right {
+        geometry: {"type":"box","size":[0.42,4.75,1.1]};
+        style: "stone";
+        position: [15.8,2.375,-24.0];
+      }
+      element monument_support_light_right {
+        geometry: {"type":"box","size":[0.045,3.9,0.03]};
+        style: "soft_gold";
+        position: [15.8,2.5,-23.43];
+      }
+      element hello_stage {
+        geometry: {"type":"box","size":[32.5,0.22,1.6]};
+        style: "stone";
+        position: [0.0,4.82,-24.0];
+      }
+      element hello_stage_edge {
+        geometry: {"type":"box","size":[32.4,0.045,0.045]};
+        style: "gold_light";
+        position: [0.0,4.93,-23.17];
+      }
+      element link_projector_base {
+        geometry: {"type":"box","size":[10.0,0.1,0.6]};
+        style: "stone";
+        position: [0.0,0.05,-10.4];
+      }
+      element link_projector_light {
+        geometry: {"type":"box","size":[9.6,0.018,0.13]};
+        style: "cyan_light";
+        position: [0.0,0.109,-10.25];
+      }
+      element link_projection_pool {
+        geometry: {"type":"plane","size":[13.0,3.4]};
+        style: "holo_pool";
+        position: [0.0,0.042,-11.0];
+        rotation: [-90,0,0];
+      }
+    }
+    component horizon_aperture {
+      name: "The first horizon";
+      position: [0,13,-43];
+      element aperture_0_00 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [17.15,0.0,0.0];
+        rotation: [0,0,90.0];
+      }
+      element aperture_0_01 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [17.00328,2.23852,0.0];
+        rotation: [0,0,97.5];
+      }
+      element aperture_0_02 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [16.56563,4.43875,0.0];
+        rotation: [0,0,105.0];
+      }
+      element aperture_0_03 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [15.84453,6.56302,0.0];
+        rotation: [0,0,112.5];
+      }
+      element aperture_0_04 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [14.85234,8.575,0.0];
+        rotation: [0,0,120.0];
+      }
+      element aperture_0_05 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [13.60601,10.44026,0.0];
+        rotation: [0,0,127.5];
+      }
+      element aperture_0_06 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [12.12688,12.12688,0.0];
+        rotation: [0,0,135.0];
+      }
+      element aperture_0_07 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [10.44026,13.60601,0.0];
+        rotation: [0,0,142.5];
+      }
+      element aperture_0_08 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [8.575,14.85234,0.0];
+        rotation: [0,0,150.0];
+      }
+      element aperture_0_09 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [6.56302,15.84453,0.0];
+        rotation: [0,0,157.5];
+      }
+      element aperture_0_10 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [4.43875,16.56563,0.0];
+        rotation: [0,0,165.0];
+      }
+      element aperture_0_11 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [2.23852,17.00328,0.0];
+        rotation: [0,0,172.5];
+      }
+      element aperture_0_12 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [0.0,17.15,0.0];
+        rotation: [0,0,180.0];
+      }
+      element aperture_0_13 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-2.23852,17.00328,0.0];
+        rotation: [0,0,187.5];
+      }
+      element aperture_0_14 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-4.43875,16.56563,0.0];
+        rotation: [0,0,195.0];
+      }
+      element aperture_0_15 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-6.56302,15.84453,0.0];
+        rotation: [0,0,202.5];
+      }
+      element aperture_0_16 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-8.575,14.85234,0.0];
+        rotation: [0,0,210.0];
+      }
+      element aperture_0_17 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-10.44026,13.60601,0.0];
+        rotation: [0,0,217.5];
+      }
+      element aperture_0_18 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-12.12688,12.12688,0.0];
+        rotation: [0,0,225.0];
+      }
+      element aperture_0_19 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-13.60601,10.44026,0.0];
+        rotation: [0,0,232.5];
+      }
+      element aperture_0_20 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-14.85234,8.575,0.0];
+        rotation: [0,0,240.0];
+      }
+      element aperture_0_21 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-15.84453,6.56302,0.0];
+        rotation: [0,0,247.5];
+      }
+      element aperture_0_22 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-16.56563,4.43875,0.0];
+        rotation: [0,0,255.0];
+      }
+      element aperture_0_23 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-17.00328,2.23852,0.0];
+        rotation: [0,0,262.5];
+      }
+      element aperture_0_24 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-17.15,0.0,0.0];
+        rotation: [0,0,270.0];
+      }
+      element aperture_0_25 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-17.00328,-2.23852,0.0];
+        rotation: [0,0,277.5];
+      }
+      element aperture_0_26 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-16.56563,-4.43875,0.0];
+        rotation: [0,0,285.0];
+      }
+      element aperture_0_27 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-15.84453,-6.56302,0.0];
+        rotation: [0,0,292.5];
+      }
+      element aperture_0_28 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-14.85234,-8.575,0.0];
+        rotation: [0,0,300.0];
+      }
+      element aperture_0_29 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-13.60601,-10.44026,0.0];
+        rotation: [0,0,307.5];
+      }
+      element aperture_0_30 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-12.12688,-12.12688,0.0];
+        rotation: [0,0,315.0];
+      }
+      element aperture_0_31 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-10.44026,-13.60601,0.0];
+        rotation: [0,0,322.5];
+      }
+      element aperture_0_32 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-8.575,-14.85234,0.0];
+        rotation: [0,0,330.0];
+      }
+      element aperture_0_33 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-6.56302,-15.84453,0.0];
+        rotation: [0,0,337.5];
+      }
+      element aperture_0_34 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-4.43875,-16.56563,0.0];
+        rotation: [0,0,345.0];
+      }
+      element aperture_0_35 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-2.23852,-17.00328,0.0];
+        rotation: [0,0,352.5];
+      }
+      element aperture_0_36 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [-0.0,-17.15,0.0];
+        rotation: [0,0,360.0];
+      }
+      element aperture_0_37 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [2.23852,-17.00328,0.0];
+        rotation: [0,0,367.5];
+      }
+      element aperture_0_38 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [4.43875,-16.56563,0.0];
+        rotation: [0,0,375.0];
+      }
+      element aperture_0_39 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [6.56302,-15.84453,0.0];
+        rotation: [0,0,382.5];
+      }
+      element aperture_0_40 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [8.575,-14.85234,0.0];
+        rotation: [0,0,390.0];
+      }
+      element aperture_0_41 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [10.44026,-13.60601,0.0];
+        rotation: [0,0,397.5];
+      }
+      element aperture_0_42 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [12.12688,-12.12688,0.0];
+        rotation: [0,0,405.0];
+      }
+      element aperture_0_43 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [13.60601,-10.44026,0.0];
+        rotation: [0,0,412.5];
+      }
+      element aperture_0_44 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [14.85234,-8.575,0.0];
+        rotation: [0,0,420.0];
+      }
+      element aperture_0_45 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [15.84453,-6.56302,0.0];
+        rotation: [0,0,427.5];
+      }
+      element aperture_0_46 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [16.56563,-4.43875,0.0];
+        rotation: [0,0,435.0];
+      }
+      element aperture_0_47 {
+        geometry: {"type":"box","size":[2.27314,1.65,2.3]};
+        style: "ring_stone";
+        position: [17.00328,-2.23852,0.0];
+        rotation: [0,0,442.5];
+      }
+      element aperture_1_00 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [16.13,0.0,1.03];
+        rotation: [0,0,90.0];
+      }
+      element aperture_1_01 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [15.99201,2.10539,1.03];
+        rotation: [0,0,97.5];
+      }
+      element aperture_1_02 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [15.58038,4.17475,1.03];
+        rotation: [0,0,105.0];
+      }
+      element aperture_1_03 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [14.90218,6.17268,1.03];
+        rotation: [0,0,112.5];
+      }
+      element aperture_1_04 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [13.96899,8.065,1.03];
+        rotation: [0,0,120.0];
+      }
+      element aperture_1_05 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [12.79679,9.81932,1.03];
+        rotation: [0,0,127.5];
+      }
+      element aperture_1_06 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [11.40563,11.40563,1.03];
+        rotation: [0,0,135.0];
+      }
+      element aperture_1_07 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [9.81932,12.79679,1.03];
+        rotation: [0,0,142.5];
+      }
+      element aperture_1_08 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [8.065,13.96899,1.03];
+        rotation: [0,0,150.0];
+      }
+      element aperture_1_09 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [6.17268,14.90218,1.03];
+        rotation: [0,0,157.5];
+      }
+      element aperture_1_10 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [4.17475,15.58038,1.03];
+        rotation: [0,0,165.0];
+      }
+      element aperture_1_11 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [2.10539,15.99201,1.03];
+        rotation: [0,0,172.5];
+      }
+      element aperture_1_12 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [0.0,16.13,1.03];
+        rotation: [0,0,180.0];
+      }
+      element aperture_1_13 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-2.10539,15.99201,1.03];
+        rotation: [0,0,187.5];
+      }
+      element aperture_1_14 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-4.17475,15.58038,1.03];
+        rotation: [0,0,195.0];
+      }
+      element aperture_1_15 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-6.17268,14.90218,1.03];
+        rotation: [0,0,202.5];
+      }
+      element aperture_1_16 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-8.065,13.96899,1.03];
+        rotation: [0,0,210.0];
+      }
+      element aperture_1_17 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-9.81932,12.79679,1.03];
+        rotation: [0,0,217.5];
+      }
+      element aperture_1_18 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-11.40563,11.40563,1.03];
+        rotation: [0,0,225.0];
+      }
+      element aperture_1_19 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-12.79679,9.81932,1.03];
+        rotation: [0,0,232.5];
+      }
+      element aperture_1_20 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-13.96899,8.065,1.03];
+        rotation: [0,0,240.0];
+      }
+      element aperture_1_21 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-14.90218,6.17268,1.03];
+        rotation: [0,0,247.5];
+      }
+      element aperture_1_22 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-15.58038,4.17475,1.03];
+        rotation: [0,0,255.0];
+      }
+      element aperture_1_23 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-15.99201,2.10539,1.03];
+        rotation: [0,0,262.5];
+      }
+      element aperture_1_24 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-16.13,0.0,1.03];
+        rotation: [0,0,270.0];
+      }
+      element aperture_1_25 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-15.99201,-2.10539,1.03];
+        rotation: [0,0,277.5];
+      }
+      element aperture_1_26 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-15.58038,-4.17475,1.03];
+        rotation: [0,0,285.0];
+      }
+      element aperture_1_27 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-14.90218,-6.17268,1.03];
+        rotation: [0,0,292.5];
+      }
+      element aperture_1_28 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-13.96899,-8.065,1.03];
+        rotation: [0,0,300.0];
+      }
+      element aperture_1_29 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-12.79679,-9.81932,1.03];
+        rotation: [0,0,307.5];
+      }
+      element aperture_1_30 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-11.40563,-11.40563,1.03];
+        rotation: [0,0,315.0];
+      }
+      element aperture_1_31 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-9.81932,-12.79679,1.03];
+        rotation: [0,0,322.5];
+      }
+      element aperture_1_32 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-8.065,-13.96899,1.03];
+        rotation: [0,0,330.0];
+      }
+      element aperture_1_33 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-6.17268,-14.90218,1.03];
+        rotation: [0,0,337.5];
+      }
+      element aperture_1_34 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-4.17475,-15.58038,1.03];
+        rotation: [0,0,345.0];
+      }
+      element aperture_1_35 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-2.10539,-15.99201,1.03];
+        rotation: [0,0,352.5];
+      }
+      element aperture_1_36 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [-0.0,-16.13,1.03];
+        rotation: [0,0,360.0];
+      }
+      element aperture_1_37 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [2.10539,-15.99201,1.03];
+        rotation: [0,0,367.5];
+      }
+      element aperture_1_38 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [4.17475,-15.58038,1.03];
+        rotation: [0,0,375.0];
+      }
+      element aperture_1_39 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [6.17268,-14.90218,1.03];
+        rotation: [0,0,382.5];
+      }
+      element aperture_1_40 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [8.065,-13.96899,1.03];
+        rotation: [0,0,390.0];
+      }
+      element aperture_1_41 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [9.81932,-12.79679,1.03];
+        rotation: [0,0,397.5];
+      }
+      element aperture_1_42 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [11.40563,-11.40563,1.03];
+        rotation: [0,0,405.0];
+      }
+      element aperture_1_43 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [12.79679,-9.81932,1.03];
+        rotation: [0,0,412.5];
+      }
+      element aperture_1_44 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [13.96899,-8.065,1.03];
+        rotation: [0,0,420.0];
+      }
+      element aperture_1_45 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [14.90218,-6.17268,1.03];
+        rotation: [0,0,427.5];
+      }
+      element aperture_1_46 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [15.58038,-4.17475,1.03];
+        rotation: [0,0,435.0];
+      }
+      element aperture_1_47 {
+        geometry: {"type":"box","size":[2.06943,0.105,0.12]};
+        style: "cyan_light";
+        position: [15.99201,-2.10539,1.03];
+        rotation: [0,0,442.5];
+      }
+      element aperture_outermark_00 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [17.81,0.0,1.21];
+        rotation: [0,0,90.0];
+      }
+      element aperture_outermark_01 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [17.20314,4.60957,1.21];
+        rotation: [0,0,105.0];
+      }
+      element aperture_outermark_02 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [15.42391,8.905,1.21];
+        rotation: [0,0,120.0];
+      }
+      element aperture_outermark_03 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [12.59357,12.59357,1.21];
+        rotation: [0,0,135.0];
+      }
+      element aperture_outermark_04 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [8.905,15.42391,1.21];
+        rotation: [0,0,150.0];
+      }
+      element aperture_outermark_05 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [4.60957,17.20314,1.21];
+        rotation: [0,0,165.0];
+      }
+      element aperture_outermark_06 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [0.0,17.81,1.21];
+        rotation: [0,0,180.0];
+      }
+      element aperture_outermark_07 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-4.60957,17.20314,1.21];
+        rotation: [0,0,195.0];
+      }
+      element aperture_outermark_08 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-8.905,15.42391,1.21];
+        rotation: [0,0,210.0];
+      }
+      element aperture_outermark_09 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-12.59357,12.59357,1.21];
+        rotation: [0,0,225.0];
+      }
+      element aperture_outermark_10 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-15.42391,8.905,1.21];
+        rotation: [0,0,240.0];
+      }
+      element aperture_outermark_11 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-17.20314,4.60957,1.21];
+        rotation: [0,0,255.0];
+      }
+      element aperture_outermark_12 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-17.81,0.0,1.21];
+        rotation: [0,0,270.0];
+      }
+      element aperture_outermark_13 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-17.20314,-4.60957,1.21];
+        rotation: [0,0,285.0];
+      }
+      element aperture_outermark_14 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-15.42391,-8.905,1.21];
+        rotation: [0,0,300.0];
+      }
+      element aperture_outermark_15 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-12.59357,-12.59357,1.21];
+        rotation: [0,0,315.0];
+      }
+      element aperture_outermark_16 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-8.905,-15.42391,1.21];
+        rotation: [0,0,330.0];
+      }
+      element aperture_outermark_17 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-4.60957,-17.20314,1.21];
+        rotation: [0,0,345.0];
+      }
+      element aperture_outermark_18 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [-0.0,-17.81,1.21];
+        rotation: [0,0,360.0];
+      }
+      element aperture_outermark_19 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [4.60957,-17.20314,1.21];
+        rotation: [0,0,375.0];
+      }
+      element aperture_outermark_20 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [8.905,-15.42391,1.21];
+        rotation: [0,0,390.0];
+      }
+      element aperture_outermark_21 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [12.59357,-12.59357,1.21];
+        rotation: [0,0,405.0];
+      }
+      element aperture_outermark_22 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [15.42391,-8.905,1.21];
+        rotation: [0,0,420.0];
+      }
+      element aperture_outermark_23 {
+        geometry: {"type":"box","size":[0.83,0.105,0.14]};
+        style: "soft_gold";
+        position: [17.20314,-4.60957,1.21];
+        rotation: [0,0,435.0];
+      }
+      component aperture_orbit {
+        script: "scripts/horizon.script";
+        config: {"speed":1.15};
+        element aperture_register_0 {
+          geometry: {"type":"box","size":[1.25,0.17,0.2]};
+          style: "gold_light";
+          position: [14.91257,4.84539,1.1];
+          rotation: [0,0,108];
+        }
+        element aperture_register_1 {
+          geometry: {"type":"box","size":[1.25,0.17,0.2]};
+          style: "gold_light";
+          position: [-3.26006,15.33735,1.1];
+          rotation: [0,0,192];
+        }
+        element aperture_register_2 {
+          geometry: {"type":"box","size":[1.25,0.17,0.2]};
+          style: "gold_light";
+          position: [-15.27812,-3.52723,1.1];
+          rotation: [0,0,283];
+        }
+        element aperture_register_3 {
+          geometry: {"type":"box","size":[1.25,0.17,0.2]};
+          style: "gold_light";
+          position: [2.99189,-15.39191,1.1];
+          rotation: [0,0,371];
+        }
+      }
+    }
+    component hello_world_text {
+      name: "Hello World!";
+      position: [0,5.54,-24];
+      component hello_glyph_00 {
+        name: "H";
+        position: [-14.16,0,0];
+        element hello_stroke_00_0_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,2.88,0.0];
+        }
+        element hello_stroke_00_0_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,2.88,0.0];
+        }
+        element hello_stroke_00_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,2.4,0.0];
+        }
+        element hello_stroke_00_1_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,2.4,0.0];
+        }
+        element hello_stroke_00_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,1.92,0.0];
+        }
+        element hello_stroke_00_2_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,1.92,0.0];
+        }
+        element hello_stroke_00_3_0 {
+          geometry: {"type":"box","size":[2.4,0.48,0.74]};
+          style: "letter";
+          position: [1.2,1.44,0.0];
+        }
+        element hello_stroke_00_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_00_4_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,0.96,0.0];
+        }
+        element hello_stroke_00_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_00_5_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,0.48,0.0];
+        }
+        element hello_stroke_00_6_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,0.0,0.0];
+        }
+        element hello_stroke_00_6_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,0.0,0.0];
+        }
+      }
+      component hello_glyph_01 {
+        name: "e";
+        position: [-11.28,0,0];
+        element hello_stroke_01_2_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter";
+          position: [1.2,1.92,0.0];
+        }
+        element hello_stroke_01_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,1.44,0.0];
+        }
+        element hello_stroke_01_3_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,1.44,0.0];
+        }
+        element hello_stroke_01_4_0 {
+          geometry: {"type":"box","size":[2.4,0.48,0.74]};
+          style: "letter";
+          position: [1.2,0.96,0.0];
+        }
+        element hello_stroke_01_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_01_6_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter";
+          position: [1.2,0.0,0.0];
+        }
+      }
+      component hello_glyph_02 {
+        name: "l";
+        position: [-8.4,0,0];
+        element hello_stroke_02_0_0 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter";
+          position: [0.48,2.88,0.0];
+        }
+        element hello_stroke_02_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,2.4,0.0];
+        }
+        element hello_stroke_02_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,1.92,0.0];
+        }
+        element hello_stroke_02_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,1.44,0.0];
+        }
+        element hello_stroke_02_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,0.96,0.0];
+        }
+        element hello_stroke_02_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,0.48,0.0];
+        }
+        element hello_stroke_02_6_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter";
+          position: [0.72,0.0,0.0];
+        }
+      }
+      component hello_glyph_03 {
+        name: "l";
+        position: [-6.48,0,0];
+        element hello_stroke_03_0_0 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter";
+          position: [0.48,2.88,0.0];
+        }
+        element hello_stroke_03_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,2.4,0.0];
+        }
+        element hello_stroke_03_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,1.92,0.0];
+        }
+        element hello_stroke_03_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,1.44,0.0];
+        }
+        element hello_stroke_03_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,0.96,0.0];
+        }
+        element hello_stroke_03_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.72,0.48,0.0];
+        }
+        element hello_stroke_03_6_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter";
+          position: [0.72,0.0,0.0];
+        }
+      }
+      component hello_glyph_04 {
+        name: "o";
+        position: [-4.56,0,0];
+        element hello_stroke_04_2_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter";
+          position: [1.2,1.92,0.0];
+        }
+        element hello_stroke_04_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,1.44,0.0];
+        }
+        element hello_stroke_04_3_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,1.44,0.0];
+        }
+        element hello_stroke_04_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_04_4_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,0.96,0.0];
+        }
+        element hello_stroke_04_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_04_5_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter";
+          position: [2.16,0.48,0.0];
+        }
+        element hello_stroke_04_6_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter";
+          position: [1.2,0.0,0.0];
+        }
+      }
+      component hello_glyph_06 {
+        name: "W";
+        position: [0.24,0,0];
+        element hello_stroke_06_0_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,2.88,0.0];
+        }
+        element hello_stroke_06_0_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,2.88,0.0];
+        }
+        element hello_stroke_06_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,2.4,0.0];
+        }
+        element hello_stroke_06_1_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,2.4,0.0];
+        }
+        element hello_stroke_06_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.92,0.0];
+        }
+        element hello_stroke_06_2_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,1.92,0.0];
+        }
+        element hello_stroke_06_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.44,0.0];
+        }
+        element hello_stroke_06_3_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.2,1.44,0.0];
+        }
+        element hello_stroke_06_3_2 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,1.44,0.0];
+        }
+        element hello_stroke_06_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_06_4_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.2,0.96,0.0];
+        }
+        element hello_stroke_06_4_2 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,0.96,0.0];
+        }
+        element hello_stroke_06_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_06_5_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.2,0.48,0.0];
+        }
+        element hello_stroke_06_5_2 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,0.48,0.0];
+        }
+        element hello_stroke_06_6_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,0.0,0.0];
+        }
+        element hello_stroke_06_6_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.68,0.0,0.0];
+        }
+      }
+      component hello_glyph_07 {
+        name: "o";
+        position: [3.12,0,0];
+        element hello_stroke_07_2_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.2,1.92,0.0];
+        }
+        element hello_stroke_07_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.44,0.0];
+        }
+        element hello_stroke_07_3_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,1.44,0.0];
+        }
+        element hello_stroke_07_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_07_4_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,0.96,0.0];
+        }
+        element hello_stroke_07_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_07_5_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,0.48,0.0];
+        }
+        element hello_stroke_07_6_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.2,0.0,0.0];
+        }
+      }
+      component hello_glyph_08 {
+        name: "r";
+        position: [6.0,0,0];
+        element hello_stroke_08_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.92,0.0];
+        }
+        element hello_stroke_08_2_1 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.44,1.92,0.0];
+        }
+        element hello_stroke_08_3_0 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.48,1.44,0.0];
+        }
+        element hello_stroke_08_3_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,1.44,0.0];
+        }
+        element hello_stroke_08_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_08_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_08_6_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.0,0.0];
+        }
+      }
+      component hello_glyph_09 {
+        name: "l";
+        position: [8.88,0,0];
+        element hello_stroke_09_0_0 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.48,2.88,0.0];
+        }
+        element hello_stroke_09_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,2.4,0.0];
+        }
+        element hello_stroke_09_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,1.92,0.0];
+        }
+        element hello_stroke_09_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,1.44,0.0];
+        }
+        element hello_stroke_09_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,0.96,0.0];
+        }
+        element hello_stroke_09_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,0.48,0.0];
+        }
+        element hello_stroke_09_6_0 {
+          geometry: {"type":"box","size":[1.44,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.72,0.0,0.0];
+        }
+      }
+      component hello_glyph_10 {
+        name: "d";
+        position: [10.8,0,0];
+        element hello_stroke_10_0_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,2.88,0.0];
+        }
+        element hello_stroke_10_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,2.4,0.0];
+        }
+        element hello_stroke_10_2_0 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.96,1.92,0.0];
+        }
+        element hello_stroke_10_2_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,1.92,0.0];
+        }
+        element hello_stroke_10_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.44,0.0];
+        }
+        element hello_stroke_10_3_1 {
+          geometry: {"type":"box","size":[0.96,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.92,1.44,0.0];
+        }
+        element hello_stroke_10_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_10_4_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,0.96,0.0];
+        }
+        element hello_stroke_10_5_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.48,0.0];
+        }
+        element hello_stroke_10_5_1 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [2.16,0.48,0.0];
+        }
+        element hello_stroke_10_6_0 {
+          geometry: {"type":"box","size":[1.92,0.48,0.74]};
+          style: "letter_accent";
+          position: [1.44,0.0,0.0];
+        }
+      }
+      component hello_glyph_11 {
+        name: "!";
+        position: [13.68,0,0];
+        element hello_stroke_11_0_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,2.88,0.0];
+        }
+        element hello_stroke_11_1_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,2.4,0.0];
+        }
+        element hello_stroke_11_2_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.92,0.0];
+        }
+        element hello_stroke_11_3_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,1.44,0.0];
+        }
+        element hello_stroke_11_4_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.96,0.0];
+        }
+        element hello_stroke_11_6_0 {
+          geometry: {"type":"box","size":[0.48,0.48,0.74]};
+          style: "letter_accent";
+          position: [0.24,0.0,0.0];
+        }
+      }
+    }
+    component link_hologram {
+      name: "About LINK";
+      position: [0,2.35,-11];
+      script: "scripts/hologram.script";
+      config: {"height":2.35,"z":-11};
+      element link_hologram_glass {
+        geometry: {"type":"plane","size":[27.0,3.55]};
+        style: "holo_glass";
+        position: [0.0,0.0,0.0];
+      }
+      element link_hologram_text {
+        geometry: {"type":"plane","size":[26.2,3.5]};
+        style: "holo_text";
+        position: [0.0,0.0,0.035];
+        name: "LINK · Every World. One Link.";
+        text: "LINK — Linked Interactive Network\nAn open standard for virtual worlds: Element · Script · Style.\nExplore with LINK Browser. Connect with LINK Protocol.\nEvery World. One Link.";
+      }
+      element link_hologram_edge_left {
+        geometry: {"type":"box","size":[0.022,3.55,0.025]};
+        style: "holo_edge";
+        position: [-13.5,0.0,0.015];
+      }
+      element link_hologram_edge_right {
+        geometry: {"type":"box","size":[0.022,3.55,0.025]};
+        style: "holo_edge";
+        position: [13.5,0.0,0.015];
+      }
+      element link_hologram_edge_bottom {
+        geometry: {"type":"box","size":[27.0,0.022,0.025]};
+        style: "holo_edge";
+        position: [0.0,-1.775,0.015];
+      }
+      element link_hologram_edge_top {
+        geometry: {"type":"box","size":[27.0,0.022,0.025]};
+        style: "holo_edge";
+        position: [0.0,1.775,0.015];
+      }
+      element link_hologram_scan {
+        geometry: {"type":"box","size":[26.85,0.014,0.022]};
+        style: "holo_scan";
+        position: [0.0,-1.72,0.075];
+      }
+    }
+    component distant_horizons {
+      element horizon_planet {
+        geometry: {"type":"sphere","radius":13.2};
+        style: "planet";
+        position: [-1.0,35.0,-107.0];
+      }
+      element distant_moon {
+        geometry: {"type":"sphere","radius":4.1};
+        style: "moon";
+        position: [-45.0,57.0,-143.0];
+      }
+      component planet_orbital_plane {
+        position: [-1,35,-107];
+        rotation: [68,0,-18];
+        element planet_ring_00 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [16.5,0.0,0.0];
+          rotation: [0,0,90.0];
+        }
+        element planet_ring_01 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [16.29686,2.58117,0.0];
+          rotation: [0,0,99.0];
+        }
+        element planet_ring_02 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [15.69243,5.09878,0.0];
+          rotation: [0,0,108.0];
+        }
+        element planet_ring_03 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [14.70161,7.49084,0.0];
+          rotation: [0,0,117.0];
+        }
+        element planet_ring_04 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [13.34878,9.69846,0.0];
+          rotation: [0,0,126.0];
+        }
+        element planet_ring_05 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [11.66726,11.66726,0.0];
+          rotation: [0,0,135.0];
+        }
+        element planet_ring_06 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [9.69846,13.34878,0.0];
+          rotation: [0,0,144.0];
+        }
+        element planet_ring_07 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [7.49084,14.70161,0.0];
+          rotation: [0,0,153.0];
+        }
+        element planet_ring_08 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [5.09878,15.69243,0.0];
+          rotation: [0,0,162.0];
+        }
+        element planet_ring_09 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [2.58117,16.29686,0.0];
+          rotation: [0,0,171.0];
+        }
+        element planet_ring_10 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [0.0,16.5,0.0];
+          rotation: [0,0,180.0];
+        }
+        element planet_ring_11 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-2.58117,16.29686,0.0];
+          rotation: [0,0,189.0];
+        }
+        element planet_ring_12 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-5.09878,15.69243,0.0];
+          rotation: [0,0,198.0];
+        }
+        element planet_ring_13 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-7.49084,14.70161,0.0];
+          rotation: [0,0,207.0];
+        }
+        element planet_ring_14 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-9.69846,13.34878,0.0];
+          rotation: [0,0,216.0];
+        }
+        element planet_ring_15 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-11.66726,11.66726,0.0];
+          rotation: [0,0,225.0];
+        }
+        element planet_ring_16 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-13.34878,9.69846,0.0];
+          rotation: [0,0,234.0];
+        }
+        element planet_ring_17 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-14.70161,7.49084,0.0];
+          rotation: [0,0,243.0];
+        }
+        element planet_ring_18 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-15.69243,5.09878,0.0];
+          rotation: [0,0,252.0];
+        }
+        element planet_ring_19 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-16.29686,2.58117,0.0];
+          rotation: [0,0,261.0];
+        }
+        element planet_ring_20 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-16.5,0.0,0.0];
+          rotation: [0,0,270.0];
+        }
+        element planet_ring_21 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-16.29686,-2.58117,0.0];
+          rotation: [0,0,279.0];
+        }
+        element planet_ring_22 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-15.69243,-5.09878,0.0];
+          rotation: [0,0,288.0];
+        }
+        element planet_ring_23 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-14.70161,-7.49084,0.0];
+          rotation: [0,0,297.0];
+        }
+        element planet_ring_24 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-13.34878,-9.69846,0.0];
+          rotation: [0,0,306.0];
+        }
+        element planet_ring_25 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-11.66726,-11.66726,0.0];
+          rotation: [0,0,315.0];
+        }
+        element planet_ring_26 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-9.69846,-13.34878,0.0];
+          rotation: [0,0,324.0];
+        }
+        element planet_ring_27 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-7.49084,-14.70161,0.0];
+          rotation: [0,0,333.0];
+        }
+        element planet_ring_28 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-5.09878,-15.69243,0.0];
+          rotation: [0,0,342.0];
+        }
+        element planet_ring_29 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-2.58117,-16.29686,0.0];
+          rotation: [0,0,351.0];
+        }
+        element planet_ring_30 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [-0.0,-16.5,0.0];
+          rotation: [0,0,360.0];
+        }
+        element planet_ring_31 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [2.58117,-16.29686,0.0];
+          rotation: [0,0,369.0];
+        }
+        element planet_ring_32 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [5.09878,-15.69243,0.0];
+          rotation: [0,0,378.0];
+        }
+        element planet_ring_33 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [7.49084,-14.70161,0.0];
+          rotation: [0,0,387.0];
+        }
+        element planet_ring_34 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [9.69846,-13.34878,0.0];
+          rotation: [0,0,396.0];
+        }
+        element planet_ring_35 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [11.66726,-11.66726,0.0];
+          rotation: [0,0,405.0];
+        }
+        element planet_ring_36 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [13.34878,-9.69846,0.0];
+          rotation: [0,0,414.0];
+        }
+        element planet_ring_37 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [14.70161,-7.49084,0.0];
+          rotation: [0,0,423.0];
+        }
+        element planet_ring_38 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [15.69243,-5.09878,0.0];
+          rotation: [0,0,432.0];
+        }
+        element planet_ring_39 {
+          geometry: {"type":"box","size":[2.59,0.11,0.11]};
+          style: "planet_ring";
+          position: [16.29686,-2.58117,0.0];
+          rotation: [0,0,441.0];
+        }
+      }
+      element horizon_star_00 {
+        geometry: {"type":"sphere","radius":0.6};
+        style: "star_gold";
+        position: [-56.76,34.74,-125.34];
+      }
+      element horizon_star_01 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star";
+        position: [49.54185,62.0781,-167.79895];
+      }
+      element horizon_star_02 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star";
+        position: [-16.15631,23.41619,-152.25789];
+      }
+      element horizon_star_03 {
+        geometry: {"type":"sphere","radius":0.402};
+        style: "star";
+        position: [-81.85446,50.75429,-136.71684];
+      }
+      element horizon_star_04 {
+        geometry: {"type":"sphere","radius":0.476};
+        style: "star";
+        position: [24.44738,12.09238,-121.17579];
+      }
+      element horizon_star_05 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star";
+        position: [-41.25077,39.43048,-163.63473];
+      }
+      element horizon_star_06 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star";
+        position: [65.05108,66.76857,-148.09368];
+      }
+      element horizon_star_07 {
+        geometry: {"type":"sphere","radius":0.365};
+        style: "star_gold";
+        position: [-0.64708,28.10667,-132.55263];
+      }
+      element horizon_star_08 {
+        geometry: {"type":"sphere","radius":0.439};
+        style: "star";
+        position: [-66.34523,55.44476,-117.01157];
+      }
+      element horizon_star_09 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star";
+        position: [39.95661,16.78286,-159.47052];
+      }
+      element horizon_star_10 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star";
+        position: [-25.74154,44.12095,-143.92947];
+      }
+      element horizon_star_11 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star";
+        position: [80.56031,71.45905,-128.38842];
+      }
+      element horizon_star_12 {
+        geometry: {"type":"sphere","radius":0.402};
+        style: "star";
+        position: [14.86215,32.79714,-112.84736];
+      }
+      element horizon_star_13 {
+        geometry: {"type":"sphere","radius":0.6};
+        style: "star";
+        position: [-50.836,60.13524,-155.30631];
+      }
+      element horizon_star_14 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star_gold";
+        position: [55.46584,21.47333,-139.76526];
+      }
+      element horizon_star_15 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star";
+        position: [-10.23231,48.81143,-124.2242];
+      }
+      element horizon_star_16 {
+        geometry: {"type":"sphere","radius":0.365};
+        style: "star";
+        position: [-75.93046,10.14952,-166.68315];
+      }
+      element horizon_star_17 {
+        geometry: {"type":"sphere","radius":0.439};
+        style: "star";
+        position: [30.37138,37.48762,-151.1421];
+      }
+      element horizon_star_18 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star";
+        position: [-35.32677,64.82571,-135.60104];
+      }
+      element horizon_star_19 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star";
+        position: [70.97508,26.16381,-120.05999];
+      }
+      element horizon_star_20 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star";
+        position: [5.27692,53.5019,-162.51894];
+      }
+      element horizon_star_21 {
+        geometry: {"type":"sphere","radius":0.402};
+        style: "star_gold";
+        position: [-60.42123,14.84,-146.97788];
+      }
+      element horizon_star_22 {
+        geometry: {"type":"sphere","radius":0.476};
+        style: "star";
+        position: [45.88061,42.17809,-131.43683];
+      }
+      element horizon_star_23 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star";
+        position: [-19.81754,69.51619,-115.89578];
+      }
+      element horizon_star_24 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star";
+        position: [-85.51569,30.85428,-158.35472];
+      }
+      element horizon_star_25 {
+        geometry: {"type":"sphere","radius":0.365};
+        style: "star";
+        position: [20.78615,58.19238,-142.81367];
+      }
+      element horizon_star_26 {
+        geometry: {"type":"sphere","radius":0.6};
+        style: "star";
+        position: [-44.912,19.53047,-127.27262];
+      }
+      element horizon_star_27 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star";
+        position: [61.38984,46.86857,-169.73156];
+      }
+      element horizon_star_28 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star_gold";
+        position: [-4.30831,74.20666,-154.19051];
+      }
+      element horizon_star_29 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star";
+        position: [-70.00646,35.54476,-138.64946];
+      }
+      element horizon_star_30 {
+        geometry: {"type":"sphere","radius":0.402};
+        style: "star";
+        position: [36.29538,62.88285,-123.10841];
+      }
+      element horizon_star_31 {
+        geometry: {"type":"sphere","radius":0.476};
+        style: "star";
+        position: [-29.40277,24.22095,-165.56735];
+      }
+      element horizon_star_32 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star";
+        position: [76.89907,51.55904,-150.0263];
+      }
+      element horizon_star_33 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star";
+        position: [11.20092,12.89714,-134.48525];
+      }
+      element horizon_star_34 {
+        geometry: {"type":"sphere","radius":0.365};
+        style: "star";
+        position: [-54.49723,40.23523,-118.94419];
+      }
+      element horizon_star_35 {
+        geometry: {"type":"sphere","radius":0.439};
+        style: "star_gold";
+        position: [51.80461,67.57333,-161.40314];
+      }
+      element horizon_star_36 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star";
+        position: [-13.89354,28.91142,-145.86209];
+      }
+      element horizon_star_37 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star";
+        position: [-79.5917,56.24952,-130.32103];
+      }
+      element horizon_star_38 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star";
+        position: [26.71015,17.58761,-114.77998];
+      }
+      element horizon_star_39 {
+        geometry: {"type":"sphere","radius":0.6};
+        style: "star";
+        position: [-38.988,44.92571,-157.23893];
+      }
+      element horizon_star_40 {
+        geometry: {"type":"sphere","radius":0.476};
+        style: "star";
+        position: [67.31384,72.2638,-141.69787];
+      }
+      element horizon_star_41 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star";
+        position: [1.61569,33.6019,-126.15682];
+      }
+      element horizon_star_42 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star_gold";
+        position: [-64.08247,60.93999,-168.61577];
+      }
+      element horizon_star_43 {
+        geometry: {"type":"sphere","radius":0.365};
+        style: "star";
+        position: [42.21938,22.27809,-153.07471];
+      }
+      element horizon_star_44 {
+        geometry: {"type":"sphere","radius":0.439};
+        style: "star";
+        position: [-23.47877,49.61619,-137.53366];
+      }
+      element horizon_star_45 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star";
+        position: [82.82307,10.95428,-121.99261];
+      }
+      element horizon_star_46 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star";
+        position: [17.12492,38.29238,-164.45155];
+      }
+      element horizon_star_47 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star";
+        position: [-48.57323,65.63047,-148.9105];
+      }
+      element horizon_star_48 {
+        geometry: {"type":"sphere","radius":0.402};
+        style: "star";
+        position: [57.72861,26.96857,-133.36945];
+      }
+      element horizon_star_49 {
+        geometry: {"type":"sphere","radius":0.476};
+        style: "star_gold";
+        position: [-7.96954,54.30666,-117.8284];
+      }
+      element horizon_star_50 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star";
+        position: [-73.6677,15.64476,-160.28734];
+      }
+      element horizon_star_51 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star";
+        position: [32.63415,42.98285,-144.74629];
+      }
+      element horizon_star_52 {
+        geometry: {"type":"sphere","radius":0.6};
+        style: "star";
+        position: [-33.064,70.32095,-129.20524];
+      }
+      element horizon_star_53 {
+        geometry: {"type":"sphere","radius":0.439};
+        style: "star";
+        position: [73.23784,31.65904,-113.66418];
+      }
+      element horizon_star_54 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star";
+        position: [7.53969,58.99714,-156.12313];
+      }
+      element horizon_star_55 {
+        geometry: {"type":"sphere","radius":0.254};
+        style: "star";
+        position: [-58.15847,20.33523,-140.58208];
+      }
+      element horizon_star_56 {
+        geometry: {"type":"sphere","radius":0.328};
+        style: "star_gold";
+        position: [48.14338,47.67333,-125.04102];
+      }
+      element horizon_star_57 {
+        geometry: {"type":"sphere","radius":0.402};
+        style: "star";
+        position: [-17.55477,9.01142,-167.49997];
+      }
+      element horizon_star_58 {
+        geometry: {"type":"sphere","radius":0.476};
+        style: "star";
+        position: [-83.25293,36.34952,-151.95892];
+      }
+      element horizon_star_59 {
+        geometry: {"type":"sphere","radius":0.217};
+        style: "star";
+        position: [23.04892,63.68761,-136.41786];
+      }
+      element horizon_star_60 {
+        geometry: {"type":"sphere","radius":0.291};
+        style: "star";
+        position: [-42.64924,25.02571,-120.87681];
+      }
+      element horizon_star_61 {
+        geometry: {"type":"sphere","radius":0.365};
+        style: "star";
+        position: [63.65261,52.3638,-163.33576];
+      }
+      element horizon_star_62 {
+        geometry: {"type":"sphere","radius":0.439};
+        style: "star";
+        position: [-2.04554,13.7019,-147.7947];
+      }
+      element horizon_star_63 {
+        geometry: {"type":"sphere","radius":0.18};
+        style: "star_gold";
+        position: [-67.7437,41.03999,-132.25365];
+      }
+      component floating_island_0 {
+        position: [-32.0,-1.4,-35.0];
+        rotation: [0,0,0];
+        element island_body_0 {
+          geometry: {"type":"cylinder","radius":0.7,"radiusTop":7.7,"height":13.0};
+          style: "distant_stone";
+          position: [0.0,-6.5,0.0];
+        }
+        element island_crown_0 {
+          geometry: {"type":"cylinder","radius":7.7,"radiusTop":6.93,"height":0.32};
+          style: "island_top";
+          position: [0.0,0.16,0.0];
+        }
+        element island_obelisk_0 {
+          geometry: {"type":"box","size":[1.25,5.0,1.25]};
+          style: "stone";
+          position: [0.0,2.5,0.0];
+        }
+        element island_signal_0 {
+          geometry: {"type":"box","size":[0.09,3.4,0.09]};
+          style: "soft_cyan";
+          position: [0.0,2.6,0.65];
+        }
+      }
+      component floating_island_1 {
+        position: [34.0,2.1,-54.0];
+        rotation: [0,31,0];
+        element island_body_1 {
+          geometry: {"type":"cylinder","radius":0.7,"radiusTop":8.8,"height":17.0};
+          style: "distant_stone";
+          position: [0.0,-8.5,0.0];
+        }
+        element island_crown_1 {
+          geometry: {"type":"cylinder","radius":8.8,"radiusTop":7.92,"height":0.32};
+          style: "island_top";
+          position: [0.0,0.16,0.0];
+        }
+        element island_obelisk_1 {
+          geometry: {"type":"box","size":[1.25,5.55,1.25]};
+          style: "stone";
+          position: [0.0,2.775,0.0];
+        }
+        element island_signal_1 {
+          geometry: {"type":"box","size":[0.09,3.8,0.09]};
+          style: "soft_cyan";
+          position: [0.0,2.875,0.65];
+        }
+      }
+      component floating_island_2 {
+        position: [-51.0,6.3,-87.0];
+        rotation: [0,62,0];
+        element island_body_2 {
+          geometry: {"type":"cylinder","radius":0.7,"radiusTop":8.1,"height":21.0};
+          style: "distant_stone";
+          position: [0.0,-10.5,0.0];
+        }
+        element island_crown_2 {
+          geometry: {"type":"cylinder","radius":8.1,"radiusTop":7.29,"height":0.32};
+          style: "island_top";
+          position: [0.0,0.16,0.0];
+        }
+        element island_obelisk_2 {
+          geometry: {"type":"box","size":[1.25,6.1,1.25]};
+          style: "stone";
+          position: [0.0,3.05,0.0];
+        }
+        element island_signal_2 {
+          geometry: {"type":"box","size":[0.09,4.2,0.09]};
+          style: "soft_cyan";
+          position: [0.0,3.15,0.65];
+        }
+      }
+      component floating_island_3 {
+        position: [57.0,11.4,-116.0];
+        rotation: [0,93,0];
+        element island_body_3 {
+          geometry: {"type":"cylinder","radius":0.7,"radiusTop":11.5,"height":22.0};
+          style: "distant_stone";
+          position: [0.0,-11.0,0.0];
+        }
+        element island_crown_3 {
+          geometry: {"type":"cylinder","radius":11.5,"radiusTop":10.35,"height":0.32};
+          style: "island_top";
+          position: [0.0,0.16,0.0];
+        }
+        element island_obelisk_3 {
+          geometry: {"type":"box","size":[1.25,6.65,1.25]};
+          style: "stone";
+          position: [0.0,3.325,0.0];
+        }
+        element island_signal_3 {
+          geometry: {"type":"box","size":[0.09,4.6,0.09]};
+          style: "soft_cyan";
+          position: [0.0,3.425,0.65];
+        }
+      }
+      component floating_island_4 {
+        position: [-27.0,-3.5,-72.0];
+        rotation: [0,124,0];
+        element island_body_4 {
+          geometry: {"type":"cylinder","radius":0.7,"radiusTop":4.8,"height":12.0};
+          style: "distant_stone";
+          position: [0.0,-6.0,0.0];
+        }
+        element island_crown_4 {
+          geometry: {"type":"cylinder","radius":4.8,"radiusTop":4.32,"height":0.32};
+          style: "island_top";
+          position: [0.0,0.16,0.0];
+        }
+        element island_obelisk_4 {
+          geometry: {"type":"box","size":[1.25,7.2,1.25]};
+          style: "stone";
+          position: [0.0,3.6,0.0];
+        }
+        element island_signal_4 {
+          geometry: {"type":"box","size":[0.09,5.0,0.09]};
+          style: "soft_cyan";
+          position: [0.0,3.7,0.65];
+        }
+      }
+      component floating_island_5 {
+        position: [25.0,5.5,-95.0];
+        rotation: [0,155,0];
+        element island_body_5 {
+          geometry: {"type":"cylinder","radius":0.7,"radiusTop":3.4,"height":8.0};
+          style: "distant_stone";
+          position: [0.0,-4.0,0.0];
+        }
+        element island_crown_5 {
+          geometry: {"type":"cylinder","radius":3.4,"radiusTop":3.06,"height":0.32};
+          style: "island_top";
+          position: [0.0,0.16,0.0];
+        }
+        element island_obelisk_5 {
+          geometry: {"type":"box","size":[1.25,7.75,1.25]};
+          style: "stone";
+          position: [0.0,3.875,0.0];
+        }
+        element island_signal_5 {
+          geometry: {"type":"box","size":[0.09,5.4,0.09]};
+          style: "soft_cyan";
+          position: [0.0,3.975,0.65];
+        }
+      }
+    }
+  }
+}

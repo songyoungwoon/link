@@ -1,0 +1,27 @@
+// This program is shared, but hits is separate for each stone component.
+on onStart(ctx) {
+  store hits = 0;
+}
+
+on onInteract(ctx, event) {
+  let owner = ctx.find(ctx.config.owner);
+  let state = ctx.getState(owner);
+  if (!state.broken) {
+    let strength = max(0, state.strength - ctx.config.damage);
+    let broken = strength == 0;
+    hits = hits + 1;
+    ctx.setState({hits: hits});
+    ctx.setState(owner, {strength: strength, broken: broken});
+    if (broken) {
+      ctx.setTransform({position: [0, .44, 0], scale: [1.18, .28, 1.18]});
+      ctx.setStyle(ctx.find(ctx.config.visual), {color: "#605B6C", opacity: .5, wireframe: true});
+      ctx.log("Stone broken");
+    } else {
+      ctx.log("Stone damaged");
+    }
+  }
+}
+
+on onDestroy(ctx) {
+  ctx.log("Stone binding destroyed");
+}

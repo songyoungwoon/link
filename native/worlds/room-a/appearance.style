@@ -1,0 +1,11 @@
+defaults { color: "#E8E8E0"; roughness: .75; metalness: 0; opacity: 1; wireframe: false; }
+material floor { color: "#D8E7DF"; roughness: .9; }
+material cream { color: "#F6EFD9"; }
+material mint { color: "#A8D6BF"; }
+material dark { color: "#244C41"; roughness: .6; }
+material brass { color: "#D5AA5D"; metalness: .65; roughness: .3; }
+material clay { color: "#D4876D"; }
+class soft { roughness: .85; }
+class orb { color: "#72BAA3"; roughness: .25; metalness: .2; }
+class door { color: "#83B79D"; }
+id door_handle { color: "#E4BD70"; roughness: .22; metalness: .7; }

@@ -1,0 +1,896 @@
+// Generated native Element geometry. Edit generator for repeatable changes.
+scene {
+  object heukryong_corridor {
+    name: "사진 공간";
+    component corridor_architecture {
+      name: "복도";
+      element corridor_floor {
+        geometry: {"type":"box","size":[6.6,0.16,59.9]};
+        style: "floor";
+        position: [0.0,-0.08,-24.55];
+      }
+      element corridor_ceiling {
+        geometry: {"type":"box","size":[6.6,0.16,59.9]};
+        style: "ceiling";
+        position: [0.0,3.88,-24.55];
+      }
+      element corridor_wall_left {
+        geometry: {"type":"box","size":[0.16,3.8,59.9]};
+        style: "wall";
+        position: [-3.28,1.9,-24.55];
+      }
+      element corridor_skirt_left {
+        geometry: {"type":"box","size":[0.028,0.14,59.9]};
+        style: "oak";
+        position: [-3.183,0.1,-24.55];
+      }
+      element corridor_ceiling_trim_left {
+        geometry: {"type":"box","size":[0.035,0.055,59.9]};
+        style: "brass";
+        position: [-3.175,3.72,-24.55];
+      }
+      element corridor_wall_right {
+        geometry: {"type":"box","size":[0.16,3.8,59.9]};
+        style: "wall";
+        position: [3.28,1.9,-24.55];
+      }
+      element corridor_skirt_right {
+        geometry: {"type":"box","size":[0.028,0.14,59.9]};
+        style: "oak";
+        position: [3.183,0.1,-24.55];
+      }
+      element corridor_ceiling_trim_right {
+        geometry: {"type":"box","size":[0.035,0.055,59.9]};
+        style: "brass";
+        position: [3.175,3.72,-24.55];
+      }
+      element corridor_end_wall {
+        geometry: {"type":"box","size":[6.6,3.8,0.16]};
+        style: "portal_backdrop";
+        position: [0.0,1.9,-54.5];
+      }
+      element floor_joint_00 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,2.7];
+      }
+      element light_recess_00 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,2.7];
+      }
+      element light_diffuser_00 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,2.7];
+      }
+      element floor_joint_01 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-0.7];
+      }
+      element floor_joint_02 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-4.1];
+      }
+      element light_recess_02 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-4.1];
+      }
+      element light_diffuser_02 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-4.1];
+      }
+      element floor_joint_03 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-7.5];
+      }
+      element floor_joint_04 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-10.9];
+      }
+      element light_recess_04 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-10.9];
+      }
+      element light_diffuser_04 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-10.9];
+      }
+      element floor_joint_05 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-14.3];
+      }
+      element floor_joint_06 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-17.7];
+      }
+      element light_recess_06 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-17.7];
+      }
+      element light_diffuser_06 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-17.7];
+      }
+      element floor_joint_07 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-21.1];
+      }
+      element floor_joint_08 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-24.5];
+      }
+      element light_recess_08 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-24.5];
+      }
+      element light_diffuser_08 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-24.5];
+      }
+      element floor_joint_09 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-27.9];
+      }
+      element floor_joint_10 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-31.3];
+      }
+      element light_recess_10 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-31.3];
+      }
+      element light_diffuser_10 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-31.3];
+      }
+      element floor_joint_11 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-34.7];
+      }
+      element floor_joint_12 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-38.1];
+      }
+      element light_recess_12 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-38.1];
+      }
+      element light_diffuser_12 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-38.1];
+      }
+      element floor_joint_13 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-41.5];
+      }
+      element floor_joint_14 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-44.9];
+      }
+      element light_recess_14 {
+        geometry: {"type":"box","size":[1.95,0.045,0.2]};
+        style: "oak";
+        position: [0.0,3.775,-44.9];
+      }
+      element light_diffuser_14 {
+        geometry: {"type":"box","size":[1.77,0.025,0.14]};
+        style: "light";
+        position: [0.0,3.74,-44.9];
+      }
+      element floor_joint_15 {
+        geometry: {"type":"box","size":[6.36,0.006,0.018]};
+        style: "floor_joint";
+        position: [0.0,0.004,-48.3];
+      }
+      element floor_guide_left {
+        geometry: {"type":"box","size":[0.025,0.008,59.5]};
+        style: "brass";
+        position: [-2.82,0.007,-24.55];
+      }
+      element floor_guide_right {
+        geometry: {"type":"box","size":[0.025,0.008,59.5]};
+        style: "brass";
+        position: [2.82,0.007,-24.55];
+      }
+    }
+    component frame_cat_001 {
+      name: "사진 001";
+      position: [-3.12,1.72,-2.4];
+      rotation: [0,90,0];
+      element rim_cat_001 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_001 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_001 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-001.jpg";
+        name: "사진 001";
+      }
+    }
+    component frame_cat_002 {
+      name: "사진 002";
+      position: [3.12,1.72,-2.4];
+      rotation: [0,-90,0];
+      element rim_cat_002 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_002 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_002 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-002.jpg";
+        name: "사진 002";
+      }
+    }
+    component frame_cat_003 {
+      name: "사진 003";
+      position: [-3.12,1.72,-5.8];
+      rotation: [0,90,0];
+      element rim_cat_003 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_003 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_003 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-003.jpg";
+        name: "사진 003";
+      }
+    }
+    component frame_cat_004 {
+      name: "사진 004";
+      position: [3.12,1.72,-5.8];
+      rotation: [0,-90,0];
+      element rim_cat_004 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_004 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_004 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-004.jpg";
+        name: "사진 004";
+      }
+    }
+    component frame_cat_005 {
+      name: "사진 005";
+      position: [-3.12,1.72,-9.2];
+      rotation: [0,90,0];
+      element rim_cat_005 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_005 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_005 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-005.jpg";
+        name: "사진 005";
+      }
+    }
+    component frame_cat_006 {
+      name: "사진 006";
+      position: [3.12,1.72,-9.2];
+      rotation: [0,-90,0];
+      element rim_cat_006 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_006 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_006 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-006.jpg";
+        name: "사진 006";
+      }
+    }
+    component frame_cat_007 {
+      name: "사진 007";
+      position: [-3.12,1.72,-12.6];
+      rotation: [0,90,0];
+      element rim_cat_007 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_007 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_007 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-007.jpg";
+        name: "사진 007";
+      }
+    }
+    component frame_cat_008 {
+      name: "사진 008";
+      position: [3.12,1.72,-12.6];
+      rotation: [0,-90,0];
+      element rim_cat_008 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_008 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_008 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-008.jpg";
+        name: "사진 008";
+      }
+    }
+    component frame_cat_009 {
+      name: "사진 009";
+      position: [-3.12,1.72,-16.0];
+      rotation: [0,90,0];
+      element rim_cat_009 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_009 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_009 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-009.jpg";
+        name: "사진 009";
+      }
+    }
+    component frame_cat_010 {
+      name: "사진 010";
+      position: [3.12,1.72,-16.0];
+      rotation: [0,-90,0];
+      element rim_cat_010 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_010 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_010 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-010.jpg";
+        name: "사진 010";
+      }
+    }
+    component frame_cat_011 {
+      name: "사진 011";
+      position: [-3.12,1.72,-19.4];
+      rotation: [0,90,0];
+      element rim_cat_011 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_011 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_011 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-011.jpg";
+        name: "사진 011";
+      }
+    }
+    component frame_cat_012 {
+      name: "사진 012";
+      position: [3.12,1.72,-19.4];
+      rotation: [0,-90,0];
+      element rim_cat_012 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_012 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_012 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-012.jpg";
+        name: "사진 012";
+      }
+    }
+    component frame_cat_013 {
+      name: "사진 013";
+      position: [-3.12,1.72,-22.8];
+      rotation: [0,90,0];
+      element rim_cat_013 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_013 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_013 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-013.jpg";
+        name: "사진 013";
+      }
+    }
+    component frame_cat_014 {
+      name: "사진 014";
+      position: [3.12,1.72,-22.8];
+      rotation: [0,-90,0];
+      element rim_cat_014 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_014 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_014 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-014.jpg";
+        name: "사진 014";
+      }
+    }
+    component frame_cat_015 {
+      name: "사진 015";
+      position: [-3.12,1.72,-26.2];
+      rotation: [0,90,0];
+      element rim_cat_015 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_015 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_015 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-015.jpg";
+        name: "사진 015";
+      }
+    }
+    component frame_cat_016 {
+      name: "사진 016";
+      position: [3.12,1.72,-26.2];
+      rotation: [0,-90,0];
+      element rim_cat_016 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_016 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_016 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-016.jpg";
+        name: "사진 016";
+      }
+    }
+    component frame_cat_017 {
+      name: "사진 017";
+      position: [-3.12,1.72,-29.6];
+      rotation: [0,90,0];
+      element rim_cat_017 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_017 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_017 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-017.jpg";
+        name: "사진 017";
+      }
+    }
+    component frame_cat_018 {
+      name: "사진 018";
+      position: [3.12,1.72,-29.6];
+      rotation: [0,-90,0];
+      element rim_cat_018 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_018 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_018 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-018.jpg";
+        name: "사진 018";
+      }
+    }
+    component frame_cat_019 {
+      name: "사진 019";
+      position: [-3.12,1.72,-33.0];
+      rotation: [0,90,0];
+      element rim_cat_019 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_019 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_019 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-019.jpg";
+        name: "사진 019";
+      }
+    }
+    component frame_cat_020 {
+      name: "사진 020";
+      position: [3.12,1.72,-33.0];
+      rotation: [0,-90,0];
+      element rim_cat_020 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_020 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_020 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-020.jpg";
+        name: "사진 020";
+      }
+    }
+    component frame_cat_021 {
+      name: "사진 021";
+      position: [-3.12,1.72,-36.4];
+      rotation: [0,90,0];
+      element rim_cat_021 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_021 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_021 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-021.jpg";
+        name: "사진 021";
+      }
+    }
+    component frame_cat_022 {
+      name: "사진 022";
+      position: [3.12,1.72,-36.4];
+      rotation: [0,-90,0];
+      element rim_cat_022 {
+        geometry: {"type":"frame","size":[2.35,1.8325],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_022 {
+        geometry: {"type":"plane","size":[2.25,1.7325]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_022 {
+        geometry: {"type":"plane","size":[2.07,1.5525]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-022.jpg";
+        name: "사진 022";
+      }
+    }
+    component frame_cat_023 {
+      name: "사진 023";
+      position: [-3.12,1.72,-39.8];
+      rotation: [0,90,0];
+      element rim_cat_023 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_023 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_023 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-023.jpg";
+        name: "사진 023";
+      }
+    }
+    component frame_cat_024 {
+      name: "사진 024";
+      position: [3.12,1.72,-39.8];
+      rotation: [0,-90,0];
+      element rim_cat_024 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_024 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_024 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-024.jpg";
+        name: "사진 024";
+      }
+    }
+    component frame_cat_025 {
+      name: "사진 025";
+      position: [-3.12,1.72,-43.2];
+      rotation: [0,90,0];
+      element rim_cat_025 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_025 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_025 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-025.jpg";
+        name: "사진 025";
+      }
+    }
+    component frame_cat_026 {
+      name: "사진 026";
+      position: [3.12,1.72,-43.2];
+      rotation: [0,-90,0];
+      element rim_cat_026 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_026 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_026 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-026.jpg";
+        name: "사진 026";
+      }
+    }
+    component frame_cat_027 {
+      name: "사진 027";
+      position: [-3.12,1.72,-46.6];
+      rotation: [0,90,0];
+      element rim_cat_027 {
+        geometry: {"type":"frame","size":[1.735,2.22],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_cat_027 {
+        geometry: {"type":"plane","size":[1.635,2.12]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_cat_027 {
+        geometry: {"type":"plane","size":[1.455,1.94]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/cat-027.jpg";
+        name: "사진 027";
+      }
+    }
+    component frame_owner_001 {
+      name: "인물 사진 01";
+      position: [-3.12,1.72,2.0];
+      rotation: [0,90,0];
+      element rim_owner_001 {
+        geometry: {"type":"frame","size":[0.99875,2.12],"border":0.055,"depth":0.09};
+        style: "oak";
+      }
+      element mat_owner_001 {
+        geometry: {"type":"plane","size":[0.89875,2.02]};
+        style: "mat";
+        position: [0.0,0.0,0.047];
+      }
+      element photo_owner_001 {
+        geometry: {"type":"plane","size":[0.71875,1.84]};
+        style: "photograph";
+        position: [0.0,0.0,0.058];
+        image: "assets/owner-001.jpg";
+        name: "인물 사진 01";
+      }
+    }
+    component portal_geometry {
+      name: "포탈";
+      position: [0,0,-51.6];
+      element portal_0_left {
+        geometry: {"type":"box","size":[0.14,3.5,0.42]};
+        style: "portal_dark";
+        position: [-1.555,1.75,0.08];
+      }
+      element portal_0_right {
+        geometry: {"type":"box","size":[0.14,3.5,0.42]};
+        style: "portal_dark";
+        position: [1.555,1.75,0.08];
+      }
+      element portal_0_top {
+        geometry: {"type":"box","size":[3.25,0.14,0.42]};
+        style: "portal_dark";
+        position: [0.0,3.43,0.08];
+      }
+      element portal_1_left {
+        geometry: {"type":"box","size":[0.07,3.32,0.17]};
+        style: "portal_metal";
+        position: [-1.44,1.66,0.31];
+      }
+      element portal_1_right {
+        geometry: {"type":"box","size":[0.07,3.32,0.17]};
+        style: "portal_metal";
+        position: [1.44,1.66,0.31];
+      }
+      element portal_1_top {
+        geometry: {"type":"box","size":[2.95,0.07,0.17]};
+        style: "portal_metal";
+        position: [0.0,3.285,0.31];
+      }
+      element portal_2_left {
+        geometry: {"type":"box","size":[0.07,3.2,0.08]};
+        style: "portal_light";
+        position: [-1.29,1.6,0.54];
+      }
+      element portal_2_right {
+        geometry: {"type":"box","size":[0.07,3.2,0.08]};
+        style: "portal_light";
+        position: [1.29,1.6,0.54];
+      }
+      element portal_2_top {
+        geometry: {"type":"box","size":[2.65,0.07,0.08]};
+        style: "portal_light";
+        position: [0.0,3.165,0.54];
+      }
+      element portal_threshold {
+        geometry: {"type":"box","size":[3.35,0.025,1.8]};
+        style: "portal_metal";
+        position: [0.0,0.014,0.05];
+      }
+      element portal_threshold_light {
+        geometry: {"type":"box","size":[2.48,0.012,0.055]};
+        style: "portal_light";
+        position: [0.0,0.032,0.55];
+      }
+      element portal_recess_blade_0 {
+        geometry: {"type":"box","size":[0.028,2.66,0.025]};
+        style: "portal_soft";
+        position: [-1.12,1.65,-0.95];
+      }
+      element portal_recess_blade_1 {
+        geometry: {"type":"box","size":[0.028,2.66,0.025]};
+        style: "portal_soft";
+        position: [-0.56,1.65,-0.95];
+      }
+      element portal_recess_blade_2 {
+        geometry: {"type":"box","size":[0.028,2.66,0.025]};
+        style: "portal_soft";
+        position: [0.0,1.65,-0.95];
+      }
+      element portal_recess_blade_3 {
+        geometry: {"type":"box","size":[0.028,2.66,0.025]};
+        style: "portal_soft";
+        position: [0.56,1.65,-0.95];
+      }
+      element portal_recess_blade_4 {
+        geometry: {"type":"box","size":[0.028,2.66,0.025]};
+        style: "portal_soft";
+        position: [1.12,1.65,-0.95];
+      }
+    }
+  }
+}

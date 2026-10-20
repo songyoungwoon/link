@@ -1,0 +1,33 @@
+scene {
+  object first_world {
+    name: "나의 첫 번째 공간";
+
+    component room {
+      element floor {
+        position: [0, -.08, 0];
+        geometry: {type: "box", size: [10, .16, 10]};
+        style: "floor_material";
+      }
+      element pedestal {
+        position: [0, .325, 0];
+        geometry: {type: "cylinder", radius: 1.3, radiusTop: 1.3, height: .65};
+        style: "pedestal_material";
+      }
+    }
+
+    component spinner {
+      name: "회전하는 큐브";
+      position: [0, 1.55, 0];
+      state: {selected: false, clicks: 0, angle: 0};
+      script: "scripts/pulse.script";
+      config: {speed: 45, visual: "sample_cube", activeColor: "#F1AE66"};
+
+      element sample_cube {
+        name: "클릭하면 색이 바뀝니다";
+        geometry: {type: "box", size: [1.8, 1.8, 1.8]};
+        style: "cube_material";
+        classes: ["interactive"];
+      }
+    }
+  }
+}

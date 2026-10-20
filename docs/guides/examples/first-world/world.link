@@ -1,0 +1,10 @@
+world {
+  version: "0.1";
+  id: "first-world";
+  name: "나의 첫 번째 LINK 공간";
+  elements: "scene.element";
+  style: "appearance.style";
+  scripts: ["scripts/pulse.script"];
+  entry: {position: [5, 3.8, 7], target: [0, 1.1, 0]};
+  environment: {background: "#E9E5DD", grid: false};
+}

@@ -1,0 +1,15 @@
+defaults { color: "#F3EEE5"; roughness: .85; metalness: 0; opacity: 1; wireframe: false; }
+material wall { color: "#EFECE5"; }
+material ceiling { color: "#E4E0D7"; }
+material floor { color: "#CBBFA9"; }
+material floor_joint { color: "#B6A991"; }
+material oak { color: "#705139"; roughness: .6; }
+material brass { color: "#BBA075"; metalness: .35; }
+material mat { color: "#FFFCF6"; }
+material photograph { color: "#FFFFFF"; roughness: 1; }
+material light { color: "#FFF6CA"; }
+material portal_backdrop { color: "#213B40"; }
+material portal_dark { color: "#214044"; metalness: .2; }
+material portal_metal { color: "#60968F"; metalness: .45; }
+material portal_light { color: "#8FF4DD"; }
+material portal_soft { color: "#4C9D94"; }

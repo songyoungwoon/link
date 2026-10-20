@@ -1,0 +1,10 @@
+// LINK native local world. File references are relative to this document.
+world {
+  version: "0.1";
+  id: "room-a";
+  name: "Room A - Mint Studio";
+  elements: "scene.element";
+  style: "appearance.style";
+  scripts: ["scripts/door.script", "scripts/spin.script"];
+  entry: { position: [7.4, 6.2, 9.4], target: [0, 1.1, 0] };
+}

@@ -1,0 +1,10 @@
+defaults { color: "#6A647C"; roughness: .88; metalness: 0; opacity: 1; wireframe: false; }
+material floor { color: "#302C3E"; }
+material edge { color: "#201F2D"; }
+material platform { color: "#575064"; }
+material amber { color: "#D9AB53"; }
+material purple { color: "#A18BC7"; }
+material pale { color: "#E8DCD1"; }
+material stone { color: "#B4B0AA"; roughness: .96; }
+class stone { roughness: .96; }
+class marker { metalness: .35; roughness: .5; }

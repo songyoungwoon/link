@@ -1,0 +1,9 @@
+world {
+  version: "0.1";
+  id: "room-b";
+  name: "Room B - Stone Laboratory";
+  elements: "scene.element";
+  style: "appearance.style";
+  scripts: ["scripts/stone.script"];
+  entry: { position: [6.8, 6.1, 9], target: [0, .8, 0] };
+}
