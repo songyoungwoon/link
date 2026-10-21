@@ -12,6 +12,7 @@
 #endif
 #include <windows.h>
 #include <windowsx.h>
+#include <commctrl.h>
 #include <GL/gl.h>
 #include "link/desktop.hpp"
 #include "link/navigation.hpp"
@@ -172,16 +173,18 @@ void applyMaterial(const Material& m) {
   glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,spec);glMaterialf(GL_FRONT_AND_BACK,GL_SHININESS,float(4+(1-m.roughness)*100));
   glPolygonMode(GL_FRONT_AND_BACK,m.wireframe?GL_LINE:GL_FILL);
 }
-enum ControlId {Address=100,Open,Reload,Home,Stop,Cancel,Gallery,RoomA,RoomB,NodeList,Inspector,Logs,Status,PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle};
+enum ControlId {Address=100,Open,Reload,Home,Stop,Cancel,Gallery,RoomA,RoomB,NodeList,Inspector,Logs,Status,PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle,Menu,DeveloperTools,DeveloperClose,ErrorDetails,FocusAddress};
 class Desktop {
 public:
   explicit Desktop(std::filesystem::path root):navigator_(std::move(root),[this](bool error,const std::string& message){log(error,message);}){}
-  ~Desktop(){navigator_.stop();destroyGl();if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(background_)DeleteObject(background_);if(paper_)DeleteObject(paper_);}
+  ~Desktop(){navigator_.stop();destroyGl();if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(addressFont_)DeleteObject(addressFont_);if(background_)DeleteObject(background_);if(paper_)DeleteObject(paper_);if(photoBrush_)DeleteObject(photoBrush_);}
   int run(int show);
-  std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath;
+  std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath,shellSmokePath;
 private:
   Navigator navigator_;NativeTextures textures_;HWND window_=nullptr,viewport_=nullptr,address_=nullptr,status_=nullptr,nodes_=nullptr,inspector_=nullptr,logs_=nullptr;
   std::map<int,HWND> controls_;HDC glDc_=nullptr;HGLRC glContext_=nullptr;HFONT font_=nullptr,mono_=nullptr;HBRUSH background_=nullptr,paper_=nullptr;
+  HFONT addressFont_=nullptr;HBRUSH photoBrush_=nullptr;HWND tooltip_=nullptr;RECT addressPill_{},viewRect_{};bool toolsOpen_=false,shellActive_=false,shellLoading_=false,shellError_=false,addressComposing_=false;int hovered_=0;int homeAnchor_=0,contentWidth_=0;
+  int shellStage_=0;std::size_t shellCreated_=0;bool shellHome_=false,shellFocus_=false,shellTools_=false,shellResize_=false,shellDpi_=false,shellReload_=false,shellCancel_=false,shellFailure_=false;std::string shellFailureMessage_;
   UINT dpi_=96;int width_=1280,height_=820,viewWidth_=0,viewHeight_=0;Camera camera_;bool minimized_=false,dragged_=false;int dragButton_=0;POINT lastMouse_{},downMouse_{};
   std::array<bool,256> walkKeys_{};
   std::vector<std::string> nodeIds_;std::vector<std::wstring> logLines_;std::string selected_,lastStructure_,lastError_,displayAddress_,lastState_;std::wstring mode_=L"시작 화면";
@@ -190,6 +193,8 @@ private:
   std::vector<std::size_t> photoNodes_;std::size_t photoIndex_=0;int viewIndex_=0;bool photoOpen_=false;const Texture* viewerTexture_=nullptr;std::string renderError_;double maxTextureStepMs_=0;Clock::time_point texturesStarted_=Clock::now();
   int galleryStage_=0;std::size_t galleryImages_=0,galleryTexts_=0,galleryBytes_=0;bool galleryPhotoClicked_=false,galleryViewer_=false,galleryPortal_=false,galleryText3d_=false,galleryHologram_=false,galleryWalk_=false,galleryBounds_=false,galleryLook_=false,galleryPortalCaptured_=false,galleryReload_=false,galleryReleased_=false;std::string galleryFailure_;Clock::time_point galleryTime_=Clock::now();Vec3 galleryWalkStart_{};std::string galleryPortalAddress_;std::size_t galleryWalkSteps_=0;double galleryWalkDistance_=0,galleryExpectedDistance_=0;
   static LRESULT CALLBACK windowProc(HWND,UINT,WPARAM,LPARAM);static LRESULT CALLBACK viewProc(HWND,UINT,WPARAM,LPARAM);
+  static LRESULT CALLBACK buttonProc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+  static LRESULT CALLBACK editProc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
   LRESULT message(UINT,WPARAM,LPARAM);LRESULT viewMessage(UINT,WPARAM,LPARAM);
   int px(int n)const{return MulDiv(n,dpi_,96);}HWND control(const wchar_t*,const wchar_t*,DWORD,int,DWORD=0);
   void layout();void paint();void drawText(HDC,const std::wstring&,RECT,COLORREF,int=13,bool=false,UINT=DT_LEFT|DT_TOP|DT_NOPREFIX);
@@ -197,29 +202,41 @@ private:
   void log(bool,const std::string&);void refreshInspector();void click(int,int);bool clickBinding(std::size_t);void smoke();void finishSmoke(bool);bool capture(const std::filesystem::path&);
   void jumpView(int);void openPhoto(std::size_t);void closePhoto();void movePhoto(int);void setPhotoControls();void clearWorldGraphics();void renderPhoto();bool clickImage(bool);void gallerySmoke();void finishGallerySmoke(bool);
   bool walking()const;bool movementKey(WPARAM)const;void updateWalk(double);void lookWalk(int,int);
+  void drawButton(const DRAWITEMSTRUCT&);void drawIcon(HDC,int,int,int,int,COLORREF);void toggleTools();void showMenu();void refreshShell();void createFonts();bool shortcut(WPARAM,bool);void shellSmoke();void finishShellSmoke(bool);bool homeLayoutFits()const;
 };
 
 HWND Desktop::control(const wchar_t* kind,const wchar_t* text,DWORD style,int id,DWORD ex) {
   HWND child=CreateWindowExW(ex,kind,text,WS_CHILD|WS_VISIBLE|style,0,0,1,1,window_,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
-  if(!child)throw std::runtime_error("Could not create native UI control");SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);controls_[id]=child;return child;
+  if(!child)throw std::runtime_error("Could not create native UI control");SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);controls_[id]=child;
+  if(std::wstring(kind)==L"BUTTON")SetWindowSubclass(child,buttonProc,1,reinterpret_cast<DWORD_PTR>(this));return child;
+}
+void Desktop::createFonts(){
+  if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(addressFont_)DeleteObject(addressFont_);
+  font_=CreateFontW(-px(13),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");
+  addressFont_=CreateFontW(-px(16),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");
+  mono_=CreateFontW(-px(12),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,FIXED_PITCH,L"Consolas");
+  for(auto [id,child]:controls_)SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(id==Inspector||id==Logs?mono_:font_),TRUE);
 }
 void Desktop::createControls() {
-  dpi_=GetDpiForWindow(window_);background_=CreateSolidBrush(RGB(237,235,227));paper_=CreateSolidBrush(RGB(247,247,241));
-  font_=CreateFontW(-px(13),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");
-  mono_=CreateFontW(-px(12),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,FIXED_PITCH,L"Consolas");
-  address_=control(L"EDIT",L"link://local/heukryong",ES_AUTOHSCROLL|WS_TABSTOP,Address,WS_EX_CLIENTEDGE);
-  for(auto [id,title]:std::initializer_list<std::pair<int,const wchar_t*>>{{Open,L"열기 →"},{Reload,L"새로 고침"},{Home,L"홈"},{Stop,L"실행 중지"},{Cancel,L"로딩 취소"},{Gallery,L"흑룡이 전시회   →"},{RoomA,L"Room A   →"},{RoomB,L"Room B   →"}})control(L"BUTTON",title,BS_PUSHBUTTON|WS_TABSTOP,id);
-  status_=control(L"STATIC",L"시작 화면",SS_LEFT,Status);
-  nodes_=control(L"LISTBOX",L"",LBS_NOTIFY|LBS_NOINTEGRALHEIGHT|WS_VSCROLL|WS_TABSTOP,NodeList,WS_EX_CLIENTEDGE);
-  inspector_=control(L"EDIT",L"공간 또는 목록에서 노드를 선택하세요.",ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL|WS_VSCROLL|WS_TABSTOP,Inspector,WS_EX_CLIENTEDGE);
-  logs_=control(L"EDIT",L"",ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL|WS_VSCROLL|WS_TABSTOP,Logs,WS_EX_CLIENTEDGE);
+  dpi_=GetDpiForWindow(window_);background_=CreateSolidBrush(RGB(255,255,255));paper_=CreateSolidBrush(RGB(248,250,252));photoBrush_=CreateSolidBrush(RGB(14,17,18));createFonts();
+  address_=control(L"EDIT",L"",ES_AUTOHSCROLL|WS_TABSTOP,Address);
+  SendMessageW(address_,EM_SETLIMITTEXT,4096,0);SendMessageW(address_,EM_SETMARGINS,EC_LEFTMARGIN|EC_RIGHTMARGIN,0);
+  SetWindowSubclass(address_,editProc,2,reinterpret_cast<DWORD_PTR>(this));
+  for(auto [id,title]:std::initializer_list<std::pair<int,const wchar_t*>>{{Open,L"열기"},{Reload,L"새로 고침 · F5"},{Home,L"홈"},{Stop,L"실행 중지"},{Cancel,L"로딩 취소 · Esc"},{Gallery,L"흑룡이 전시회"},{RoomA,L"Room A"},{RoomB,L"Room B"},{Menu,L"메뉴"},{DeveloperClose,L"개발자 도구 닫기"},{ErrorDetails,L"자세히"}})control(L"BUTTON",title,BS_OWNERDRAW|WS_TABSTOP,id);
+  status_=control(L"STATIC",L"",SS_LEFT|SS_ENDELLIPSIS,Status);
+  nodes_=control(L"LISTBOX",L"",LBS_NOTIFY|LBS_NOINTEGRALHEIGHT|WS_VSCROLL|WS_TABSTOP,NodeList);
+  inspector_=control(L"EDIT",L"공간 또는 목록에서 노드를 선택하세요.",ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL|WS_VSCROLL|WS_TABSTOP,Inspector);
+  logs_=control(L"EDIT",L"",ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL|WS_VSCROLL|WS_TABSTOP,Logs);
   SendMessageW(inspector_,WM_SETFONT,reinterpret_cast<WPARAM>(mono_),TRUE);SendMessageW(logs_,WM_SETFONT,reinterpret_cast<WPARAM>(mono_),TRUE);
   viewport_=CreateWindowExW(0,L"LINK.WorldViewport",L"",WS_CHILD|WS_VISIBLE|WS_CLIPSIBLINGS,0,0,1,1,window_,nullptr,GetModuleHandleW(nullptr),this);
   if(!viewport_)throw std::runtime_error("Could not create native 3D viewport");initGl();
-  for(auto [id,title]:std::initializer_list<std::pair<int,const wchar_t*>>{{PreviousPhoto,L"← 이전 사진"},{NextPhoto,L"다음 사진 →"},{ClosePhoto,L"닫기 · Esc"}})control(L"BUTTON",title,BS_PUSHBUTTON|WS_TABSTOP,id);
+  for(auto [id,title]:std::initializer_list<std::pair<int,const wchar_t*>>{{PreviousPhoto,L"이전 사진"},{NextPhoto,L"다음 사진"},{ClosePhoto,L"닫기 · Esc"}})control(L"BUTTON",title,BS_OWNERDRAW|WS_TABSTOP,id);
   control(L"STATIC",L"",SS_LEFT,PhotoTitle);
   for(auto id:{PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle})ShowWindow(controls_[id],SW_HIDE);
-  ShowWindow(controls_[Cancel],SW_HIDE);EnableWindow(controls_[Reload],FALSE);EnableWindow(controls_[Stop],FALSE);
+  for(auto id:{Cancel,Stop,Reload,Home,NodeList,Inspector,Logs,Status,DeveloperClose,ErrorDetails})ShowWindow(controls_[id],SW_HIDE);
+  EnableWindow(controls_[Reload],FALSE);EnableWindow(controls_[Stop],FALSE);
+  tooltip_=CreateWindowExW(WS_EX_TOPMOST,TOOLTIPS_CLASSW,nullptr,WS_POPUP|TTS_ALWAYSTIP|TTS_NOPREFIX,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,window_,nullptr,GetModuleHandleW(nullptr),nullptr);
+  for(auto id:{Home,Reload,Menu,Cancel,Open,DeveloperClose}){TOOLINFOW tool{};tool.cbSize=sizeof(tool);tool.uFlags=TTF_IDISHWND|TTF_SUBCLASS;tool.hwnd=window_;tool.uId=reinterpret_cast<UINT_PTR>(controls_[id]);tool.lpszText=const_cast<wchar_t*>(id==Home?L"시작 화면":id==Reload?L"새로 고침 (F5)":id==Menu?L"메뉴":id==Cancel?L"로딩 취소 (Esc)":id==DeveloperClose?L"개발자 도구 닫기 (F12)":L"공간 열기 (Enter)");SendMessageW(tooltip_,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&tool));}
 }
 void Desktop::initGl(){
   glDc_=GetDC(viewport_);PIXELFORMATDESCRIPTOR pfd{};pfd.nSize=sizeof(pfd);pfd.nVersion=1;pfd.dwFlags=PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;pfd.iPixelType=PFD_TYPE_RGBA;pfd.cColorBits=32;pfd.cDepthBits=24;pfd.cStencilBits=8;pfd.iLayerType=PFD_MAIN_PLANE;
@@ -230,40 +247,145 @@ void Desktop::initGl(){
 }
 void Desktop::destroyGl(){if(glContext_){wglMakeCurrent(glDc_,glContext_);textures_.clear();wglMakeCurrent(nullptr,nullptr);wglDeleteContext(glContext_);glContext_=nullptr;}if(glDc_&&viewport_){ReleaseDC(viewport_,glDc_);glDc_=nullptr;}}
 void Desktop::layout(){
-  RECT client{};GetClientRect(window_,&client);width_=client.right;height_=client.bottom;int edge=px(16),side=px(300),top=px(116),bottom=px(33),bar=px(63),bh=px(32);
-  int contentWidth=std::max(1,width_-side-3*edge);viewWidth_=contentWidth;viewHeight_=std::max(0,height_-top-bottom);
-  MoveWindow(viewport_,edge,top,contentWidth,viewHeight_,TRUE);
-  int x=edge;for(auto id:{Home,Reload}){int bw=px(id==Home?48:88);MoveWindow(controls_[id],x,bar,bw,bh,TRUE);x+=bw+px(6);}
-  int actions=px(234);MoveWindow(address_,x,bar,std::max(px(80),width_-edge-actions-x),bh,TRUE);x=width_-edge-actions+px(6);
-  for(auto [id,bw]:std::initializer_list<std::pair<int,int>>{{Open,65},{Stop,78},{Cancel,78}}){MoveWindow(controls_[id],x,bar,px(bw),bh,TRUE);x+=px(bw+5);}
-  int sx=width_-side-edge,sw=side;MoveWindow(status_,sx,top+px(29),sw,px(58),TRUE);
-  int available=std::max(px(440),height_-top-bottom),listH=std::clamp(available/4,px(112),px(210)),inspectH=std::clamp(available/3-px(23),px(136),px(235));
-  MoveWindow(nodes_,sx,top+px(118),sw,listH,TRUE);int iy=top+px(118)+listH+px(32);MoveWindow(inspector_,sx,iy,sw,inspectH,TRUE);
-  int ly=iy+inspectH+px(35);MoveWindow(logs_,sx,ly,sw,std::max(px(50),height_-bottom-ly),TRUE);
-  int cardWidth=std::min(px(350),contentWidth-px(70)),cx=edge+(contentWidth-cardWidth)/2,cy=top+viewHeight_/2-px(15);
-  for(auto id:{Gallery,RoomA,RoomB}){MoveWindow(controls_[id],cx,cy,cardWidth,px(42),TRUE);cy+=px(52);}InvalidateRect(window_,nullptr,TRUE);
-  int photoActions=px(318),photoX=edge+(contentWidth-photoActions)/2;for(auto id:{PreviousPhoto,NextPhoto,ClosePhoto}){MoveWindow(controls_[id],photoX,top+viewHeight_-px(49),px(100),px(31),TRUE);photoX+=px(109);}MoveWindow(controls_[PhotoTitle],edge+px(22),top+px(16),contentWidth-px(44),px(43),TRUE);
+  if(!viewport_)return;
+  RECT client{};GetClientRect(window_,&client);width_=client.right;height_=client.bottom;
+  const bool active=navigator_.current()!=nullptr,loading=navigator_.loading()||textures_.loading();
+  const int side=toolsOpen_?std::min(px(336),std::max(px(280),width_/3)):0;
+  contentWidth_=std::max(1,width_-side);
+  viewRect_={0,px(64),contentWidth_,std::max(px(64),height_-px(30))};
+  viewWidth_=viewRect_.right-viewRect_.left;viewHeight_=std::max<int>(0,viewRect_.bottom-viewRect_.top);
+  MoveWindow(viewport_,viewRect_.left,viewRect_.top,viewWidth_,viewHeight_,TRUE);
+  ShowWindow(viewport_,active?SW_SHOW:SW_HIDE);
+  for(auto id:{Gallery,RoomA,RoomB})ShowWindow(controls_[id],active?SW_HIDE:SW_SHOW);
+  for(auto id:{Home,Reload})ShowWindow(controls_[id],active?SW_SHOW:SW_HIDE);
+  ShowWindow(controls_[Stop],SW_HIDE);ShowWindow(controls_[Cancel],loading?SW_SHOW:SW_HIDE);
+  EnableWindow(controls_[Reload],!displayAddress_.empty());EnableWindow(controls_[Stop],active);
+  if(active){
+    MoveWindow(controls_[Home],px(12),px(12),px(40),px(40),TRUE);MoveWindow(controls_[Reload],px(57),px(12),px(40),px(40),TRUE);
+    addressPill_={px(110),px(11),contentWidth_-px(66)-(loading?px(43):0),px(53)};
+    MoveWindow(address_,addressPill_.left+px(39),px(23),std::max<int>(px(60),addressPill_.right-addressPill_.left-px(87)),px(22),TRUE);
+    MoveWindow(controls_[Open],addressPill_.right-px(36),px(16),px(30),px(32),TRUE);
+    MoveWindow(controls_[Cancel],contentWidth_-px(104),px(14),px(36),px(36),TRUE);
+    SendMessageW(address_,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);
+  }else{
+    homeAnchor_=std::clamp(int(height_*.38),px(173),std::max(px(173),height_-px(244)));
+    const int fieldWidth=std::max(px(280),std::min(px(620),contentWidth_-px(64)));
+    const int x=(contentWidth_-fieldWidth)/2,y=homeAnchor_+px(28);
+    addressPill_={x,y,x+fieldWidth,y+px(58)};
+    MoveWindow(address_,x+px(54),y+px(18),std::max(px(80),fieldWidth-px(153)-(loading?px(40):0)),px(26),TRUE);
+    MoveWindow(controls_[Open],x+fieldWidth-px(83),y+px(8),px(75),px(42),TRUE);
+    MoveWindow(controls_[Cancel],x+fieldWidth-px(123),y+px(11),px(36),px(36),TRUE);
+    const int gap=px(18),tileWidth=std::min(px(116),std::max(px(80),(contentWidth_-px(48)-gap*2)/3)),rowWidth=tileWidth*3+gap*2;int tileX=(contentWidth_-rowWidth)/2;
+    for(auto id:{Gallery,RoomA,RoomB}){MoveWindow(controls_[id],tileX,homeAnchor_+px(119),tileWidth,px(109),TRUE);tileX+=tileWidth+gap;}
+    SendMessageW(address_,WM_SETFONT,reinterpret_cast<WPARAM>(addressFont_),TRUE);
+  }
+  MoveWindow(controls_[Menu],contentWidth_-px(51),px(13),px(38),px(38),TRUE);
+  const bool hasStatus=active||loading||shellError_;
+  ShowWindow(status_,hasStatus?SW_SHOW:SW_HIDE);ShowWindow(controls_[ErrorDetails],shellError_?SW_SHOW:SW_HIDE);
+  LONG_PTR statusStyle=GetWindowLongPtrW(status_,GWL_STYLE);statusStyle&=~SS_TYPEMASK;statusStyle|=active?SS_LEFT:SS_CENTER;SetWindowLongPtrW(status_,GWL_STYLE,statusStyle);
+  if(active){MoveWindow(status_,px(18),height_-px(24),std::max(px(160),contentWidth_-(shellError_?px(112):px(330))),px(20),TRUE);MoveWindow(controls_[ErrorDetails],contentWidth_-px(87),height_-px(28),px(72),px(25),TRUE);}
+  else{MoveWindow(status_,px(28),homeAnchor_+px(244),std::max(px(100),contentWidth_-px(56)),px(22),TRUE);MoveWindow(controls_[ErrorDetails],(contentWidth_-px(76))/2,homeAnchor_+px(272),px(76),px(27),TRUE);}
+  for(auto id:{NodeList,Inspector,Logs,DeveloperClose})ShowWindow(controls_[id],toolsOpen_?SW_SHOW:SW_HIDE);
+  if(toolsOpen_){
+    const int sx=contentWidth_+px(18),sw=side-px(36);MoveWindow(controls_[DeveloperClose],width_-px(49),px(13),px(34),px(34),TRUE);
+    const int listY=px(91),listH=std::max(px(88),std::min(px(195),height_/4));MoveWindow(nodes_,sx,listY,sw,listH,TRUE);
+    const int inspectY=listY+listH+px(43),inspectH=std::max(px(112),std::min(px(210),height_/3-px(24)));MoveWindow(inspector_,sx,inspectY,sw,inspectH,TRUE);
+    const int logY=inspectY+inspectH+px(43);MoveWindow(logs_,sx,logY,sw,std::max(px(40),height_-logY-px(44)),TRUE);
+  }
+  const int photoActions=px(350);int photoX=(contentWidth_-photoActions)/2;
+  for(auto id:{PreviousPhoto,NextPhoto,ClosePhoto}){MoveWindow(controls_[id],photoX,viewRect_.bottom-px(53),px(110),px(35),TRUE);photoX+=px(120);}
+  MoveWindow(controls_[PhotoTitle],px(23),viewRect_.top+px(17),std::max(1,contentWidth_-px(46)),px(42),TRUE);
+  setPhotoControls();InvalidateRect(window_,nullptr,TRUE);
 }
 void Desktop::drawText(HDC dc,const std::wstring& text,RECT rect,COLORREF color,int size,bool bold,UINT format){
   HFONT f=CreateFontW(-px(size),0,0,0,bold?FW_SEMIBOLD:FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");auto old=SelectObject(dc,f);SetTextColor(dc,color);SetBkMode(dc,TRANSPARENT);DrawTextW(dc,text.c_str(),static_cast<int>(text.size()),&rect,format);SelectObject(dc,old);DeleteObject(f);
 }
-void Desktop::paint(){
-  PAINTSTRUCT ps{};HDC dc=BeginPaint(window_,&ps);RECT all{0,0,width_,height_};FillRect(dc,&all,background_);int e=px(16),top=px(116),sx=width_-px(316);
-  drawText(dc,L"LINK",{e,px(15),e+px(90),px(49)},RGB(37,67,60),27,true);drawText(dc,L"LINKED INTERACTIVE NETWORK",{e+px(100),px(23),width_-px(170),px(48)},RGB(109,133,117),10);
-  drawText(dc,L"LOCAL PREVIEW  0.1",{width_-px(165),px(23),width_-e,px(48)},RGB(135,150,132),10,false,DT_RIGHT|DT_TOP);
-  drawText(dc,L"현재 공간",{sx,top,sx+px(300),top+px(22)},RGB(80,108,83),12,true);
-  RECT lr{};GetWindowRect(nodes_,&lr);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&lr),2);drawText(dc,L"공간 구조   ·   선택하여 검사",{sx,lr.top-px(23),width_-e,lr.top},RGB(80,108,83),11,true);
-  GetWindowRect(inspector_,&lr);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&lr),2);drawText(dc,L"노드 검사기   /   LOCAL STATE",{sx,lr.top-px(23),width_-e,lr.top},RGB(80,108,83),11,true);
-  GetWindowRect(logs_,&lr);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&lr),2);drawText(dc,L"실행 로그   /   RECENT 40",{sx,lr.top-px(23),width_-e,lr.top},RGB(80,108,83),11,true);
-  if(!navigator_.current()){
-    RECT stage{e,top,e+viewWidth_,top+viewHeight_};HBRUSH ink=CreateSolidBrush(RGB(18,33,39));FillRect(dc,&stage,ink);DeleteObject(ink);
-    int cy=top+viewHeight_/2;drawText(dc,L"LINK Browser",{stage.left+px(20),cy-px(153),stage.right-px(20),cy-px(130)},RGB(130,163,148),10,false,DT_CENTER|DT_TOP);
-    drawText(dc,L"Every World. One Link.",{stage.left+px(20),cy-px(114),stage.right-px(20),cy-px(60)},RGB(232,239,226),24,true,DT_CENTER|DT_TOP);
-    drawText(dc,L"An open standard for connected virtual worlds.",{stage.left+px(20),cy-px(62),stage.right-px(20),cy-px(25)},RGB(137,163,153),11,false,DT_CENTER|DT_TOP);
+void Desktop::drawIcon(HDC dc,int id,int cx,int cy,int size,COLORREF color){
+  int x=cx-size/2,y=cy-size/2;auto v=[&](int n){return MulDiv(n,size,20);};auto point=[&](int a,int b){return POINT{x+v(a),y+v(b)};};
+  HPEN pen=CreatePen(PS_SOLID,std::max(1,size/13),color);auto oldPen=SelectObject(dc,pen);auto oldBrush=SelectObject(dc,GetStockObject(NULL_BRUSH));
+  auto line=[&](std::initializer_list<POINT> points){std::vector<POINT> p(points);Polyline(dc,p.data(),static_cast<int>(p.size()));};
+  if(id==Home){line({point(2,9),point(10,2),point(18,9)});line({point(4,8),point(4,18),point(8,18),point(8,12),point(12,12),point(12,18),point(16,18),point(16,8)});}
+  else if(id==Reload){Arc(dc,x+v(3),y+v(3),x+v(17),y+v(17),x+v(17),y+v(7),x+v(17),y+v(13));line({point(17,2),point(17,7),point(12,7)});}
+  else if(id==Cancel||id==ClosePhoto||id==DeveloperClose){line({point(5,5),point(15,15)});line({point(5,15),point(15,5)});}
+  else if(id==Menu){HBRUSH dot=CreateSolidBrush(color);SelectObject(dc,dot);for(int n:{4,10,16})Ellipse(dc,x+v(n-1),y+v(9),x+v(n+1)+1,y+v(11)+1);SelectObject(dc,GetStockObject(NULL_BRUSH));DeleteObject(dot);}
+  else if(id==Gallery){Ellipse(dc,x+v(4),y+v(6),x+v(16),y+v(18));line({point(4,10),point(3,3),point(8,7)});line({point(12,7),point(17,3),point(16,10)});line({point(7,11),point(7,12)});line({point(13,11),point(13,12)});line({point(9,14),point(10,15),point(11,14)});}
+  else if(id==RoomA){RoundRect(dc,x+v(5),y+v(2),x+v(16),y+v(18),v(2),v(2));line({point(5,2),point(12,5),point(12,18)});line({point(9,11),point(10,11)});}
+  else if(id==RoomB){line({point(6,3),point(14,4),point(18,11),point(13,17),point(5,17),point(2,10),point(6,3)});line({point(6,3),point(8,10),point(18,11)});line({point(8,10),point(5,17)});}
+  else if(id==FocusAddress){RoundRect(dc,x+v(2),y+v(7),x+v(13),y+v(17),v(5),v(5));RoundRect(dc,x+v(8),y+v(2),x+v(19),y+v(12),v(5),v(5));}
+  else{const bool previous=id==PreviousPhoto;line({point(previous?16:3,10),point(previous?4:17,10)});line({point(previous?9:12,5),point(previous?4:17,10),point(previous?9:12,15)});}
+  SelectObject(dc,oldBrush);SelectObject(dc,oldPen);DeleteObject(pen);
+}
+void Desktop::drawButton(const DRAWITEMSTRUCT& item){
+  const int id=static_cast<int>(item.CtlID),w=item.rcItem.right-item.rcItem.left,h=item.rcItem.bottom-item.rcItem.top;if(w<=0||h<=0)return;
+  HDC dc=CreateCompatibleDC(item.hDC);HBITMAP bitmap=CreateCompatibleBitmap(item.hDC,w*2,h*2);auto oldBitmap=SelectObject(dc,bitmap);SetMapMode(dc,MM_ANISOTROPIC);SetWindowExtEx(dc,w,h,nullptr);SetViewportExtEx(dc,w*2,h*2,nullptr);
+  const bool disabled=(item.itemState&ODS_DISABLED)!=0,pressed=(item.itemState&ODS_SELECTED)!=0,hover=hovered_==id;
+  const bool tile=id==Gallery||id==RoomA||id==RoomB,photo=id==PreviousPhoto||id==NextPhoto||id==ClosePhoto,active=navigator_.current()!=nullptr;
+  COLORREF canvas=photo?RGB(14,17,18):((active&&id!=ErrorDetails)||id==DeveloperClose)?RGB(248,250,252):RGB(255,255,255);if(id==Open)canvas=RGB(255,255,255);
+  HBRUSH base=CreateSolidBrush(canvas);RECT area{0,0,w,h};FillRect(dc,&area,base);DeleteObject(base);
+  auto round=[&](RECT r,COLORREF fill,int radius){HBRUSH brush=CreateSolidBrush(fill);auto old=SelectObject(dc,brush);auto p=SelectObject(dc,GetStockObject(NULL_PEN));RoundRect(dc,r.left,r.top,r.right,r.bottom,radius,radius);SelectObject(dc,p);SelectObject(dc,old);DeleteObject(brush);};
+  const COLORREF ink=disabled?RGB(190,199,209):RGB(83,99,117),accent=disabled?RGB(176,197,192):RGB(18,137,119);
+  if(tile){
+    if(hover||pressed)round({1,1,w-1,h-1},pressed?RGB(232,239,242):RGB(245,248,250),px(17));
+    RECT circle{(w-px(49))/2,px(11),(w+px(49))/2,px(60)};round(circle,id==Gallery?RGB(231,244,240):id==RoomA?RGB(237,242,248):RGB(241,239,247),px(49));
+    drawIcon(dc,id,w/2,px(36),px(24),id==Gallery?RGB(18,137,119):id==RoomA?RGB(93,119,148):RGB(126,112,149));
+    drawText(dc,windowText(item.hwndItem),{px(2),px(76),w-px(2),h-px(7)},RGB(79,95,113),12,false,DT_CENTER|DT_TOP|DT_SINGLELINE|DT_NOPREFIX);
+  }else if(id==Open){
+    round({1,1,w-1,h-1},active?(hover?RGB(214,238,231):RGB(232,245,240)):(pressed?RGB(14,111,96):hover?RGB(24,153,133):RGB(18,137,119)),px(active?17:26));
+    if(active)drawIcon(dc,Open,w/2,h/2,px(18),accent);else drawText(dc,L"열기",{0,0,w,h},RGB(255,255,255),13,true,DT_CENTER|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX);
+  }else if(photo||id==ErrorDetails){
+    round({1,1,w-1,h-1},pressed?RGB(220,230,235):hover?RGB(235,243,245):RGB(249,251,252),px(28));
+    drawText(dc,windowText(item.hwndItem),{0,0,w,h},id==ErrorDetails?accent:RGB(58,79,96),12,false,DT_CENTER|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX);
+  }else{
+    if(hover||pressed)round({1,1,w-1,h-1},pressed?RGB(226,233,239):RGB(237,242,246),px(36));drawIcon(dc,id,w/2,h/2,px(19),ink);
   }
-  auto c=counters();std::wostringstream footer;footer<<L"LOCAL RUNTIME    worlds "<<c.activeWorlds<<L"   bindings "<<c.activeBindings<<L"    |    textures "<<textures_.count()<<L" · "<<textures_.bytes()/1024/1024<<L" MiB     "<<(walking()?L"화면 클릭 후 WASD·방향키 걷기 / 드래그 둘러보기":L"드래그 회전 / 우클릭 이동 / 휠 확대");
-  if(!photoNodes_.empty())footer<<L" / 사진 더블클릭";
-  drawText(dc,footer.str(),{e,height_-px(25),width_-e,height_-px(4)},RGB(113,137,116),10);EndPaint(window_,&ps);
+  if((item.itemState&ODS_FOCUS)&&!(item.itemState&ODS_NOFOCUSRECT)){HPEN pen=CreatePen(PS_DOT,1,RGB(55,151,135));auto oldPen=SelectObject(dc,pen);auto oldBrush=SelectObject(dc,GetStockObject(NULL_BRUSH));RoundRect(dc,px(3),px(3),w-px(3),h-px(3),px(tile?15:22),px(tile?15:22));SelectObject(dc,oldBrush);SelectObject(dc,oldPen);DeleteObject(pen);}
+  SetMapMode(dc,MM_TEXT);SetStretchBltMode(item.hDC,HALFTONE);SetBrushOrgEx(item.hDC,0,0,nullptr);StretchBlt(item.hDC,item.rcItem.left,item.rcItem.top,w,h,dc,0,0,w*2,h*2,SRCCOPY);SelectObject(dc,oldBitmap);DeleteObject(bitmap);DeleteDC(dc);
+}
+LRESULT CALLBACK Desktop::buttonProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam,UINT_PTR,DWORD_PTR data){
+  auto* app=reinterpret_cast<Desktop*>(data);int id=GetDlgCtrlID(window);
+  if(message==WM_MOUSEMOVE&&app->hovered_!=id){int old=app->hovered_;app->hovered_=id;if(app->controls_.contains(old))InvalidateRect(app->controls_[old],nullptr,FALSE);InvalidateRect(window,nullptr,FALSE);TRACKMOUSEEVENT track{sizeof(track),TME_LEAVE,window,0};TrackMouseEvent(&track);}
+  if(message==WM_MOUSELEAVE&&app->hovered_==id){app->hovered_=0;InvalidateRect(window,nullptr,FALSE);}
+  if(message==WM_SETFOCUS||message==WM_KILLFOCUS)InvalidateRect(window,nullptr,FALSE);
+  if(message==WM_SETCURSOR&&IsWindowEnabled(window)){SetCursor(LoadCursorW(nullptr,IDC_HAND));return TRUE;}
+  if(message==WM_NCDESTROY)RemoveWindowSubclass(window,buttonProc,1);
+  return DefSubclassProc(window,message,wParam,lParam);
+}
+LRESULT CALLBACK Desktop::editProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam,UINT_PTR,DWORD_PTR data){
+  auto* app=reinterpret_cast<Desktop*>(data);
+  if(message==WM_IME_STARTCOMPOSITION)app->addressComposing_=true;
+  if(message==WM_IME_ENDCOMPOSITION)app->addressComposing_=false;
+  if(message==WM_NCDESTROY)RemoveWindowSubclass(window,editProc,2);
+  LRESULT result=DefSubclassProc(window,message,wParam,lParam);
+  if(message==WM_PAINT&&!app->addressComposing_&&GetWindowTextLengthW(window)==0){HDC dc=GetDC(window);RECT rect{};GetClientRect(window,&rect);auto font=reinterpret_cast<HFONT>(SendMessageW(window,WM_GETFONT,0,0));auto old=SelectObject(dc,font);SetTextColor(dc,RGB(143,156,172));SetBkMode(dc,TRANSPARENT);DrawTextW(dc,L"LINK 주소를 입력하세요",-1,&rect,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX);SelectObject(dc,old);ReleaseDC(window,dc);}
+  if(message==WM_SETTEXT||message==WM_IME_STARTCOMPOSITION||message==WM_IME_ENDCOMPOSITION)InvalidateRect(window,nullptr,TRUE);
+  return result;
+}
+void Desktop::paint(){
+  PAINTSTRUCT ps{};HDC target=BeginPaint(window_,&ps);HDC dc=CreateCompatibleDC(target);HBITMAP bitmap=CreateCompatibleBitmap(target,std::max(1,width_),std::max(1,height_));auto oldBitmap=SelectObject(dc,bitmap);
+  RECT all{0,0,width_,height_};FillRect(dc,&all,background_);const bool active=navigator_.current()!=nullptr;
+  auto rounded=[&](RECT r,COLORREF fill,COLORREF stroke,int radius){HBRUSH brush=CreateSolidBrush(fill);HPEN pen=CreatePen(PS_SOLID,1,stroke);auto oldBrush=SelectObject(dc,brush);auto oldPen=SelectObject(dc,pen);RoundRect(dc,r.left,r.top,r.right,r.bottom,radius,radius);SelectObject(dc,oldPen);SelectObject(dc,oldBrush);DeleteObject(pen);DeleteObject(brush);};
+  if(active){
+    RECT bar{0,0,contentWidth_,px(64)};FillRect(dc,&bar,paper_);
+    HPEN line=CreatePen(PS_SOLID,1,RGB(229,234,239));auto old=SelectObject(dc,line);MoveToEx(dc,0,px(63),nullptr);LineTo(dc,contentWidth_,px(63));SelectObject(dc,old);DeleteObject(line);
+    if(!shellError_&&contentWidth_>px(540))drawText(dc,photoOpen_?L"← → 사진 이동   ·   Esc 닫기":walking()?L"WASD 이동  ·  드래그 둘러보기":L"드래그 회전  ·  우클릭 이동  ·  휠 확대",{contentWidth_-px(308),height_-px(23),contentWidth_-px(17),height_-px(3)},RGB(102,116,134),11,false,DT_RIGHT|DT_TOP|DT_SINGLELINE);
+  }else{
+    drawText(dc,L"LINK Browser",{px(26),px(24),px(210),px(45)},RGB(107,119,134),12);
+    drawText(dc,L"LINK",{0,homeAnchor_-px(121),contentWidth_,homeAnchor_-px(20)},RGB(30,41,55),83,true,DT_CENTER|DT_TOP|DT_SINGLELINE);
+    drawText(dc,L"Every World. One Link.",{0,homeAnchor_-px(14),contentWidth_,homeAnchor_+px(14)},RGB(119,132,149),15,false,DT_CENTER|DT_TOP|DT_SINGLELINE);
+    drawText(dc,L"Linked Interactive Network",{px(26),height_-px(34),contentWidth_-px(26),height_-px(11)},RGB(115,129,147),10);
+    drawText(dc,L"v0.1.0-alpha",{px(26),height_-px(34),contentWidth_-px(26),height_-px(11)},RGB(115,129,147),10,false,DT_RIGHT|DT_TOP|DT_SINGLELINE);
+  }
+  const bool addressFocus=GetFocus()==address_;
+  if(!active){RECT shadow=addressPill_;OffsetRect(&shadow,0,px(3));rounded(shadow,RGB(245,247,249),RGB(245,247,249),px(60));}
+  rounded(addressPill_,RGB(255,255,255),addressFocus?RGB(100,177,164):RGB(218,225,232),px(active?23:58));
+  drawIcon(dc,FocusAddress,addressPill_.left+px(active?20:28),(addressPill_.top+addressPill_.bottom)/2,px(active?16:19),addressFocus?RGB(25,139,123):RGB(139,153,168));
+  if(toolsOpen_){
+    RECT side{contentWidth_,0,width_,height_};FillRect(dc,&side,paper_);HPEN line=CreatePen(PS_SOLID,1,RGB(224,231,238));auto old=SelectObject(dc,line);MoveToEx(dc,contentWidth_,0,nullptr);LineTo(dc,contentWidth_,height_);SelectObject(dc,old);DeleteObject(line);
+    drawText(dc,L"개발자 도구",{contentWidth_+px(19),px(21),width_-px(55),px(44)},RGB(44,61,78),14,true);
+    for(auto [child,title]:std::initializer_list<std::pair<HWND,const wchar_t*>>{{nodes_,L"공간 구조"},{inspector_,L"노드 검사기"},{logs_,L"실행 로그"}}){RECT r{};GetWindowRect(child,&r);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&r),2);drawText(dc,title,{r.left,r.top-px(25),r.right,r.top-px(3)},RGB(104,119,138),11,true);RECT border=r;InflateRect(&border,1,1);FrameRect(dc,&border,static_cast<HBRUSH>(GetStockObject(LTGRAY_BRUSH)));}
+    auto c=counters();std::wostringstream info;info<<L"worlds "<<c.activeWorlds<<L"  bindings "<<c.activeBindings<<L"  textures "<<textures_.count()<<L" / "<<textures_.bytes()/1024/1024<<L" MiB";drawText(dc,info.str(),{contentWidth_+px(18),height_-px(27),width_-px(14),height_-px(7)},RGB(136,150,166),9);
+  }
+  BitBlt(target,0,0,width_,height_,dc,0,0,SRCCOPY);SelectObject(dc,oldBitmap);DeleteObject(bitmap);DeleteDC(dc);EndPaint(window_,&ps);
 }
 void Desktop::render(){
   auto* runtime=navigator_.current();if(!runtime||!glContext_||viewWidth_<=0||viewHeight_<=0||minimized_)return;
@@ -281,7 +403,7 @@ void Desktop::render(){
   for(std::size_t i=0;i<runtime->nodes().size();++i){const auto& node=runtime->nodes()[i].definition;if(node.kind!=Kind::Element||!matrices.visible[i]||!node.image.empty()||!node.text.empty())continue;const auto material=runtime->material(i);if(material.emission<=0||material.opacity<=0)continue;const auto rgb=static_cast<unsigned>(std::stoul(material.color.substr(1),nullptr,16));
     for(auto [scale,alpha]:{std::pair{1.10,.018},std::pair{1.045,.045}}){glColor4d(double((rgb>>16)&255)/255,double((rgb>>8)&255)/255,double(rgb&255)/255,alpha*std::min(material.emission,2.)*material.opacity);glPushMatrix();glMultMatrixd(matrices.world[i].m.data());glScaled(scale,scale,scale);geometry(node.geometry);glPopMatrix();}
   }glPopAttrib();
-  if(!selected_.empty()){glDisable(GL_LIGHTING);glColor3f(.68f,.87f,.66f);glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);glLineWidth(1.5f);glEnable(GL_POLYGON_OFFSET_LINE);glPolygonOffset(-1,-1);
+  if(toolsOpen_&&!selected_.empty()){glDisable(GL_LIGHTING);glColor3f(.68f,.87f,.66f);glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);glLineWidth(1.5f);glEnable(GL_POLYGON_OFFSET_LINE);glPolygonOffset(-1,-1);
     for(std::size_t i=0;i<runtime->nodes().size();++i){if(runtime->nodes()[i].definition.kind!=Kind::Element||!matrices.visible[i])continue;auto p=i;bool selected=false;while(p!=noParent){if(runtime->nodes()[p].definition.id==selected_){selected=true;break;}p=runtime->nodes()[p].definition.parent;}if(selected){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());geometry(runtime->nodes()[i].definition.geometry);glPopMatrix();}}
     glDisable(GL_POLYGON_OFFSET_LINE);glLineWidth(1);glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);glEnable(GL_LIGHTING);
   }SwapBuffers(glDc_);++frames_;
@@ -294,7 +416,7 @@ void Desktop::renderPhoto(){
       if(texture){double availableW=std::max(1,viewWidth_-px(54)),availableH=std::max(1,viewHeight_-px(143));double w=availableW,h=w/texture->aspect;if(h>availableH){h=availableH;w=h*texture->aspect;}glPushMatrix();glTranslated(viewWidth_/2.,(viewHeight_+px(3))/2.,0);texturedQuad(*texture,w,h);glPopMatrix();}
   }}glEnable(GL_DEPTH_TEST);
 }
-void Desktop::request(const std::string& address){walkKeys_.fill(false);navigator_.request(address);SetWindowTextW(address_,wide(address).c_str());lastError_.clear();}
+void Desktop::request(const std::string& address){walkKeys_.fill(false);navigator_.request(address);SetWindowTextW(address_,wide(address).c_str());lastError_.clear();renderError_.clear();refreshShell();}
 bool Desktop::walking()const{auto* runtime=navigator_.current();return runtime&&runtime->world().walk.has_value();}
 bool Desktop::movementKey(WPARAM key)const{return key=='W'||key=='A'||key=='S'||key=='D'||key==VK_UP||key==VK_LEFT||key==VK_DOWN||key==VK_RIGHT;}
 void Desktop::lookWalk(int dx,int dy){
@@ -311,16 +433,49 @@ void Desktop::updateWalk(double seconds){
   if(const auto* portal=enteredPortal(world,from,to)){const auto address=portal->address;log(false,"Portal "+portal->id+" -> "+address);request(address);}
 }
 void Desktop::command(int id){
+  if(id==Menu){showMenu();return;}
+  if(id==DeveloperTools||id==DeveloperClose){toggleTools();return;}
+  if(id==ErrorDetails){if(!toolsOpen_)toggleTools();SetFocus(logs_);return;}
+  if(id==FocusAddress){SetFocus(address_);SendMessageW(address_,EM_SETSEL,0,-1);return;}
   if(id==Open){auto value=utf8(windowText(address_));if(!value.empty())request(value);}
   if(id==Gallery)request("link://local/heukryong");
   if(id==RoomA)request("link://local/room-a");if(id==RoomB)request("link://local/room-b");
   if(id==Reload){auto address=displayAddress_;if(!address.empty())request(address);}
-  if(id==Home||id==Stop){clearWorldGraphics();navigator_.stop();selected_.clear();mode_=id==Home?L"시작 화면":L"실행 중지됨";lastError_.clear();renderError_.clear();refreshInspector();InvalidateRect(window_,nullptr,FALSE);}
+  if(id==Home||id==Stop){clearWorldGraphics();navigator_.stop();selected_.clear();displayAddress_.clear();mode_=id==Home?L"시작 화면":L"실행 중지됨";lastError_.clear();renderError_.clear();SetWindowTextW(address_,L"");refreshInspector();refreshShell();SetFocus(address_);InvalidateRect(window_,nullptr,FALSE);}
   if(id==Cancel){navigator_.cancel();if(textures_.loading()){clearWorldGraphics();navigator_.stop();mode_=L"사진 준비 취소";}lastError_.clear();log(false,"Loading cancelled.");}
   if(id==PreviousPhoto)movePhoto(-1);
   if(id==NextPhoto)movePhoto(1);
   if(id==ClosePhoto)closePhoto();
   if(id==NodeList){int row=static_cast<int>(SendMessageW(nodes_,LB_GETCURSEL,0,0));if(row>=0&&static_cast<std::size_t>(row)<nodeIds_.size()){selected_=nodeIds_[row];refreshInspector();}}
+  refreshShell();
+}
+void Desktop::toggleTools(){
+  toolsOpen_=!toolsOpen_;if(!toolsOpen_&&(GetFocus()==nodes_||GetFocus()==inspector_||GetFocus()==logs_||GetFocus()==controls_[DeveloperClose]))SetFocus(navigator_.current()?viewport_:address_);
+  layout();render();
+}
+void Desktop::showMenu(){
+  walkKeys_.fill(false);HMENU menu=CreatePopupMenu();const bool active=navigator_.current()!=nullptr,loading=navigator_.loading()||textures_.loading();
+  AppendMenuW(menu,MF_STRING,FocusAddress,L"주소로 이동\tCtrl+L");AppendMenuW(menu,MF_STRING|(!displayAddress_.empty()?0:MF_GRAYED),Reload,L"새로 고침\tF5");
+  AppendMenuW(menu,MF_STRING,Home,L"홈");AppendMenuW(menu,MF_STRING|(active?0:MF_GRAYED),Stop,L"실행 중지");if(loading)AppendMenuW(menu,MF_STRING,Cancel,L"로딩 취소\tEsc");
+  AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING|(toolsOpen_?MF_CHECKED:0),DeveloperTools,L"개발자 도구\tF12");
+  RECT anchor{};GetWindowRect(controls_[Menu],&anchor);int selected=TrackPopupMenuEx(menu,TPM_RETURNCMD|TPM_RIGHTALIGN|TPM_TOPALIGN,anchor.right,anchor.bottom+px(5),window_,nullptr);DestroyMenu(menu);if(selected)command(selected);
+}
+bool Desktop::shortcut(WPARAM key,bool control){
+  if(control&&(key=='L'||key=='l')){command(FocusAddress);return true;}
+  if(key==VK_F12){command(DeveloperTools);return true;}
+  if(key==VK_F5){command(Reload);return true;}
+  if(key==VK_RETURN&&GetFocus()==address_){command(Open);return true;}
+  if(key==VK_ESCAPE){if(photoOpen_){closePhoto();return true;}if(navigator_.loading()||textures_.loading()){command(Cancel);return true;}}
+  if(photoOpen_&&(key==VK_LEFT||key==VK_RIGHT)){movePhoto(key==VK_LEFT?-1:1);return true;}
+  return false;
+}
+void Desktop::refreshShell(){
+  auto* runtime=navigator_.current();const bool active=runtime!=nullptr,loading=navigator_.loading()||textures_.loading(),error=!navigator_.error().empty()||!renderError_.empty();
+  bool changed=active!=shellActive_||loading!=shellLoading_||error!=shellError_;shellActive_=active;shellLoading_=loading;shellError_=error;
+  std::wstring text=runtime?wide(runtime->world().name):L"";
+  if(navigator_.loading())text=L"공간을 여는 중…";else if(textures_.loading())text=L"사진 준비 중 · "+std::to_wstring(textures_.completed())+L" / "+std::to_wstring(textures_.total());
+  else if(error)text=active?L"공간을 열지 못했습니다 · 현재 공간 유지":L"공간을 열지 못했습니다. 주소를 확인해 주세요.";
+  setText(status_,text);if(changed)layout();
 }
 void Desktop::clearWorldGraphics(){
   walkKeys_.fill(false);
@@ -339,6 +494,7 @@ void Desktop::setPhotoControls(){
     ShowWindow(found->second,photoOpen_?SW_SHOW:SW_HIDE);
     if(photoOpen_)SetWindowPos(found->second,HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   }
+  InvalidateRect(window_,nullptr,FALSE);
 }
 void Desktop::openPhoto(std::size_t index){
   auto* runtime=navigator_.current();if(!runtime||photoNodes_.empty())return;
@@ -395,22 +551,19 @@ void Desktop::frame(){
     for(std::size_t i=0;i<runtime->nodes().size();++i)if(!runtime->nodes()[i].definition.image.empty())photoNodes_.push_back(i);
     texturesStarted_=now;
     try{textures_.begin(runtime->world());}catch(const std::exception& error){renderError_=error.what();clearWorldGraphics();navigator_.stop();runtime=nullptr;log(true,renderError_);mode_=L"사진 준비 실패";}
-    InvalidateRect(window_,nullptr,FALSE);
+    layout();if(runtime)SetFocus(viewport_);InvalidateRect(window_,nullptr,FALSE);
   }
   if(runtime&&textures_.loading()&&!minimized_){
     const auto stepStart=Clock::now();
     try{textures_.step();}catch(const std::exception& error){renderError_=error.what();clearWorldGraphics();navigator_.stop();runtime=nullptr;log(true,renderError_);mode_=L"사진 준비 실패";}
     maxTextureStepMs_=std::max(maxTextureStepMs_,std::chrono::duration<double,std::milli>(Clock::now()-stepStart).count());
   }
-  bool active=runtime!=nullptr;ShowWindow(viewport_,active?SW_SHOW:SW_HIDE);for(auto id:{Gallery,RoomA,RoomB})ShowWindow(controls_[id],active?SW_HIDE:SW_SHOW);EnableWindow(controls_[Stop],active);EnableWindow(controls_[Reload],!displayAddress_.empty());ShowWindow(controls_[Cancel],navigator_.loading()||textures_.loading()?SW_SHOW:SW_HIDE);
-  std::wstring status=active?wide(runtime->world().name)+L"\r\n활성":mode_;if(navigator_.loading())status+=L"  |  로딩: "+wide(navigator_.loadingAddress());if(!navigator_.error().empty()){if(!active)status=L"불러오기 실패";status+=active?L"\r\n탐색 실패 · 현재 공간 유지: ":L"\r\n오류: ";status+=wide(navigator_.error());}setText(status_,status);
-  if(textures_.loading())setText(status_,status+L" · 사진 "+std::to_wstring(textures_.completed())+L" / "+std::to_wstring(textures_.total()));
-  if(!renderError_.empty())setText(status_,L"사진 준비 실패\r\n"+wide(renderError_));
+  refreshShell();
   if(navigator_.error()!=lastError_){lastError_=navigator_.error();InvalidateRect(window_,nullptr,FALSE);}
   if(runtime&&!minimized_&&viewWidth_>0&&viewHeight_>0){updateWalk(delta);runtime->update(std::clamp(delta,0.,.1));}
-  if(now-lastInspect_>std::chrono::milliseconds(200)){refreshInspector();lastInspect_=now;RECT footer{0,height_-px(31),width_,height_};InvalidateRect(window_,&footer,FALSE);}
-  render();if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
-  else if(!capturePath.empty()&&runtime&&!navigator_.loading()&&!textures_.loading()&&now-started_>std::chrono::seconds(2)){capture(capturePath);capturePath.clear();}
+  if(now-lastInspect_>std::chrono::milliseconds(200)){refreshInspector();lastInspect_=now;if(toolsOpen_){RECT footer{contentWidth_,height_-px(31),width_,height_};InvalidateRect(window_,&footer,FALSE);}}
+  render();if(!shellSmokePath.empty())shellSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
+  else if(!capturePath.empty()&&!navigator_.loading()&&!textures_.loading()&&now-started_>std::chrono::seconds(2)){capture(capturePath);capturePath.clear();}
 }
 
 bool Desktop::capture(const std::filesystem::path& path){
@@ -422,10 +575,11 @@ bool Desktop::capture(const std::filesystem::path& path){
   auto old=SelectObject(memory,bitmap);BitBlt(memory,0,0,width_,height_,source,0,0,SRCCOPY|CAPTUREBLT);
   // Read the real front buffer explicitly; GDI capture of hardware surfaces is driver dependent.
   if(navigator_.current()&&glContext_&&viewWidth_>0&&viewHeight_>0){
-    wglMakeCurrent(glDc_,glContext_);std::vector<unsigned char> rgb(static_cast<std::size_t>(viewWidth_)*viewHeight_*3);glPixelStorei(GL_PACK_ALIGNMENT,1);glReadBuffer(GL_FRONT);glReadPixels(0,0,viewWidth_,viewHeight_,GL_RGB,GL_UNSIGNED_BYTE,rgb.data());
-    int stride=(width_*3+3)&~3;auto* dest=static_cast<unsigned char*>(bits);int originX=px(16),originY=px(116);
+    RECT viewportBounds{};GetClientRect(viewport_,&viewportBounds);MapWindowPoints(viewport_,window_,reinterpret_cast<POINT*>(&viewportBounds),2);int capturedWidth=viewportBounds.right-viewportBounds.left,capturedHeight=viewportBounds.bottom-viewportBounds.top;
+    wglMakeCurrent(glDc_,glContext_);std::vector<unsigned char> rgb(static_cast<std::size_t>(capturedWidth)*capturedHeight*3);glPixelStorei(GL_PACK_ALIGNMENT,1);glReadBuffer(GL_FRONT);glReadPixels(0,0,capturedWidth,capturedHeight,GL_RGB,GL_UNSIGNED_BYTE,rgb.data());
+    int stride=(width_*3+3)&~3;auto* dest=static_cast<unsigned char*>(bits);int originX=viewportBounds.left,originY=viewportBounds.top;
     std::vector<RECT> overlays;if(photoOpen_)for(auto id:{PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle}){RECT rect{};GetWindowRect(controls_[id],&rect);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&rect),2);overlays.push_back(rect);}
-    for(int y=0;y<viewHeight_;++y)for(int x=0;x<viewWidth_;++x){int dy=height_-originY-viewHeight_+y,dx=originX+x;if(dy<0||dy>=height_||dx<0||dx>=width_)continue;POINT point{dx,height_-1-dy};if(std::any_of(overlays.begin(),overlays.end(),[&](const RECT& rect){return PtInRect(&rect,point)!=FALSE;}))continue;auto s=(static_cast<std::size_t>(y)*viewWidth_+x)*3;auto d=static_cast<std::size_t>(dy)*stride+dx*3;dest[d]=rgb[s+2];dest[d+1]=rgb[s+1];dest[d+2]=rgb[s];}
+    for(int y=0;y<capturedHeight;++y)for(int x=0;x<capturedWidth;++x){int dy=height_-originY-capturedHeight+y,dx=originX+x;if(dy<0||dy>=height_||dx<0||dx>=width_)continue;POINT point{dx,height_-1-dy};if(std::any_of(overlays.begin(),overlays.end(),[&](const RECT& rect){return PtInRect(&rect,point)!=FALSE;}))continue;auto s=(static_cast<std::size_t>(y)*capturedWidth+x)*3;auto d=static_cast<std::size_t>(dy)*stride+dx*3;dest[d]=rgb[s+2];dest[d+1]=rgb[s+1];dest[d+2]=rgb[s];}
   }
   std::size_t bytes=static_cast<std::size_t>((width_*3+3)&~3)*height_;BITMAPFILEHEADER header{};header.bfType=0x4d42;header.bfOffBits=sizeof(header)+sizeof(BITMAPINFOHEADER);header.bfSize=static_cast<DWORD>(header.bfOffBits+bytes);
   bool okay=false;try{if(!path.parent_path().empty())std::filesystem::create_directories(path.parent_path());std::ofstream file(path,std::ios::binary);file.write(reinterpret_cast<const char*>(&header),sizeof(header));file.write(reinterpret_cast<const char*>(&info.bmiHeader),sizeof(info.bmiHeader));file.write(static_cast<const char*>(bits),static_cast<std::streamsize>(bytes));okay=bool(file);}catch(...){}
@@ -567,18 +721,61 @@ void Desktop::finishGallerySmoke(bool okay){
   out<<",\n  \"maxTextureStepMs\": "<<maxTextureStepMs_<<",\n  \"elapsedSeconds\": "<<std::chrono::duration<double>(Clock::now()-started_).count()<<",\n  \"gl\": \""<<escape(glDescription_)<<"\"\n}\n";
   out.close();std::cout<<(okay?"Gallery smoke PASS\n":"Gallery smoke FAIL: "+galleryFailure_+"\n");gallerySmokePath.clear();exitCode_=okay?0:2;DestroyWindow(window_);
 }
+bool Desktop::homeLayoutFits()const{
+  if(navigator_.current()||!windowText(address_).empty())return false;
+  RECT previous{};bool first=true;
+  for(auto id:{Gallery,RoomA,RoomB}){HWND child=controls_.at(id);if(!IsWindowVisible(child))return false;RECT rect{};GetWindowRect(child,&rect);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&rect),2);if(rect.left<0||rect.right>contentWidth_||rect.top<addressPill_.bottom||rect.bottom>height_-px(44))return false;RECT overlap{};if(!first&&IntersectRect(&overlap,&previous,&rect))return false;previous=rect;first=false;}
+  RECT edit{};GetWindowRect(address_,&edit);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&edit),2);return edit.left>addressPill_.left&&edit.right<addressPill_.right&&edit.top>=addressPill_.top&&edit.bottom<=addressPill_.bottom;
+}
+void Desktop::shellSmoke(){
+  if(Clock::now()-started_>std::chrono::seconds(25)){shellFailureMessage_="Shell smoke timed out";finishShellSmoke(false);return;}
+  auto save=[&](const wchar_t* extension){auto path=shellSmokePath;path.replace_extension(extension);return capture(path);};
+  auto fail=[&](const std::string& message){shellFailureMessage_=message;finishShellSmoke(false);};
+  if(shellStage_==0){
+    if(Clock::now()-started_<std::chrono::milliseconds(350))return;
+    shellHome_=homeLayoutFits()&&!toolsOpen_&&!IsWindowVisible(nodes_)&&!IsWindowVisible(inspector_)&&!IsWindowVisible(logs_)&&!IsWindowVisible(status_);
+    if(!shellHome_){fail("Home must start with an empty address, three shortcuts, and hidden developer tools");return;}save(L".home.bmp");
+    SetWindowTextW(address_,L"link://local/room-a");SetFocus(controls_[Menu]);BYTE keys[256]{};GetKeyboardState(keys);BYTE simulated[256]{};std::copy_n(keys,256,simulated);simulated[VK_CONTROL]|=0x80;SetKeyboardState(simulated);SendMessageW(window_,WM_KEYDOWN,'L',0);SetKeyboardState(keys);DWORD begin=0,end=0;SendMessageW(address_,EM_GETSEL,reinterpret_cast<WPARAM>(&begin),reinterpret_cast<LPARAM>(&end));shellFocus_=GetFocus()==address_&&begin==0&&end==windowText(address_).size();SetWindowTextW(address_,L"");
+    int width=viewWidth_;SendMessageW(window_,WM_KEYDOWN,VK_F12,0);shellTools_=toolsOpen_&&IsWindowVisible(nodes_)&&viewWidth_<width;SendMessageW(window_,WM_KEYDOWN,VK_F12,0);shellTools_=shellTools_&&!toolsOpen_&&!IsWindowVisible(nodes_)&&viewWidth_==width;
+    RECT original{};GetWindowRect(window_,&original);SetWindowPos(window_,nullptr,0,0,900,650,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);shellResize_=homeLayoutFits();save(L".small.bmp");
+    UINT originalDpi=dpi_;RECT enlarged{original.left,original.top,original.left+1440,original.top+900};SendMessageW(window_,WM_DPICHANGED,MAKELPARAM(144,144),reinterpret_cast<LPARAM>(&enlarged));shellDpi_=dpi_==144&&homeLayoutFits();save(L".dpi150.bmp");SendMessageW(window_,WM_DPICHANGED,MAKELPARAM(originalDpi,originalDpi),reinterpret_cast<LPARAM>(&original));
+    if(!shellFocus_||!shellTools_||!shellResize_||!shellDpi_){fail("Address focus, F12, resize, or synthetic 150-percent layout failed");return;}
+    SendMessageW(controls_[RoomA],BM_CLICK,0,0);shellStage_=1;return;
+  }
+  if(shellStage_==1){
+    if(navigator_.loading())return;if(!navigator_.current()){fail("Room A shortcut did not open a world");return;}
+    save(L".world.bmp");int width=viewWidth_;SendMessageW(window_,WM_KEYDOWN,VK_F12,0);save(L".tools.bmp");SendMessageW(window_,WM_KEYDOWN,VK_F12,0);shellTools_=shellTools_&&width==viewWidth_&&!toolsOpen_;
+    shellCreated_=counters().createdWorlds;SendMessageW(window_,WM_KEYDOWN,VK_F5,0);shellStage_=2;return;
+  }
+  if(shellStage_==2){
+    if(navigator_.loading())return;shellReload_=navigator_.current()&&counters().createdWorlds>shellCreated_;if(!shellReload_){fail("F5 did not reload the current world");return;}
+    request("link://local/room-b");SendMessageW(window_,WM_KEYDOWN,VK_ESCAPE,0);shellCancel_=!navigator_.loading()&&navigator_.current()!=nullptr;
+    SetWindowTextW(address_,L"link://local/missing-shell-smoke");SetFocus(address_);SendMessageW(window_,WM_KEYDOWN,VK_RETURN,0);shellStage_=3;return;
+  }
+  if(shellStage_==3){
+    if(navigator_.loading())return;shellFailure_=navigator_.current()&&!navigator_.error().empty()&&IsWindowVisible(status_)&&IsWindowVisible(controls_[ErrorDetails]);save(L".error.bmp");
+    SendMessageW(controls_[ErrorDetails],BM_CLICK,0,0);shellFailure_=shellFailure_&&toolsOpen_&&GetFocus()==logs_;if(toolsOpen_)SendMessageW(window_,WM_KEYDOWN,VK_F12,0);
+    if(!shellFailure_||!shellCancel_){fail("Failed navigation or cancellation was not recoverable and visible");return;}SendMessageW(controls_[Home],BM_CLICK,0,0);shellStage_=4;return;
+  }
+  if(shellStage_==4){SendMessageW(window_,WM_KEYDOWN,VK_F5,0);if(!homeLayoutFits()||navigator_.loading()||counters().activeWorlds||counters().activeBindings){fail("Home or its disabled reload retained a runtime");return;}finishShellSmoke(true);}
+}
+void Desktop::finishShellSmoke(bool okay){
+  if(!shellSmokePath.parent_path().empty())std::filesystem::create_directories(shellSmokePath.parent_path());std::ofstream out(shellSmokePath);out<<"{\n  \"passed\": "<<(okay?"true":"false")<<",\n  \"failure\": \""<<shellFailureMessage_<<"\",\n  \"emptyHomeThreeShortcuts\": "<<(shellHome_?"true":"false")<<",\n  \"ctrlLSelectsAddress\": "<<(shellFocus_?"true":"false")<<",\n  \"developerToolsToggleRestoresViewport\": "<<(shellTools_?"true":"false")<<",\n  \"smallWindowBounds\": "<<(shellResize_?"true":"false")<<",\n  \"syntheticDpi150Bounds\": "<<(shellDpi_?"true":"false")<<",\n  \"f5Reload\": "<<(shellReload_?"true":"false")<<",\n  \"escapeCancels\": "<<(shellCancel_?"true":"false")<<",\n  \"failureVisibleAndDetailed\": "<<(shellFailure_?"true":"false")<<",\n  \"activeWorldsAfterHome\": "<<counters().activeWorlds<<",\n  \"liveTexturesAfterHome\": "<<textures_.count()<<"\n}\n";out.close();shellSmokePath.clear();exitCode_=okay?0:2;DestroyWindow(window_);
+}
 LRESULT Desktop::message(UINT message,WPARAM wParam,LPARAM lParam){
   switch(message){
     case WM_CREATE:createControls();layout();SetTimer(window_,1,16,nullptr);return 0;
     case WM_SIZE:minimized_=wParam==SIZE_MINIMIZED;if(!minimized_&&viewport_)layout();return 0;
-    case WM_GETMINMAXINFO:{auto* info=reinterpret_cast<MINMAXINFO*>(lParam);info->ptMinTrackSize={px(980),px(720)};return 0;}
-    case WM_DPICHANGED:{dpi_=HIWORD(wParam);auto* rect=reinterpret_cast<RECT*>(lParam);SetWindowPos(window_,nullptr,rect->left,rect->top,rect->right-rect->left,rect->bottom-rect->top,SWP_NOZORDER|SWP_NOACTIVATE);if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);font_=CreateFontW(-px(13),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");mono_=CreateFontW(-px(12),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,FIXED_PITCH,L"Consolas");for(auto [id,control]:controls_)SendMessageW(control,WM_SETFONT,reinterpret_cast<WPARAM>(id==Inspector||id==Logs?mono_:font_),TRUE);layout();return 0;}
-    case WM_COMMAND:if(HIWORD(wParam)==BN_CLICKED||(LOWORD(wParam)==NodeList&&HIWORD(wParam)==LBN_SELCHANGE))command(LOWORD(wParam));return 0;
+    case WM_GETMINMAXINFO:{auto* info=reinterpret_cast<MINMAXINFO*>(lParam);info->ptMinTrackSize={px(720),px(560)};return 0;}
+    case WM_DPICHANGED:{dpi_=HIWORD(wParam);auto* rect=reinterpret_cast<RECT*>(lParam);SetWindowPos(window_,nullptr,rect->left,rect->top,rect->right-rect->left,rect->bottom-rect->top,SWP_NOZORDER|SWP_NOACTIVATE);createFonts();layout();return 0;}
+    case WM_COMMAND:if(LOWORD(wParam)==Address&&HIWORD(wParam)==EN_CHANGE){InvalidateRect(address_,nullptr,TRUE);return 0;}if(LOWORD(wParam)==Address&&(HIWORD(wParam)==EN_SETFOCUS||HIWORD(wParam)==EN_KILLFOCUS)){InvalidateRect(window_,&addressPill_,FALSE);return 0;}if(HIWORD(wParam)==BN_CLICKED||(LOWORD(wParam)==NodeList&&HIWORD(wParam)==LBN_SELCHANGE))command(LOWORD(wParam));return 0;
+    case WM_KEYDOWN:if(shortcut(wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))return 0;break;
+    case WM_DRAWITEM:if(wParam){drawButton(*reinterpret_cast<DRAWITEMSTRUCT*>(lParam));return TRUE;}break;
     case WM_TIMER:if(wParam==1)frame();return 0;
     case WM_PAINT:paint();return 0;
     case WM_ERASEBKGND:return 1;
-    case WM_CTLCOLORSTATIC:{auto dc=reinterpret_cast<HDC>(wParam);SetTextColor(dc,RGB(65,96,72));SetBkColor(dc,RGB(237,235,227));return reinterpret_cast<LRESULT>(background_);}
-    case WM_CTLCOLOREDIT:case WM_CTLCOLORLISTBOX:{auto dc=reinterpret_cast<HDC>(wParam);SetTextColor(dc,RGB(55,85,64));SetBkColor(dc,RGB(247,247,241));return reinterpret_cast<LRESULT>(paper_);}
+    case WM_CTLCOLORSTATIC:{auto dc=reinterpret_cast<HDC>(wParam);auto child=reinterpret_cast<HWND>(lParam);if(child==controls_[PhotoTitle]){SetTextColor(dc,RGB(225,233,239));SetBkColor(dc,RGB(14,17,18));return reinterpret_cast<LRESULT>(photoBrush_);}SetTextColor(dc,child==status_&&shellError_?RGB(166,102,46):RGB(94,112,132));SetBkColor(dc,RGB(255,255,255));return reinterpret_cast<LRESULT>(background_);}
+    case WM_CTLCOLOREDIT:case WM_CTLCOLORLISTBOX:{auto dc=reinterpret_cast<HDC>(wParam);SetTextColor(dc,RGB(51,65,85));SetBkColor(dc,RGB(255,255,255));return reinterpret_cast<LRESULT>(background_);}
     case WM_CLOSE:DestroyWindow(window_);return 0;
     case WM_DESTROY:KillTimer(window_,1);clearWorldGraphics();navigator_.stop();destroyGl();PostQuitMessage(exitCode_);return 0;
   }return DefWindowProcW(window_,message,wParam,lParam);
@@ -610,14 +807,12 @@ LRESULT CALLBACK Desktop::viewProc(HWND window,UINT message,WPARAM wParam,LPARAM
   if(!app)return DefWindowProcW(window,message,wParam,lParam);try{return app->viewMessage(message,wParam,lParam);}catch(const std::exception& e){app->log(true,e.what());return 0;}
 }
 int Desktop::run(int show){
-  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);HINSTANCE instance=GetModuleHandleW(nullptr);WNDCLASSEXW frame{};frame.cbSize=sizeof(frame);frame.hInstance=instance;frame.lpfnWndProc=windowProc;frame.hCursor=LoadCursorW(nullptr,IDC_ARROW);frame.hIcon=LoadIconW(nullptr,IDI_APPLICATION);frame.lpszClassName=L"LINK.NativeShell";frame.style=CS_HREDRAW|CS_VREDRAW;RegisterClassExW(&frame);
+  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);INITCOMMONCONTROLSEX common{sizeof(common),ICC_STANDARD_CLASSES};InitCommonControlsEx(&common);HINSTANCE instance=GetModuleHandleW(nullptr);WNDCLASSEXW frame{};frame.cbSize=sizeof(frame);frame.hInstance=instance;frame.lpfnWndProc=windowProc;frame.hCursor=LoadCursorW(nullptr,IDC_ARROW);frame.hIcon=LoadIconW(nullptr,IDI_APPLICATION);frame.lpszClassName=L"LINK.NativeShell";frame.style=CS_HREDRAW|CS_VREDRAW;RegisterClassExW(&frame);
   WNDCLASSEXW view{};view.cbSize=sizeof(view);view.hInstance=instance;view.lpfnWndProc=viewProc;view.hCursor=LoadCursorW(nullptr,IDC_CROSS);view.lpszClassName=L"LINK.WorldViewport";view.style=CS_OWNDC|CS_DBLCLKS;RegisterClassExW(&view);
   HWND main=CreateWindowExW(0,frame.lpszClassName,L"LINK Browser — Linked Interactive Network",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,this);
-  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);if(!initialAddress.empty())request(initialAddress);else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
+  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);if(!initialAddress.empty())request(initialAddress);else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
   MSG message{};while(GetMessageW(&message,nullptr,0,0)>0){
-    if(message.message==WM_KEYDOWN&&photoOpen_){if(message.wParam==VK_ESCAPE){closePhoto();continue;}if(message.wParam==VK_LEFT||message.wParam==VK_RIGHT){movePhoto(message.wParam==VK_LEFT?-1:1);continue;}}
-    if(message.message==WM_KEYDOWN&&message.wParam==VK_RETURN&&GetFocus()==address_){command(Open);continue;}
-    if(message.message==WM_KEYDOWN&&message.wParam==VK_ESCAPE&&(navigator_.loading()||textures_.loading())){command(Cancel);continue;}
+    if(message.message==WM_KEYDOWN&&shortcut(message.wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))continue;
     if((message.message==WM_KEYDOWN||message.message==WM_KEYUP)&&GetFocus()==viewport_&&walking()&&movementKey(message.wParam)){TranslateMessage(&message);DispatchMessageW(&message);continue;}
     if(!IsDialogMessageW(main,&message)){TranslateMessage(&message);DispatchMessageW(&message);}
   }
@@ -636,8 +831,9 @@ int runDesktop(int argc,wchar_t** argv){
       else if(arg==L"--capture"&&i+1<argc)app.capturePath=argv[++i];
       else if(arg==L"--smoke-test"&&i+1<argc)app.smokePath=argv[++i];
       else if(arg==L"--gallery-smoke"&&i+1<argc)app.gallerySmokePath=argv[++i];
+      else if(arg==L"--shell-smoke"&&i+1<argc)app.shellSmokePath=argv[++i];
       else if(arg==L"--help"){
-        std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json]\n";
+        std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json] [--shell-smoke report.json]\n";
         return 0;
       }else{std::cerr<<"Unknown or incomplete argument: "<<utf8(arg)<<'\n';return 1;}
     }

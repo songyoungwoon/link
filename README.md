@@ -73,6 +73,8 @@ ctest --preset release
 
 Once built, **[LINK_START.cmd](LINK_START.cmd)** opens the home screen. World files are copied beside the executable in `worlds/`. Keep that directory with the app when moving the build; another PC also needs a compatible MSVC runtime. Initial tool installation may need downloads. The app runs without external asset downloads.
 
+![LINK Browser home](docs/assets/browser-home.png)
+
 Open the tutorial world directly from its source directory:
 
 ```powershell
@@ -89,7 +91,9 @@ Or choose the repository's demo worlds:
 
 ## Explore and interact
 
-Type an address and press **Enter** or **열기**. **새로 고침** reloads the world documents and resets runtime state. **홈** returns home, **실행 중지** releases the active world, and **로딩 취소 / Esc** cancels preparation.
+The home screen puts **LINK**, an address field, and shortcuts to **흑룡이 전시회**, **Room A**, and **Room B** at the center. Enter an address and press **Enter**, or choose a shortcut. Inside a world, a compact address bar leaves room for exploration.
+
+**Ctrl+L** selects the address, **F5** reloads the world documents and resets runtime state, and **F12** toggles developer tools with the inspector and execution log. Developer tools start hidden. **Esc** cancels loading or closes a photograph.
 
 | Context | Controls |
 | --- | --- |
