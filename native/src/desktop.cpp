@@ -698,7 +698,7 @@ void Desktop::gallerySmoke(){
     const auto* hologram=textures_.text("link_hologram_text");galleryHologram_=textures_.textCount()==1&&hologram&&hologram->id&&!hologram->textBackground;
     if(!galleryWalk_||!galleryText3d_||!galleryHologram_||!galleryPortalCaptured_){galleryFailure_="Corridor traversal, extruded greeting, or transparent introduction texture failed";finishGallerySmoke(false);return;}
     take(L".hello.bmp");if(runtime->world().views.size()>2){jumpView(2);take(L".hello-side.bmp");}
-    request("link://local/heukryong");galleryStage_=3;return;
+    request(initialAddress.empty()?"link://local/heukryong":initialAddress);galleryStage_=3;return;
   }
   if(galleryStage_==3){command(Reload);galleryStage_=4;return;}
   if(galleryStage_==4){

@@ -197,7 +197,7 @@ material portal_soft { color: "#4C9D94"; }
 """
     write_world(folder, scene, "사진 공간", {"position": [0, 1.65, 4], "target": [0, 1.65, 0]}, appearance, "#E7E3DA",
                 walk={"min": [-2.65, 0, number(portal_z - 2.5)], "max": [2.65, 3.5, 5], "eyeHeight": 1.65, "speed": 3.4},
-                portals=[{"id": "hello_portal", "address": "link://local/hello-world", "position": [0, 1.65, number(portal_z)], "size": [2.4, 3.3, 1]}])
+                portals=[{"id": "hello_portal", "address": "/hello-world", "position": [0, 1.65, number(portal_z)], "size": [2.4, 3.3, 1]}])
 
 
 # Original seven-row glyphs. Horizontal runs become extruded solid boxes.

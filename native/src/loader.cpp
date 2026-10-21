@@ -1,4 +1,5 @@
 #include "link/loader.hpp"
+#include "link/remote.hpp"
 #include "link/script.hpp"
 #include "link/text.hpp"
 #include <algorithm>
@@ -6,6 +7,7 @@
 #include <cmath>
 #include <cwctype>
 #include <fstream>
+#include <random>
 #include <set>
 #include <string_view>
 
@@ -43,12 +45,86 @@ std::filesystem::path canonical(const std::filesystem::path& path,const std::str
   std::error_code error;const auto result=std::filesystem::canonical(path,error);if(error)throw Error({label,1,1},"missing or inaccessible path: "+error.message());return result;
 }
 void cancelled(std::stop_token stop,const std::string& file) {if(stop.stop_requested())throw Error({file,1,1},"loading cancelled");}
-std::string read(const std::filesystem::path& file,std::size_t budget,std::stop_token stop) {
-  const auto label=pathText(file);cancelled(stop,label);std::ifstream input(file,std::ios::binary);if(!input)throw Error({label,1,1},"cannot open file");
+std::string read(const std::filesystem::path& file,std::size_t budget,std::stop_token stop,std::string label={}) {
+  if(label.empty())label=pathText(file);cancelled(stop,label);std::ifstream input(file,std::ios::binary);if(!input)throw Error({label,1,1},"cannot open file");
   std::string result;char block[8192];
   while(input){cancelled(stop,label);input.read(block,sizeof(block));const auto bytes=static_cast<std::size_t>(input.gcount());if(bytes>budget-result.size())throw Error({label,1,1},"file byte budget exceeded (maximum "+std::to_string(budget)+")");result.append(block,bytes);}
   if(input.bad())throw Error({label,1,1},"failed while reading file");cancelled(stop,label);return result;
 }
+std::filesystem::path resourcePath(const std::string& relative) {
+  const Location where{relative,1,1};const auto decoded=decode(relative,where);const auto path=utf8Path(decoded,where);
+  if(path.is_absolute()||path.has_root_path()||decoded.front()=='/')throw Error(where,"resource must be a relative path inside the world");
+  for(const auto& part:path)if(part=="..")throw Error(where,"resource parent traversal is forbidden");
+  return path;
+}
+std::string localWorld(const std::string& address) {
+  const Location where{address,1,1};if(!address.starts_with("link://"))throw Error(where,"expected link://local/<world>");const auto slash=address.find('/',7);
+  if(slash==std::string::npos||address.substr(7,slash-7)!="local")throw Error(where,"LINK authority must be local without credentials or port");
+  const auto segment=decode(address.substr(slash+1),where);
+  if(segment.empty()||!std::all_of(segment.begin(),segment.end(),[](unsigned char c){return(c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='-';}))throw Error(where,"LINK world must be one segment containing letters, digits or hyphens");
+  return segment;
+}
+struct RemoteSnapshot {
+  RemoteLink remote;
+  std::string address;
+  std::filesystem::path parent,directory;
+  std::vector<std::pair<std::filesystem::path,std::size_t>> files;
+  std::size_t transferred=0;
+  RemoteSnapshot(RemoteLink source,std::string origin):remote(std::move(source)),address(std::move(origin)) {
+    std::error_code error;const auto temporary=std::filesystem::temp_directory_path(error);
+    if(error)throw Error({address,1,1},"cannot locate temporary snapshot directory: "+error.message());
+    parent=canonical(temporary,address);std::random_device random;
+    for(unsigned attempt=0;attempt<32;++attempt) {
+      const auto name="link-world-"+std::to_string(random())+"-"+std::to_string(random());
+      const auto candidate=parent/name;
+      if(std::filesystem::create_directory(candidate,error)){directory=candidate;return;}
+      if(error&&error!=std::errc::file_exists)throw Error({address,1,1},"cannot create temporary world snapshot: "+error.message());
+    }
+    throw Error({address,1,1},"cannot allocate a unique temporary world snapshot");
+  }
+  ~RemoteSnapshot() {
+    // Delete only this owned, direct child of the canonical temporary directory.
+    std::error_code error;const auto actual=std::filesystem::canonical(directory,error);
+    if(error||directory.empty()||directory.parent_path()!=parent||!sameComponent(actual,directory)||!contained(actual,parent)||sameComponent(actual,parent))return;
+    std::filesystem::remove_all(directory,error);
+  }
+  std::string label(const std::string& relative) const {return address+"/"+relative;}
+  std::filesystem::path stage(const std::string& relative,std::size_t cap,std::stop_token stop) {
+    const auto where=Location{label(relative),1,1};cancelled(stop,where.file);
+    std::filesystem::path path;
+    try{path=resourcePath(relative).lexically_normal();}catch(const Error& error){throw Error(where,error.what());}
+    // Windows aliases can otherwise overwrite an earlier resource in the snapshot.
+    for(const auto& component:path) {
+      auto name=pathText(component);if(name==".")continue;
+      if(name.empty()||name.back()=='.'||name.back()==' '||name.find_first_of("<>\"|*?")!=std::string::npos)throw Error(where,"unsafe remote resource filename");
+      auto stem=name.substr(0,name.find('.'));std::transform(stem.begin(),stem.end(),stem.begin(),[](unsigned char c){return static_cast<char>(std::toupper(c));});
+      if(stem=="CON"||stem=="PRN"||stem=="AUX"||stem=="NUL"||(stem.size()==4&&(stem.starts_with("COM")||stem.starts_with("LPT"))&&stem[3]>='1'&&stem[3]<='9'))throw Error(where,"reserved remote resource filename");
+    }
+    const auto file=(directory/path).lexically_normal();
+    if(!contained(file,directory)||sameComponent(file,directory))throw Error(where,"resource escapes its world snapshot");
+    for(const auto& [prior,bytes]:files)if(sameComponent(file,prior)) {
+      if(bytes>cap)throw Error(where,"file byte budget exceeded (maximum "+std::to_string(cap)+")");
+      return resolveResource(directory,relative);
+    }
+    if(transferred>=Limits::remoteWorldBytes)throw Error(where,"world transfer byte budget exceeded (maximum "+std::to_string(Limits::remoteWorldBytes)+")");
+    const auto encoded=path.generic_u8string();const std::string decodedRelative(encoded.begin(),encoded.end());
+    const auto bytes=fetchRemoteResource(remote,decodedRelative,std::min(cap,Limits::remoteWorldBytes-transferred),stop);
+    transferred+=bytes.size();cancelled(stop,where.file);
+    std::error_code error;std::filesystem::create_directories(file.parent_path(),error);
+    if(error)throw Error(where,"cannot create snapshot resource directory: "+error.message());
+    const auto actualParent=canonical(file.parent_path(),where.file);
+    if(!contained(actualParent,directory))throw Error(where,"snapshot resource directory escapes its world");
+    std::ofstream output(file,std::ios::binary|std::ios::trunc);
+    if(!output)throw Error(where,"cannot create snapshot resource");
+    for(std::size_t offset=0;offset<bytes.size();) {
+      cancelled(stop,where.file);const auto count=std::min<std::size_t>(8192,bytes.size()-offset);
+      output.write(bytes.data()+offset,static_cast<std::streamsize>(count));offset+=count;
+      if(!output)throw Error(where,"failed while writing snapshot resource");
+    }
+    output.close();if(!output)throw Error(where,"failed while closing snapshot resource");
+    cancelled(stop,where.file);files.emplace_back(file,bytes.size());return resolveResource(directory,relative);
+  }
+};
 struct Field {Value value;Location location;};
 using Fields=std::map<std::string,Field>;
 void addField(Cursor& cursor,Fields& fields) {
@@ -147,24 +223,36 @@ void parseStyles(World& world,std::string_view source,const std::string& file,st
 }
 
 std::filesystem::path resolveLink(const std::string& address,const std::filesystem::path& worldsRoot) {
-  const Location where{address,1,1};if(!address.starts_with("link://"))throw Error(where,"expected link://local/<world>");const auto slash=address.find('/',7);
-  if(slash==std::string::npos||address.substr(7,slash-7)!="local")throw Error(where,"LINK authority must be local without credentials or port");
-  const auto segment=decode(address.substr(slash+1),where);
-  if(segment.empty()||!std::all_of(segment.begin(),segment.end(),[](unsigned char c){return(c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='-';}))throw Error(where,"LINK world must be one segment containing letters, digits or hyphens");
+  const Location where{address,1,1};const auto segment=localWorld(address);
   const auto root=canonical(worldsRoot,address);const auto result=canonical(root/utf8Path(segment,where),address);
   if(!contained(result,root)||sameComponent(result,root))throw Error(where,"LINK directory escapes the registered worlds root");
   if(!std::filesystem::is_directory(result))throw Error(where,"LINK world is not a directory");return result;
 }
 std::filesystem::path resolveResource(const std::filesystem::path& directory,const std::string& relative) {
-  const Location where{relative,1,1};const auto decoded=decode(relative,where);const auto path=utf8Path(decoded,where);
-  if(path.is_absolute()||path.has_root_path()||decoded.front()=='/')throw Error(where,"resource must be a relative path inside the world");
-  for(const auto& part:path)if(part=="..")throw Error(where,"resource parent traversal is forbidden");
+  const Location where{relative,1,1};const auto path=resourcePath(relative);
   const auto root=canonical(directory,relative);const auto result=canonical(root/path,relative);if(!contained(result,root)||sameComponent(result,root))throw Error(where,"resource escapes its world directory after symlink resolution");
   if(!std::filesystem::is_regular_file(result))throw Error(where,"resource is not a regular file");return result;
 }
+std::string resolvePortalAddress(const std::string& address,const std::string& currentAddress,const std::filesystem::path& worldsRoot) {
+  std::string result=address;
+  if(result.starts_with('/')) {
+    std::string authority;
+    if(currentAddress.starts_with("link://local/")){localWorld(currentAddress);authority="local";}
+    else authority=parseRemoteLink(currentAddress).authority();
+    result="link://"+authority+result;
+  }
+  if(result.starts_with("link://local/"))resolveLink(result,worldsRoot);
+  else parseRemoteLink(result);
+  return result;
+}
 std::shared_ptr<const World> loadWorld(const std::string& address,const std::filesystem::path& worldsRoot,std::stop_token stop) {
-  cancelled(stop,address);auto result=std::make_shared<World>();result->address=address;result->directory=resolveLink(address,worldsRoot);
-  const auto manifest=resolveResource(result->directory,"world.link");const auto manifestSource=read(manifest,Limits::manifestBytes,stop);Cursor cursor(lex(manifestSource,pathText(manifest)));const auto keyword=cursor.expect("world");const auto fields=fieldBlock(cursor);if(!cursor.done())throw Error(cursor.peek().location,"unexpected text after world declaration");
+  cancelled(stop,address);auto result=std::make_shared<World>();result->address=address;
+  std::shared_ptr<RemoteSnapshot> snapshot;
+  if(address.starts_with("link://local/"))result->directory=resolveLink(address,worldsRoot);
+  else{snapshot=std::make_shared<RemoteSnapshot>(parseRemoteLink(address),address);result->directory=snapshot->directory;result->resourceOwner=snapshot;}
+  const auto resource=[&](const std::string& relative,std::size_t cap){return snapshot?snapshot->stage(relative,cap,stop):resolveResource(result->directory,relative);};
+  const auto label=[&](const std::string& relative,const std::filesystem::path& file){return snapshot?snapshot->label(relative):pathText(file);};
+  const auto manifest=resource("world.link",Limits::manifestBytes);const auto manifestSource=read(manifest,Limits::manifestBytes,stop,label("world.link",manifest));Cursor cursor(lex(manifestSource,label("world.link",manifest)));const auto keyword=cursor.expect("world");const auto fields=fieldBlock(cursor);if(!cursor.done())throw Error(cursor.peek().location,"unexpected text after world declaration");
   allowed(fields,{"version","id","name","elements","style","scripts","entry","views","environment","walk","portals"});const auto version=text(required(fields,"version",keyword.location),"version");if(version!="0.1")throw Error(fields.at("version").location,"unsupported version '"+version+"'");
   result->id=text(required(fields,"id",keyword.location),"id");result->name=text(required(fields,"name",keyword.location),"name");
   const auto elements=text(required(fields,"elements",keyword.location),"elements");const auto style=text(required(fields,"style",keyword.location),"style");const auto scripts=strings(required(fields,"scripts",keyword.location),"scripts",Limits::scripts);
@@ -190,7 +278,7 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
       value.id=text(Field{mapRequired(portal,"id",field.location),field.location},"portal id");if(value.id.size()>128||!identifier(value.id))throw Error(field.location,"portal id must be an identifier of at most 128 bytes");
       if(!ids.insert(value.id).second)throw Error(field.location,"duplicate portal id '"+value.id+"'");
       value.address=text(Field{mapRequired(portal,"address",field.location),field.location},"portal address");
-      try{resolveLink(value.address,worldsRoot);}catch(const Error& error){throw Error(field.location,"invalid portal address: "+std::string(error.what()));}
+      try{value.address=resolvePortalAddress(value.address,address,worldsRoot);}catch(const Error& error){throw Error(field.location,"invalid portal address: "+std::string(error.what()));}
       value.position=valueVec3(mapRequired(portal,"position",field.location),field.location);value.size=valueVec3(mapRequired(portal,"size",field.location),field.location);
       for(const auto dimension:value.size)if(dimension<=0||dimension>1000)throw Error(field.location,"portal size must be positive and at most 1000");
       result->portals.push_back(std::move(value));
@@ -215,23 +303,23 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
       result->views.push_back({text(nameField,"view name"),valueVec3(mapRequired(view,"position",field.location),field.location),valueVec3(mapRequired(view,"target",field.location),field.location)});
     }
   }
-  const auto elementsFile=resolveResource(result->directory,elements);const auto styleFile=resolveResource(result->directory,style);std::vector<std::filesystem::path> scriptFiles;
-  for(const auto& script:scripts){cancelled(stop,address);const auto file=resolveResource(result->directory,script);for(const auto& prior:scriptFiles)if(sameComponent(file,prior))throw Error(fields.at("scripts").location,"duplicate resolved Script resource");scriptFiles.push_back(file);}
-  const auto elementSource=read(elementsFile,Limits::documentBytes,stop);parseScene(*result,elementSource,pathText(elementsFile),stop);
-  const auto styleSource=read(styleFile,Limits::documentBytes,stop);parseStyles(*result,styleSource,pathText(styleFile),stop);
+  const auto elementsFile=resource(elements,Limits::documentBytes);const auto styleFile=resource(style,Limits::documentBytes);std::vector<std::filesystem::path> scriptFiles;
+  for(const auto& script:scripts){cancelled(stop,address);const auto file=resource(script,Limits::scriptBytes);for(const auto& prior:scriptFiles)if(sameComponent(file,prior))throw Error(fields.at("scripts").location,"duplicate resolved Script resource");scriptFiles.push_back(file);}
+  const auto elementSource=read(elementsFile,Limits::documentBytes,stop,label(elements,elementsFile));parseScene(*result,elementSource,label(elements,elementsFile),stop);
+  const auto styleSource=read(styleFile,Limits::documentBytes,stop,label(style,styleFile));parseStyles(*result,styleSource,label(style,styleFile),stop);
   const std::set<std::string> declared(scripts.begin(),scripts.end());
   for(const auto& node:result->nodes){
     cancelled(stop,address);if(!node.script.empty()&&!declared.contains(node.script))throw Error(node.location,"Script binding '"+node.script+"' is not listed in world scripts");if(!node.style.empty()&&!result->materials.contains(node.style))throw Error(node.location,"unknown material '"+node.style+"'");
     if(!node.image.empty()&&!result->images.contains(node.image)){
       if(result->images.size()>=Limits::images)throw Error(node.location,"image count budget exceeded (maximum "+std::to_string(Limits::images)+")");
-      const auto file=resolveResource(result->directory,node.image);auto extension=pathText(file.extension());std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+      const auto file=resource(node.image,Limits::imageBytes);auto extension=pathText(file.extension());std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
       if(extension!=".jpg"&&extension!=".jpeg"&&extension!=".png"&&extension!=".bmp")throw Error(node.location,"unsupported image type; expected jpg, jpeg, png or bmp");
       std::error_code error;const auto bytes=std::filesystem::file_size(file,error);if(error)throw Error(node.location,"cannot inspect image '"+node.image+"': "+error.message());
       if(bytes>Limits::imageBytes)throw Error(node.location,"image file byte budget exceeded (maximum "+std::to_string(Limits::imageBytes)+")");
       result->images.emplace(node.image,file);
     }
   }
-  for(std::size_t i=0;i<scripts.size();++i){const auto source=read(scriptFiles[i],Limits::scriptBytes,stop);cancelled(stop,address);result->programs.emplace(scripts[i],parseScript(source,pathText(scriptFiles[i])));cancelled(stop,address);}
+  for(std::size_t i=0;i<scripts.size();++i){const auto source=read(scriptFiles[i],Limits::scriptBytes,stop,label(scripts[i],scriptFiles[i]));cancelled(stop,address);result->programs.emplace(scripts[i],parseScript(source,label(scripts[i],scriptFiles[i])));cancelled(stop,address);}
   cancelled(stop,address);return result;
 }
 } // namespace linkworld

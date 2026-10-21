@@ -16,7 +16,7 @@ Build a world. Give it an address. Let someone step inside.
 
 **Our vision: An open standard for connected virtual worlds.**
 
-The direction is an ecosystem where creators can author worlds and people can move between them through one browser. The current implementation is an **experimental local v0.1**, with a working native C++20 browser on Windows. Remote network transport is a future milestone; today's links resolve to registered local worlds.
+The direction is an ecosystem where creators can author worlds and people can move between them through one browser. The current implementation is an **experimental v0.1**, with a native C++20 browser on Windows, local worlds, and an initial **LAN HTTP transport**. Open a world from another computer with `link://192.168.0.10:8000/hello-world`, using that server's actual IPv4 address.
 
 **[Create your first world →](docs/guides/README.md)** · [Element](docs/guides/element.md) · [Script](docs/guides/script.md) · [Style](docs/guides/style.md)
 
@@ -24,11 +24,11 @@ The direction is an ecosystem where creators can author worlds and people can mo
 
 | Foundation | Purpose | In this prototype |
 | --- | --- | --- |
-| **LINK Protocol** | Define world addresses, navigation, and browser ↔ world/server communication contracts. | `link://local/...` resolution, confined resources, and portal navigation between local worlds. |
+| **LINK Protocol** | Define world addresses, navigation, and browser ↔ world/server communication contracts. | Local `link://local/...` addresses, IPv4 LAN addresses, confined resources, and portal navigation. |
 | **LINK Browser** | Visit, render, explore, and interact with worlds. | A Windows native app with 3D rendering, walking, interaction, reload, and world lifecycle management. |
 | **World Standards** | Give creators a common way to describe worlds. | **Element** for structure, **Script** for behavior, **Style** for appearance, parsed and executed by the C++ runtime. |
 
-These parts develop together. The protocol provides a destination and a future communication boundary. The standards describe what is there. The browser brings it to life. Remote browser–server communication and transport rules remain future work.
+These parts develop together. The protocol defines addresses and how world documents reach the browser. The standards describe what is there. The browser brings it to life. The [LAN v0.1 contract](docs/link-lan-v0.1.md) maps remote LINK addresses to HTTP resources while keeping the world format at v0.1.
 
 ## Create a world
 
@@ -71,7 +71,7 @@ ctest --preset release
 .\build\native\Release\LINK.exe
 ```
 
-Once built, **[LINK_START.cmd](LINK_START.cmd)** opens the home screen. World files are copied beside the executable in `worlds/`. Keep that directory with the app when moving the build; another PC also needs a compatible MSVC runtime. Initial tool installation may need downloads. The app runs without external asset downloads.
+Once built, **[LINK_START.cmd](LINK_START.cmd)** opens the home screen. World files are copied beside the executable in `worlds/`. Keep that directory with the app when moving the build; another PC also needs a compatible MSVC runtime. Initial tool installation may need downloads. Bundled local worlds run offline; remote worlds download their documents, scripts, and images from the selected server.
 
 ![LINK Browser home](docs/assets/browser-home.png)
 
@@ -87,7 +87,29 @@ Or choose the repository's demo worlds:
 .\build\native\Release\LINK.exe --worlds "$PWD\native\worlds" --open link://local/room-a
 ```
 
-`--worlds` selects an explicit local root; relative document references resolve inside each world. See [LINK Protocol: local addresses](docs/link-local-v0.1.md).
+`--worlds` selects an explicit local root; relative document references resolve inside each world. See [LINK Protocol: local addresses](docs/link-local-v0.1.md). If the checkout moved, the build helper regenerates stale CMake paths; `-Fresh -Test` also requests a clean configuration.
+
+## Open a world over LAN
+
+The server is a separate sibling repository, `link-server`, using Python 3.10+ and its standard library. Update both the server and browser; older local-only browser builds cannot open remote addresses.
+
+On the server PC, from `link-server`:
+
+```powershell
+.\LINK_SERVER_START.cmd
+# Or choose an explicit world root:
+python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
+```
+
+Use the IPv4 address printed by the server for the active Ethernet or Wi-Fi adapter. `0.0.0.0` is a bind setting; `127.0.0.1` reaches only the same PC. On another PC on the same trusted network, enter the server address in LINK Browser or run this from the browser repository:
+
+```powershell
+.\build\native\Release\LINK.exe --open link://192.168.0.10:8000/hello-world
+```
+
+Replace `192.168.0.10` with the server's actual IPv4 address. Omitting the port uses `8000`. The server's `hello-world` and `second-world` examples include an image, a client-side Script, and portals that stay on the same server. **F5** fetches a fresh world; failed or cancelled loading keeps the current world.
+
+This is plain HTTP for a trusted LAN. DNS, HTTPS, authentication, multiplayer state, and OS `link://` handler registration are future work. The server does not change Windows Firewall. See the [LAN contract and setup guide](docs/link-lan-v0.1.md) for resource limits, hosting existing worlds, and connection checks.
 
 ## Explore and interact
 
@@ -107,11 +129,11 @@ The home screen puts **LINK**, an address field, and shortcuts to **흑룡이 �
 
 - A C++ lexer, document parsers, and an AST interpreter for LINK's own authoring languages.
 - A renderer-independent object model with hierarchy, transforms, IDs, state, and instance-local script storage.
-- Style resolution, primitive geometry, local image resources, and native rendering.
-- Walking and local portals, cancellable loading, reload, validation errors, and cleanup when worlds change.
+- Style resolution, primitive geometry, local or downloaded image resources, and native rendering.
+- Walking and local or remote portals, bounded HTTP downloads, cancellable loading, fresh reload, validation errors, and cleanup when worlds change.
 - Automated core, image, and path-confinement checks, plus native input smoke tests. Run the included checks with `ctest --preset release` after building.
 
-This prototype targets **trusted local documents**. Input and interpreter budgets are implemented; production process isolation is a future milestone. The grammar and APIs are experimental and may change.
+This prototype targets **trusted local documents and trusted LAN servers**. Downloaded Script runs in each browser's world instance through the same constrained API. Input and interpreter budgets are implemented; process isolation and stronger permissions remain future work. The grammar and APIs are experimental and may change.
 
 ## Worlds to try
 
@@ -131,15 +153,15 @@ Photo originals are read-only inputs; the demo uses separate display copies. [De
 The long-term goal is a connected-world ecosystem with interoperable authoring and multiple implementations. Work ahead includes:
 
 - Versioned world contracts and clearer interoperability requirements.
-- Remote LINK discovery, browser–world/server communication, connection, and transport rules.
+- DNS and server discovery, TLS transport, authentication, and interoperable protocol profiles.
 - World permissions, stronger execution isolation, and shared state.
 - Broader native platform support and, later, immersive input and rendering.
 
-These are project directions, not capabilities claimed by the current local prototype. An open standard is the vision; v0.1 is the starting point for testing its ideas in a working browser.
+These are project directions beyond the current local and LAN prototype. An open standard is the vision; v0.1 is the starting point for testing its ideas in a working browser.
 
 **Build a world. Explore the boundaries. Help shape how worlds connect.**
 
-[Authoring guides](docs/guides/README.md) · [World Standards](docs/link-world-v0.1.md) · [LINK Protocol](docs/link-local-v0.1.md) · [Run LINK Browser](#run-link-browser)
+[Authoring guides](docs/guides/README.md) · [World Standards](docs/link-world-v0.1.md) · [Local protocol](docs/link-local-v0.1.md) · [LAN protocol](docs/link-lan-v0.1.md) · [Run LINK Browser](#run-link-browser)
 
 ## License
 
