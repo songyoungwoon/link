@@ -55,6 +55,8 @@ struct WalkSettings { Vec3 min{-3,0,-30},max{3,4,3}; double eyeHeight=1.65,speed
 struct Portal { std::string id,address; Vec3 position,size; };
 struct FogSettings { std::string color="#111c21"; double start=80,end=250; };
 struct World {
+  // Owns remote snapshot files for every renderer and viewer using this World.
+  std::shared_ptr<void> resourceOwner;
   std::string address,id,name; std::filesystem::path directory;
   Vec3 eye{7,6,9},target{0,1,0}; std::vector<NodeDefinition> nodes;
   StylePatch defaults; std::map<std::string,StylePatch> materials; std::vector<StyleRule> rules;
@@ -68,6 +70,7 @@ struct World {
   bool grid=true;
 };
 struct Limits {
+  static constexpr std::size_t remoteWorldBytes=64*1024*1024;
   static constexpr std::size_t manifestBytes=65536, documentBytes=1048576, scriptBytes=131072;
   static constexpr std::size_t tokens=40000, astNodes=20000, parseDepth=64, nodes=500,nodeDepth=16,scripts=16;
   static constexpr std::size_t stringBytes=8192,stateBytes=65536,evalSteps=4096,callDepth=16,storageBytes=65536;

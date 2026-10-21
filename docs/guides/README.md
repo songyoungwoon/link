@@ -56,7 +56,7 @@ examples/
 | 2 | [Style — 재질과 선택자](style.md) | 기본색과 클릭 전 외형 변경 |
 | 3 | [Script — 움직임과 상호작용](script.md) | 회전 속도와 클릭 반응 변경 |
 
-각 가이드의 전체 코드와 `examples/first-world`의 실제 파일은 같은 예제입니다. 필요한 파일을 직접 열어 수정해도 됩니다. 문법 전체의 기준은 [제작 언어 명세](../../native/docs/language.md), 주소·경로 기준은 [로컬 LINK Protocol 명세](../link-local-v0.1.md)에서 확인합니다.
+각 가이드의 전체 코드와 `examples/first-world`의 실제 파일은 같은 예제입니다. 필요한 파일을 직접 열어 수정해도 됩니다. 문법 전체의 기준은 [제작 언어 명세](../../native/docs/language.md), 주소·경로 기준은 [로컬 LINK Protocol 명세](../link-local-v0.1.md)와 [LAN HTTP 계약](../link-lan-v0.1.md)에서 확인합니다.
 
 ## 나만의 공간으로 복사하기
 
@@ -72,7 +72,19 @@ Copy-Item -LiteralPath .\docs\guides\examples\first-world -Destination .\docs\gu
 & .\build\native\Release\LINK.exe --worlds "$PWD\docs\guides\examples" --open link://local/my-world
 ```
 
-LINK 주소 끝의 `my-world`는 폴더 이름입니다. 현재 로컬 주소의 폴더 이름은 영문자·숫자·하이픈을 사용합니다. Element 내부 ID에는 다른 규칙이 적용되어 `sample_cube`처럼 영문자 또는 `_`로 시작하는 식별자를 사용합니다.
+LINK 주소 끝의 `my-world`는 폴더 이름입니다. 로컬·LAN 주소의 공간 폴더 이름은 영문자·숫자·하이픈을 사용합니다. Element 내부 ID에는 다른 규칙이 적용되어 `sample_cube`처럼 영문자 또는 `_`로 시작하는 식별자를 사용합니다.
+
+## LAN에서 내 공간 열기
+
+제작 문법은 그대로 두고 공간 폴더의 부모 디렉터리를 별도 `link-server`로 공개할 수 있습니다. 서버 PC의 `link-server` 폴더에서 Python 3.10 이상으로 실행합니다. 아래는 브라우저 저장소와 서버 저장소를 형제로 둔 예입니다.
+
+```powershell
+python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "..\link\docs\guides\examples"
+```
+
+다른 PC의 최신 LINK Browser에서 `link://192.168.0.10:8000/my-world`를 엽니다. 예시 IP는 서버가 출력한 실제 Ethernet·Wi-Fi IPv4로 바꾸세요. 브라우저가 문서·Script·이미지를 가져오며 **F5**로 다시 가져옵니다. 서버와 브라우저를 모두 갱신해야 합니다. 기본 서버 예제는 `LINK_SERVER_START.cmd`로 열 수 있고, 전체 설정·방화벽 확인·전송 제한은 [LAN 안내](../link-lan-v0.1.md#run-the-server-and-browser-on-windows)를 따릅니다.
+
+포탈의 `address: "/other-world"`는 현재 서버와 포트를 유지합니다. 로컬에서 같은 문서를 열면 `link://local/other-world`입니다. 명시적 `link://local/...`은 원격 공간에서도 방문자의 로컬 공간을 가리킵니다. 원격 대상은 선언할 때 문법만 확인하며 실제 진입 때 가져옵니다. Script는 방문자마다 따로 실행하고 상태를 공유하지 않습니다. 신뢰하는 LAN 서버와 문서에 사용하세요.
 
 ## 작성할 때 지킬 공통 규칙
 
