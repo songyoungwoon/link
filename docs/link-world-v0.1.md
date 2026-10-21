@@ -38,7 +38,7 @@ hook = "on", hookName, "(", parameters, ")", block;
 
 포탈은 이동한 눈 위치의 선분과 감지 상자의 교차로 진입을 판정합니다. 대상 주소는 같은 로컬 LINK 경로 규칙을 지키며 포탈에 들어간 뒤 파일 읽기·검증·최신 요청 우선 활성화 순서로 이동합니다. 선언만으로 대상 공간의 내용을 실행하지 않습니다. 이 로컬 이동은 원격 LINK 전송·서버 구현을 뜻하지 않습니다.
 
-LINK Browser 홈의 **흑룡이전시회**는 `link://local/heukryong`을 열며 Hello World 공간은 복도 끝 포탈로 연결합니다. 사진을 더블클릭하면 큰 사진 보기가 열립니다. 홈에는 Hello World 바로 가기를 두지 않습니다.
+LINK Browser 홈의 **흑룡이 전시회**는 `link://local/heukryong`을 열며 Hello World 공간은 복도 끝 포탈로 연결합니다. 사진을 더블클릭하면 큰 사진 보기가 열립니다. 홈에는 Hello World 바로 가기를 두지 않습니다.
 
 Style 계산 순서는 실행기 기본값, defaults, 이름 있는 material 참조, class, id, Script override입니다. 같은 우선순위는 파일에서 뒤의 규칙이 이깁니다. color는 `#RRGGBB`, roughness·metalness·opacity는 0~1, wireframe은 bool입니다. override는 원본을 오염시키지 않습니다.
 

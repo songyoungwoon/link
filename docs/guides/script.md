@@ -123,7 +123,7 @@ ctx.setTransform({rotation: [0, angle, 0]});
 
 예제는 `!ctx.getState().selected`로 bool을 반전하고 첫 클릭에는 `ctx.setStyle`로 color만 덮어씁니다. 다음 클릭에는 `ctx.clearStyle`로 override를 제거합니다. 단순히 이전 색을 하드코딩하지 않고 [Style 우선순위](style.md#3-속성마다-계산하는-우선순위)로 돌아가기 때문에 Style 파일을 나중에 바꿔도 복원이 맞습니다.
 
-`ctx.log(event)`는 맵을 로그로 표시합니다. 문자열과 숫자를 자동으로 섞는 변환은 없으므로 `"clicks: " + clicks` 대신 `ctx.log(clicks)` 또는 `ctx.log({clicks:clicks})`를 사용합니다.
+`ctx.log(event)`는 맵을 로그로 표시합니다. 실행 로그는 **F12**로 개발자 도구를 열어 확인합니다. 문자열과 숫자를 자동으로 섞는 변환은 없으므로 `"clicks: " + clicks` 대신 `ctx.log(clicks)` 또는 `ctx.log({clicks:clicks})`를 사용합니다.
 
 ## 7. 사용할 수 있는 ctx API
 
