@@ -49,7 +49,7 @@ if(WIN32)
 endif()
 
 enable_testing()
-add_executable(link_tests native/tests/main.cpp native/tests/parser_tests.cpp native/tests/script_tests.cpp native/tests/runtime_tests.cpp native/tests/exhibition_tests.cpp native/tests/walk_tests.cpp native/tests/guide_tests.cpp native/tests/network_tests.cpp)
+add_executable(link_tests native/tests/main.cpp native/tests/parser_tests.cpp native/tests/script_tests.cpp native/tests/runtime_tests.cpp native/tests/exhibition_tests.cpp native/tests/afterlight_tests.cpp native/tests/walk_tests.cpp native/tests/guide_tests.cpp native/tests/network_tests.cpp)
 target_link_libraries(link_tests PRIVATE link_core)
 target_compile_definitions(link_tests PRIVATE LINK_SOURCE_DIR="${CMAKE_SOURCE_DIR}/native")
 add_test(NAME link_core_tests COMMAND link_tests)

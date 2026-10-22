@@ -13,7 +13,7 @@ CpuImage decodeImage(const std::filesystem::path&,unsigned maxDimension=512);
 CpuImage rasterText(const std::string&,double aspect,const std::string& color,bool textBackground=true);
 struct Texture {
   unsigned id=0,width=0,height=0;double aspect=1,u0=0,v0=0,u1=1,v1=1;
-  std::size_t bytes=0;bool textBackground=true;
+  std::size_t bytes=0;bool textBackground=true; // Includes every RGBA8 mip level.
 };
 class NativeTextures {
 public:
@@ -36,7 +36,7 @@ public:
   std::size_t deleted() const {return deleted_;}
 private:
   std::map<std::string,Texture> images_,texts_;Texture viewer_;
-  struct Job {std::string key,text,color;std::filesystem::path path;double aspect=1;bool textBackground=true;};
+  struct Job {std::string key,text,color;std::filesystem::path path;double aspect=1;bool textBackground=true;unsigned maxDimension=2048;};
   std::vector<Job> jobs_;std::size_t completed_=0;
   std::size_t liveBytes_=0,created_=0,deleted_=0;
   Texture upload(const CpuImage&);void release(Texture&);
