@@ -143,6 +143,7 @@ The included worlds exercise the same browser and runtime:
 | --- | --- | --- |
 | Photo corridor — **흑룡이 전시회** | `link://local/heukryong` | Walk past photographs, double-click an image, and enter the portal at the end. |
 | Hello World | `link://local/hello-world` | Step through the corridor portal onto a cosmic plaza. Walk toward monumental 3D letters and a vast ring beneath planets and stars. |
+| [AFTERLIGHT](docs/afterlight.md) | `link://local/afterlight` | Explore a small afternoon room with baked daylight; open a book and toggle a table lamp. |
 | Room A | `link://local/room-a` | Open a hinged door and watch a time-based rotating sculpture. |
 | Room B | `link://local/room-b` | Test independent object state with two breakable stones. |
 

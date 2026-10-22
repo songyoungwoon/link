@@ -161,6 +161,11 @@ void geometry(const Geometry& g) {
   glNormal3d(0,1,0);glVertex3d(-x,y,z);glVertex3d(x,y,z);glVertex3d(x,y,-z);glVertex3d(-x,y,-z);
   glNormal3d(0,-1,0);glVertex3d(-x,-y,-z);glVertex3d(x,-y,-z);glVertex3d(x,-y,z);glVertex3d(-x,-y,z);glEnd();
 }
+// The surface class marks a texture used as an architectural material, rather
+// than an exhibition photograph. Keep these out of the standalone photo viewer.
+bool photoImage(const NodeDefinition& node){
+  return !node.image.empty()&&std::find(node.classes.begin(),node.classes.end(),"surface")==node.classes.end();
+}
 void texturedQuad(const Texture& texture,double width,double height,double opacity=1){
   glDisable(GL_LIGHTING);glEnable(GL_TEXTURE_2D);glBindTexture(GL_TEXTURE_2D,texture.id);glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);glColor4d(1,1,1,opacity);glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);glBegin(GL_QUADS);glTexCoord2d(texture.u0,texture.v1);glVertex3d(-width/2,-height/2,0);glTexCoord2d(texture.u1,texture.v1);glVertex3d(width/2,-height/2,0);glTexCoord2d(texture.u1,texture.v0);glVertex3d(width/2,height/2,0);glTexCoord2d(texture.u0,texture.v0);glVertex3d(-width/2,height/2,0);glEnd();glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_TEXTURE_2D);glEnable(GL_LIGHTING);
 }
@@ -179,7 +184,7 @@ public:
   explicit Desktop(std::filesystem::path root):navigator_(std::move(root),[this](bool error,const std::string& message){log(error,message);}){}
   ~Desktop(){navigator_.stop();destroyGl();if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(addressFont_)DeleteObject(addressFont_);if(background_)DeleteObject(background_);if(paper_)DeleteObject(paper_);if(photoBrush_)DeleteObject(photoBrush_);}
   int run(int show);
-  std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath,shellSmokePath;
+  std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath,shellSmokePath,afterlightSmokePath;
 private:
   Navigator navigator_;NativeTextures textures_;HWND window_=nullptr,viewport_=nullptr,address_=nullptr,status_=nullptr,nodes_=nullptr,inspector_=nullptr,logs_=nullptr;
   std::map<int,HWND> controls_;HDC glDc_=nullptr;HGLRC glContext_=nullptr;HFONT font_=nullptr,mono_=nullptr;HBRUSH background_=nullptr,paper_=nullptr;
@@ -191,6 +196,7 @@ private:
   Clock::time_point previous_=Clock::now(),lastInspect_=Clock::now(),started_=Clock::now();std::size_t createdSeen_=0;std::size_t frames_=0,clicks_=0;std::string glDescription_;
   int smokeStage_=0,switches_=0,exitCode_=0,smokeDoorCycles_=0;bool smokeClicked_=false,smokeDrag_=false,smokePreserved_=false,smokeStones_=false,smokeHome_=false,smokeStopped_=false;std::size_t smokeNodeCount_=0;Clock::time_point smokeTime_=Clock::now();std::string smokeFailure_;
   std::vector<std::size_t> photoNodes_;std::size_t photoIndex_=0;int viewIndex_=0;bool photoOpen_=false;const Texture* viewerTexture_=nullptr;std::string renderError_;double maxTextureStepMs_=0;Clock::time_point texturesStarted_=Clock::now();
+  int afterlightStage_=0;std::size_t afterlightBytes_=0;std::string afterlightFailure_;Clock::time_point afterlightTime_=Clock::now();Vec3 afterlightWalkStart_{};
   int galleryStage_=0;std::size_t galleryImages_=0,galleryTexts_=0,galleryBytes_=0;bool galleryPhotoClicked_=false,galleryViewer_=false,galleryPortal_=false,galleryText3d_=false,galleryHologram_=false,galleryWalk_=false,galleryBounds_=false,galleryLook_=false,galleryPortalCaptured_=false,galleryReload_=false,galleryReleased_=false;std::string galleryFailure_;Clock::time_point galleryTime_=Clock::now();Vec3 galleryWalkStart_{};std::string galleryPortalAddress_;std::size_t galleryWalkSteps_=0;double galleryWalkDistance_=0,galleryExpectedDistance_=0;
   static LRESULT CALLBACK windowProc(HWND,UINT,WPARAM,LPARAM);static LRESULT CALLBACK viewProc(HWND,UINT,WPARAM,LPARAM);
   static LRESULT CALLBACK buttonProc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
@@ -198,8 +204,9 @@ private:
   LRESULT message(UINT,WPARAM,LPARAM);LRESULT viewMessage(UINT,WPARAM,LPARAM);
   int px(int n)const{return MulDiv(n,dpi_,96);}HWND control(const wchar_t*,const wchar_t*,DWORD,int,DWORD=0);
   void layout();void paint();void drawText(HDC,const std::wstring&,RECT,COLORREF,int=13,bool=false,UINT=DT_LEFT|DT_TOP|DT_NOPREFIX);
-  void createControls();void initGl();void destroyGl();void render();void frame();void command(int);void request(const std::string&);
+  void createControls();void initGl();void destroyGl();void render(bool present=true);void frame();void command(int);void request(const std::string&);
   void log(bool,const std::string&);void refreshInspector();void click(int,int);bool clickBinding(std::size_t);void smoke();void finishSmoke(bool);bool capture(const std::filesystem::path&);
+  void afterlightSmoke();void finishAfterlightSmoke(bool);
   void jumpView(int);void openPhoto(std::size_t);void closePhoto();void movePhoto(int);void setPhotoControls();void clearWorldGraphics();void renderPhoto();bool clickImage(bool);void gallerySmoke();void finishGallerySmoke(bool);
   bool walking()const;bool movementKey(WPARAM)const;void updateWalk(double);void lookWalk(int,int);
   void drawButton(const DRAWITEMSTRUCT&);void drawIcon(HDC,int,int,int,int,COLORREF);void toggleTools();void showMenu();void refreshShell();void createFonts();bool shortcut(WPARAM,bool);void shellSmoke();void finishShellSmoke(bool);bool homeLayoutFits()const;
@@ -387,9 +394,9 @@ void Desktop::paint(){
   }
   BitBlt(target,0,0,width_,height_,dc,0,0,SRCCOPY);SelectObject(dc,oldBitmap);DeleteObject(bitmap);DeleteDC(dc);EndPaint(window_,&ps);
 }
-void Desktop::render(){
+void Desktop::render(bool present){
   auto* runtime=navigator_.current();if(!runtime||!glContext_||viewWidth_<=0||viewHeight_<=0||minimized_)return;
-  wglMakeCurrent(glDc_,glContext_);if(photoOpen_){renderPhoto();SwapBuffers(glDc_);++frames_;return;}unsigned background=static_cast<unsigned>(std::stoul(runtime->world().background.substr(1),nullptr,16));glClearColor(float((background>>16)&255)/255,float((background>>8)&255)/255,float(background&255)/255,1);glViewport(0,0,viewWidth_,viewHeight_);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);glMatrixMode(GL_PROJECTION);glLoadIdentity();double nearZ=.05,top=nearZ*std::tan(45*pi/360),aspect=double(viewWidth_)/viewHeight_;glFrustum(-top*aspect,top*aspect,-top,top,nearZ,500);glMatrixMode(GL_MODELVIEW);auto view=camera_.view();glLoadMatrixd(view.m.data());
+  wglMakeCurrent(glDc_,glContext_);if(photoOpen_){renderPhoto();if(present)SwapBuffers(glDc_);++frames_;return;}unsigned background=static_cast<unsigned>(std::stoul(runtime->world().background.substr(1),nullptr,16));glClearColor(float((background>>16)&255)/255,float((background>>8)&255)/255,float(background&255)/255,1);glViewport(0,0,viewWidth_,viewHeight_);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);glMatrixMode(GL_PROJECTION);glLoadIdentity();double nearZ=.05,top=nearZ*std::tan(45*pi/360),aspect=double(viewWidth_)/viewHeight_;glFrustum(-top*aspect,top*aspect,-top,top,nearZ,500);glMatrixMode(GL_MODELVIEW);auto view=camera_.view();glLoadMatrixd(view.m.data());
   if(runtime->world().fog){const auto& fog=*runtime->world().fog;const auto color=static_cast<unsigned>(std::stoul(fog.color.substr(1),nullptr,16));GLfloat rgba[]={float((color>>16)&255)/255,float((color>>8)&255)/255,float(color&255)/255,1};glEnable(GL_FOG);glFogi(GL_FOG_MODE,GL_LINEAR);glFogfv(GL_FOG_COLOR,rgba);glFogf(GL_FOG_START,float(fog.start));glFogf(GL_FOG_END,float(fog.end));}else glDisable(GL_FOG);
   GLfloat ambient[]={.26f,.28f,.30f,1},key[]={.74f,.72f,.66f,1},fill[]={.22f,.28f,.33f,1},keyPos[]={-.6f,1,.8f,0},fillPos[]={.7f,.4f,-.8f,0};glLightModelfv(GL_LIGHT_MODEL_AMBIENT,ambient);glLightfv(GL_LIGHT0,GL_DIFFUSE,key);glLightfv(GL_LIGHT0,GL_SPECULAR,key);glLightfv(GL_LIGHT0,GL_POSITION,keyPos);glLightfv(GL_LIGHT1,GL_DIFFUSE,fill);glLightfv(GL_LIGHT1,GL_POSITION,fillPos);
   if(runtime->world().grid){glDisable(GL_LIGHTING);glColor3f(.17f,.25f,.25f);glBegin(GL_LINES);for(int i=-12;i<=12;++i){glVertex3d(i,-.025,-12);glVertex3d(i,-.025,12);glVertex3d(-12,-.025,i);glVertex3d(12,-.025,i);}glEnd();glEnable(GL_LIGHTING);}
@@ -406,7 +413,7 @@ void Desktop::render(){
   if(toolsOpen_&&!selected_.empty()){glDisable(GL_LIGHTING);glColor3f(.68f,.87f,.66f);glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);glLineWidth(1.5f);glEnable(GL_POLYGON_OFFSET_LINE);glPolygonOffset(-1,-1);
     for(std::size_t i=0;i<runtime->nodes().size();++i){if(runtime->nodes()[i].definition.kind!=Kind::Element||!matrices.visible[i])continue;auto p=i;bool selected=false;while(p!=noParent){if(runtime->nodes()[p].definition.id==selected_){selected=true;break;}p=runtime->nodes()[p].definition.parent;}if(selected){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());geometry(runtime->nodes()[i].definition.geometry);glPopMatrix();}}
     glDisable(GL_POLYGON_OFFSET_LINE);glLineWidth(1);glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);glEnable(GL_LIGHTING);
-  }SwapBuffers(glDc_);++frames_;
+  }if(present)SwapBuffers(glDc_);++frames_;
 }
 void Desktop::renderPhoto(){
   glDisable(GL_FOG);glViewport(0,0,viewWidth_,viewHeight_);glClearColor(.055f,.065f,.07f,1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,viewWidth_,0,viewHeight_,-1,1);glMatrixMode(GL_MODELVIEW);glLoadIdentity();glDisable(GL_DEPTH_TEST);glDisable(GL_BLEND);
@@ -548,7 +555,7 @@ void Desktop::frame(){
   navigator_.poll();auto* runtime=navigator_.current();auto c=counters();
   if(runtime&&createdSeen_!=c.createdWorlds){
     clearWorldGraphics();createdSeen_=c.createdWorlds;camera_.reset(runtime->world());displayAddress_=runtime->world().address;selected_.clear();mode_=L"실행 중";lastStructure_.clear();renderError_.clear();viewIndex_=0;photoIndex_=0;
-    for(std::size_t i=0;i<runtime->nodes().size();++i)if(!runtime->nodes()[i].definition.image.empty())photoNodes_.push_back(i);
+    for(std::size_t i=0;i<runtime->nodes().size();++i)if(photoImage(runtime->nodes()[i].definition))photoNodes_.push_back(i);
     texturesStarted_=now;
     try{textures_.begin(runtime->world());}catch(const std::exception& error){renderError_=error.what();clearWorldGraphics();navigator_.stop();runtime=nullptr;log(true,renderError_);mode_=L"사진 준비 실패";}
     layout();if(runtime)SetFocus(viewport_);InvalidateRect(window_,nullptr,FALSE);
@@ -562,7 +569,7 @@ void Desktop::frame(){
   if(navigator_.error()!=lastError_){lastError_=navigator_.error();InvalidateRect(window_,nullptr,FALSE);}
   if(runtime&&!minimized_&&viewWidth_>0&&viewHeight_>0){updateWalk(delta);runtime->update(std::clamp(delta,0.,.1));}
   if(now-lastInspect_>std::chrono::milliseconds(200)){refreshInspector();lastInspect_=now;if(toolsOpen_){RECT footer{contentWidth_,height_-px(31),width_,height_};InvalidateRect(window_,&footer,FALSE);}}
-  render();if(!shellSmokePath.empty())shellSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
+  render();if(!shellSmokePath.empty())shellSmoke();else if(!afterlightSmokePath.empty())afterlightSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
   else if(!capturePath.empty()&&!navigator_.loading()&&!textures_.loading()&&now-started_>std::chrono::seconds(2)){capture(capturePath);capturePath.clear();}
 }
 
@@ -573,10 +580,11 @@ bool Desktop::capture(const std::filesystem::path& path){
   HDC source=GetDC(window_),memory=CreateCompatibleDC(source);BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=width_;info.bmiHeader.biHeight=height_;info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=24;info.bmiHeader.biCompression=BI_RGB;
   void* bits=nullptr;HBITMAP bitmap=CreateDIBSection(source,&info,DIB_RGB_COLORS,&bits,nullptr,0);if(!bitmap){DeleteDC(memory);ReleaseDC(window_,source);return false;}
   auto old=SelectObject(memory,bitmap);BitBlt(memory,0,0,width_,height_,source,0,0,SRCCOPY|CAPTUREBLT);
-  // Read the real front buffer explicitly; GDI capture of hardware surfaces is driver dependent.
+  // Re-render into the back buffer before readback. Front-buffer ownership can
+  // be clipped by other windows or monitor edges even when the scene is valid.
   if(navigator_.current()&&glContext_&&viewWidth_>0&&viewHeight_>0){
     RECT viewportBounds{};GetClientRect(viewport_,&viewportBounds);MapWindowPoints(viewport_,window_,reinterpret_cast<POINT*>(&viewportBounds),2);int capturedWidth=viewportBounds.right-viewportBounds.left,capturedHeight=viewportBounds.bottom-viewportBounds.top;
-    wglMakeCurrent(glDc_,glContext_);std::vector<unsigned char> rgb(static_cast<std::size_t>(capturedWidth)*capturedHeight*3);glPixelStorei(GL_PACK_ALIGNMENT,1);glReadBuffer(GL_FRONT);glReadPixels(0,0,capturedWidth,capturedHeight,GL_RGB,GL_UNSIGNED_BYTE,rgb.data());
+    render(false);wglMakeCurrent(glDc_,glContext_);std::vector<unsigned char> rgb(static_cast<std::size_t>(capturedWidth)*capturedHeight*3);glPixelStorei(GL_PACK_ALIGNMENT,1);glReadBuffer(GL_BACK);glReadPixels(0,0,capturedWidth,capturedHeight,GL_RGB,GL_UNSIGNED_BYTE,rgb.data());
     int stride=(width_*3+3)&~3;auto* dest=static_cast<unsigned char*>(bits);int originX=viewportBounds.left,originY=viewportBounds.top;
     std::vector<RECT> overlays;if(photoOpen_)for(auto id:{PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle}){RECT rect{};GetWindowRect(controls_[id],&rect);MapWindowPoints(nullptr,window_,reinterpret_cast<POINT*>(&rect),2);overlays.push_back(rect);}
     for(int y=0;y<capturedHeight;++y)for(int x=0;x<capturedWidth;++x){int dy=height_-originY-capturedHeight+y,dx=originX+x;if(dy<0||dy>=height_||dx<0||dx>=width_)continue;POINT point{dx,height_-1-dy};if(std::any_of(overlays.begin(),overlays.end(),[&](const RECT& rect){return PtInRect(&rect,point)!=FALSE;}))continue;auto s=(static_cast<std::size_t>(y)*capturedWidth+x)*3;auto d=static_cast<std::size_t>(dy)*stride+dx*3;dest[d]=rgb[s+2];dest[d+1]=rgb[s+1];dest[d+2]=rgb[s];}
@@ -655,6 +663,71 @@ bool Desktop::clickImage(bool doubleClick){
   }
   return false;
 }
+void Desktop::afterlightSmoke(){
+  const auto fail=[&](const std::string& message){afterlightFailure_=message;finishAfterlightSmoke(false);};
+  if(Clock::now()-started_>std::chrono::seconds(40)){fail("AFTERLIGHT native verification timed out");return;}
+  auto* runtime=navigator_.current();
+  if(navigator_.loading()||textures_.loading())return;
+  if(afterlightStage_==9){
+    if(runtime||textures_.count()||textures_.bytes()||counters().activeWorlds||counters().activeBindings||textures_.created()!=textures_.deleted()){fail("Home retained scene resources");return;}
+    finishAfterlightSmoke(true);return;
+  }
+  if(!runtime||runtime->world().id!="afterlight"){fail("AFTERLIGHT did not activate");return;}
+  const auto take=[&](const wchar_t* suffix){auto path=afterlightSmokePath;path.replace_extension(suffix);render();return capture(path);};
+  const auto binding=[&](const std::string& id){for(std::size_t i=0;i<runtime->nodes().size();++i)if(runtime->nodes()[i].definition.id==id)return i;return noParent;};
+  if(afterlightStage_==0){
+    afterlightBytes_=textures_.bytes();
+    const auto* floor=textures_.image("assets/oak_floor.png");if(!floor||floor->width!=2048){fail("Floor did not retain its authored 2048-pixel detail");return;}
+    if(textures_.imageCount()!=runtime->world().images.size()||!photoNodes_.empty()||afterlightBytes_>150ull*1024*1024){fail("Image allocation or architectural surface classification failed");return;}
+    SetWindowPos(window_,nullptr,30,30,std::min(1600,GetSystemMetrics(SM_CXSCREEN)-60),std::min(1000,GetSystemMetrics(SM_CYSCREEN)-80),SWP_NOZORDER);
+    camera_.reset(runtime->world());afterlightTime_=Clock::now();afterlightStage_=1;return;
+  }
+  if(Clock::now()-afterlightTime_<std::chrono::milliseconds(180))return;
+  if(afterlightStage_==1){
+    if(!take(L".afternoon.bmp")){fail("Afternoon capture failed");return;}
+    jumpView(1);afterlightTime_=Clock::now();afterlightStage_=2;return;
+  }
+  if(afterlightStage_==2){
+    if(!take(L".reading.bmp")||!clickBinding(binding("book_hinge"))||!runtime->find("book_hinge").state.at("isOpen").boolean()){fail("Native raycast did not open the book");return;}
+    afterlightTime_=Clock::now();afterlightStage_=3;return;
+  }
+  if(afterlightStage_==3){
+    if(Clock::now()-afterlightTime_<std::chrono::milliseconds(1100))return;
+    if(std::abs(runtime->find("book_hinge").transform.rotation[2]-135)>.1||!take(L".book-open.bmp")){fail("Book hinge animation or capture failed");return;}
+    if(!clickBinding(binding("book_hinge"))||runtime->find("book_hinge").state.at("isOpen").boolean()){fail("Native raycast did not close the open cover");return;}
+    jumpView(2);afterlightTime_=Clock::now();afterlightStage_=4;return;
+  }
+  if(afterlightStage_==4){
+    if(!take(L".daylight.bmp")){fail("Daylight capture failed");return;}
+    camera_.jump({.95,1.55,.82},{2.28,1.13,-.43});afterlightTime_=Clock::now();afterlightStage_=5;return;
+  }
+  if(afterlightStage_==5){
+    if(!take(L".lamp-off.bmp")||!clickBinding(binding("lamp_control"))||!runtime->find("lamp_control").state.at("isOn").boolean()||!runtime->find("lamp_pool").transform.visible){fail("Native raycast did not switch on the lamp");return;}
+    afterlightTime_=Clock::now();afterlightStage_=6;return;
+  }
+  if(afterlightStage_==6){
+    if(!take(L".lamp-on.bmp")){fail("Lamp capture failed");return;}
+    jumpView(0);afterlightWalkStart_=camera_.eye();SetFocus(viewport_);SendMessageW(viewport_,WM_KEYDOWN,'W',0);
+    afterlightTime_=Clock::now();afterlightStage_=7;return;
+  }
+  if(afterlightStage_==7){
+    SendMessageW(viewport_,WM_KEYUP,'W',0);
+    if(dot(sub(camera_.eye(),afterlightWalkStart_),sub(camera_.eye(),afterlightWalkStart_))<.001){fail("Native walking input did not move the camera");return;}
+    const auto& bounds=*runtime->world().walk;const auto eye=camera_.eye();
+    if(eye[0]<bounds.min[0]||eye[0]>bounds.max[0]||eye[2]<bounds.min[2]||eye[2]>bounds.max[2]){fail("Native walking escaped authored bounds");return;}
+    command(Reload);afterlightTime_=Clock::now();afterlightStage_=8;return;
+  }
+  if(afterlightStage_==8){
+    if(runtime->find("book_hinge").state.at("isOpen").boolean()||runtime->find("lamp_control").state.at("isOn").boolean()||textures_.imageCount()!=runtime->world().images.size()){fail("Reload did not reset interaction and image state");return;}
+    command(Home);afterlightStage_=9;
+  }
+}
+void Desktop::finishAfterlightSmoke(bool okay){
+  if(!afterlightSmokePath.parent_path().empty())std::filesystem::create_directories(afterlightSmokePath.parent_path());
+  std::ofstream file(afterlightSmokePath);file<<"{\n  \"passed\": "<<(okay?"true":"false")<<",\n  \"failure\": "<<std::quoted(afterlightFailure_)<<",\n  \"stage\": "<<afterlightStage_<<",\n  \"sceneTextureBytes\": "<<afterlightBytes_<<",\n  \"realMouseRaycastBookAndLamp\": "<<(okay?"true":"false")<<",\n  \"walkingReloadAndCleanup\": "<<(okay?"true":"false")<<",\n  \"liveTexturesAfterHome\": "<<textures_.count()<<",\n  \"createdTextures\": "<<textures_.created()<<",\n  \"deletedTextures\": "<<textures_.deleted()<<"\n}\n";file.close();
+  std::cout<<(okay?"AFTERLIGHT native smoke PASS\n":"AFTERLIGHT native smoke FAIL: "+afterlightFailure_+"\n");afterlightSmokePath.clear();exitCode_=okay?0:2;DestroyWindow(window_);
+}
+
 void Desktop::gallerySmoke(){
   if(Clock::now()-started_>std::chrono::seconds(75)){galleryFailure_="Gallery verification timed out: "+navigator_.error()+renderError_;finishGallerySmoke(false);return;}
   auto* runtime=navigator_.current();if(navigator_.loading()||textures_.loading())return;
@@ -788,7 +861,7 @@ LRESULT Desktop::viewMessage(UINT message,WPARAM wParam,LPARAM lParam){
     case WM_KILLFOCUS:walkKeys_.fill(false);break;
     case WM_ERASEBKGND:return 1;
     case WM_PAINT:{PAINTSTRUCT ps{};BeginPaint(viewport_,&ps);EndPaint(viewport_,&ps);render();return 0;}
-    case WM_LBUTTONDBLCLK:if(!photoOpen_){click(x,y);auto* runtime=navigator_.current();if(runtime&&!selected_.empty()&&!runtime->find(selected_).definition.image.empty())openPhoto(photoIndex_);}return 0;
+    case WM_LBUTTONDBLCLK:if(!photoOpen_){click(x,y);auto* runtime=navigator_.current();if(runtime&&!selected_.empty()&&photoImage(runtime->find(selected_).definition))openPhoto(photoIndex_);}return 0;
     case WM_LBUTTONDOWN:case WM_RBUTTONDOWN:if(photoOpen_)return 0;SetFocus(viewport_);SetCapture(viewport_);dragButton_=message==WM_LBUTTONDOWN?1:2;lastMouse_=downMouse_={x,y};dragged_=false;return 0;
     case WM_MOUSEMOVE:if(dragButton_){int dx=x-lastMouse_.x,dy=y-lastMouse_.y;if(std::abs(x-downMouse_.x)+std::abs(y-downMouse_.y)>3)dragged_=true;if(dragged_){if(walking())lookWalk(dx,dy);else if(dragButton_==1){camera_.yaw-=dx*.008;camera_.pitch=std::clamp(camera_.pitch+dy*.008,-1.48,1.48);}else{double scale=camera_.distance*.0017;camera_.target=add(camera_.target,add(mul(camera_.right(),-dx*scale),mul(camera_.up(),dy*scale)));}}lastMouse_={x,y};return 0;}break;
     case WM_LBUTTONUP:case WM_RBUTTONUP:{bool interact=dragButton_==1&&message==WM_LBUTTONUP&&!dragged_;dragButton_=0;ReleaseCapture();if(interact)click(x,y);return 0;}
@@ -810,7 +883,7 @@ int Desktop::run(int show){
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);INITCOMMONCONTROLSEX common{sizeof(common),ICC_STANDARD_CLASSES};InitCommonControlsEx(&common);HINSTANCE instance=GetModuleHandleW(nullptr);WNDCLASSEXW frame{};frame.cbSize=sizeof(frame);frame.hInstance=instance;frame.lpfnWndProc=windowProc;frame.hCursor=LoadCursorW(nullptr,IDC_ARROW);frame.hIcon=LoadIconW(nullptr,IDI_APPLICATION);frame.lpszClassName=L"LINK.NativeShell";frame.style=CS_HREDRAW|CS_VREDRAW;RegisterClassExW(&frame);
   WNDCLASSEXW view{};view.cbSize=sizeof(view);view.hInstance=instance;view.lpfnWndProc=viewProc;view.hCursor=LoadCursorW(nullptr,IDC_CROSS);view.lpszClassName=L"LINK.WorldViewport";view.style=CS_OWNDC|CS_DBLCLKS;RegisterClassExW(&view);
   HWND main=CreateWindowExW(0,frame.lpszClassName,L"LINK Browser — Linked Interactive Network",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,this);
-  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);if(!initialAddress.empty())request(initialAddress);else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
+  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);if(!initialAddress.empty())request(initialAddress);else if(!afterlightSmokePath.empty())request("link://local/afterlight");else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
   MSG message{};while(GetMessageW(&message,nullptr,0,0)>0){
     if(message.message==WM_KEYDOWN&&shortcut(message.wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))continue;
     if((message.message==WM_KEYDOWN||message.message==WM_KEYUP)&&GetFocus()==viewport_&&walking()&&movementKey(message.wParam)){TranslateMessage(&message);DispatchMessageW(&message);continue;}
@@ -832,8 +905,9 @@ int runDesktop(int argc,wchar_t** argv){
       else if(arg==L"--smoke-test"&&i+1<argc)app.smokePath=argv[++i];
       else if(arg==L"--gallery-smoke"&&i+1<argc)app.gallerySmokePath=argv[++i];
       else if(arg==L"--shell-smoke"&&i+1<argc)app.shellSmokePath=argv[++i];
+      else if(arg==L"--afterlight-smoke"&&i+1<argc)app.afterlightSmokePath=argv[++i];
       else if(arg==L"--help"){
-        std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json] [--shell-smoke report.json]\n";
+        std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json] [--shell-smoke report.json] [--afterlight-smoke report.json]\n";
         return 0;
       }else{std::cerr<<"Unknown or incomplete argument: "<<utf8(arg)<<'\n';return 1;}
     }

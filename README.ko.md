@@ -143,6 +143,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 | --- | --- | --- |
 | **흑룡이 전시회** | `link://local/heukryong` | 사진 복도를 걷고 더블클릭으로 사진을 연 뒤 끝의 포탈에 들어갑니다. |
 | Hello World | `link://local/hello-world` | 복도 끝 포탈을 넘어 우주 광장에 발을 내딛습니다. 행성과 별 아래, 거대한 고리와 입체 글자를 향해 걸으며 첫 지평선을 탐험합니다. |
+| [AFTERLIGHT · 오후의 방](docs/afterlight.md) | `link://local/afterlight` | 미리 계산한 오후빛이 드는 작은 방을 걷고 책을 열거나 스탠드를 켭니다. |
 | Room A | `link://local/room-a` | 힌지 문을 열고 시간에 따라 회전하는 조형물을 봅니다. |
 | Room B | `link://local/room-b` | 두 돌의 독립 상태와 파괴 동작을 확인합니다. |
 
