@@ -162,6 +162,14 @@ Geometry geometry(const Field& field) {
     result.radiusTop=nonnegative(mapRequired(values,"radiusTop",field.location),field.location,"cylinder radiusTop");
     result.height=positive(mapRequired(values,"height",field.location),field.location,"cylinder height");
   }
+  else if(type=="particles"){
+    mapKeys(values,{"type","capacity","radius","cellSize"},field.location);result.type=Geometry::Type::Particles;
+    const auto& capacity=mapRequired(values,"capacity",field.location);
+    if(!std::holds_alternative<double>(capacity.data)||capacity.number()<1||capacity.number()>Limits::particleCapacity||std::floor(capacity.number())!=capacity.number())throw Error(field.location,"particle capacity must be an integer between 1 and 2048");
+    result.capacity=static_cast<std::size_t>(capacity.number());
+    result.radius=positive(mapRequired(values,"radius",field.location),field.location,"particle radius");
+    result.cellSize=positive(mapRequired(values,"cellSize",field.location),field.location,"particle cellSize");
+  }
   else if(type=="frame"){
     mapKeys(values,{"type","size","border","depth"},field.location);result.type=Geometry::Type::Frame;
     const auto& size=mapRequired(values,"size",field.location);if(!std::holds_alternative<Value::Array>(size.data)||size.array().size()!=2)throw Error(field.location,"frame size requires two numbers");
@@ -254,7 +262,11 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
   const auto resource=[&](const std::string& relative,std::size_t cap){return snapshot?snapshot->stage(relative,cap,stop):resolveResource(result->directory,relative);};
   const auto label=[&](const std::string& relative,const std::filesystem::path& file){return snapshot?snapshot->label(relative):pathText(file);};
   const auto manifest=resource("world.link",Limits::manifestBytes);const auto manifestSource=read(manifest,Limits::manifestBytes,stop,label("world.link",manifest));Cursor cursor(lex(manifestSource,label("world.link",manifest)));const auto keyword=cursor.expect("world");const auto fields=fieldBlock(cursor);if(!cursor.done())throw Error(cursor.peek().location,"unexpected text after world declaration");
-  allowed(fields,{"version","id","name","elements","style","scripts","entry","views","environment","walk","portals"});const auto version=text(required(fields,"version",keyword.location),"version");if(version!="0.1")throw Error(fields.at("version").location,"unsupported version '"+version+"'");
+  allowed(fields,{"version","id","name","elements","style","scripts","entry","views","environment","walk","portals","extensions"});const auto version=text(required(fields,"version",keyword.location),"version");if(version!="0.1")throw Error(fields.at("version").location,"unsupported version '"+version+"'");
+  if(const auto found=fields.find("extensions");found!=fields.end()){
+    result->extensions=strings(found->second,"extensions",16);
+    for(const auto& extension:result->extensions)if(extension!="particles-v1")throw Error(found->second.location,"unsupported world extension '"+extension+"'");
+  }
   result->id=text(required(fields,"id",keyword.location),"id");result->name=text(required(fields,"name",keyword.location),"name");
   const auto elements=text(required(fields,"elements",keyword.location),"elements");const auto style=text(required(fields,"style",keyword.location),"style");const auto scripts=strings(required(fields,"scripts",keyword.location),"scripts",Limits::scripts);
   const auto& entryField=required(fields,"entry",keyword.location);const auto& entry=dataMap(entryField,"entry");mapKeys(entry,{"position","target"},entryField.location);result->eye=valueVec3(mapRequired(entry,"position",entryField.location),entryField.location);result->target=valueVec3(mapRequired(entry,"target",entryField.location),entryField.location);
@@ -309,8 +321,16 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
   const auto elementSource=read(elementsFile,Limits::documentBytes,stop,label(elements,elementsFile));parseScene(*result,elementSource,label(elements,elementsFile),stop);
   const auto styleSource=read(styleFile,Limits::documentBytes,stop,label(style,styleFile));parseStyles(*result,styleSource,label(style,styleFile),stop);
   const std::set<std::string> declared(scripts.begin(),scripts.end());
+  std::size_t particleCapacity=0;
+  const bool particlesEnabled=std::find(result->extensions.begin(),result->extensions.end(),"particles-v1")!=result->extensions.end();
   for(const auto& node:result->nodes){
-    cancelled(stop,address);if(!node.script.empty()&&!declared.contains(node.script))throw Error(node.location,"Script binding '"+node.script+"' is not listed in world scripts");if(!node.style.empty()&&!result->materials.contains(node.style))throw Error(node.location,"unknown material '"+node.style+"'");
+    cancelled(stop,address);
+    if(node.kind==Kind::Element&&node.geometry.type==Geometry::Type::Particles){
+      if(!particlesEnabled)throw Error(node.location,"particles geometry requires the particles-v1 world extension");
+      if(node.geometry.capacity>Limits::worldParticles-particleCapacity)throw Error(node.location,"world particle capacity budget exceeded (maximum 8192)");
+      particleCapacity+=node.geometry.capacity;
+    }
+    if(!node.script.empty()&&!declared.contains(node.script))throw Error(node.location,"Script binding '"+node.script+"' is not listed in world scripts");if(!node.style.empty()&&!result->materials.contains(node.style))throw Error(node.location,"unknown material '"+node.style+"'");
     if(!node.image.empty()&&!result->images.contains(node.image)){
       if(result->images.size()>=Limits::images)throw Error(node.location,"image count budget exceeded (maximum "+std::to_string(Limits::images)+")");
       const auto file=resource(node.image,Limits::imageBytes);auto extension=pathText(file.extension());std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});

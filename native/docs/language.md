@@ -34,7 +34,7 @@ component     = "component", identifier, "{", {field | component | element}, "}"
 element       = "element", identifier, "{", {field}, "}";
 ```
 
-`world.link`의 모든 필수 필드는 아래 예시에 있습니다. 선택 필드 `views`로 이름 있는 카메라 위치를, `environment`로 배경색과 격자 표시를, `walk`와 `portals`로 1인칭 이동과 포탈을 지정할 수 있습니다. 미지원 필드·중복 필드·`version`이 `"0.1"`이 아닌 문서는 거절합니다. `scripts`는 비어 있어도 되며 파일 참조 문자열과 해석된 실제 파일 모두 중복을 거절합니다. 상대 참조는 `world.link`가 위치한 공간 디렉터리 기준입니다. LINK의 허용 주소와 경로 제한은 [로컬 LINK 명세](../../docs/link-local-v0.1.md)와 [LINK TCP 계약](../../docs/link-protocol-v0.1.md)을 따릅니다. 로컬 파일과 원격 전송은 같은 `version: "0.1"` 문서 문법을 사용합니다.
+`world.link`의 모든 필수 필드는 아래 예시에 있습니다. 선택 필드 `extensions`로 실험 확장을 명시하고, `views`로 이름 있는 카메라 위치를, `environment`로 배경색과 격자 표시를, `walk`와 `portals`로 1인칭 이동과 포탈을 지정할 수 있습니다. 미지원 필드·중복 필드·`version`이 `"0.1"`이 아닌 문서는 거절합니다. `scripts`는 비어 있어도 되며 파일 참조 문자열과 해석된 실제 파일 모두 중복을 거절합니다. 상대 참조는 `world.link`가 위치한 공간 디렉터리 기준입니다. LINK의 허용 주소와 경로 제한은 [로컬 LINK 명세](../../docs/link-local-v0.1.md)와 [LINK TCP 계약](../../docs/link-protocol-v0.1.md)을 따릅니다. 로컬 파일과 원격 전송은 같은 `version: "0.1"` 문서 문법을 사용합니다.
 
 ```text
 world {
@@ -123,6 +123,7 @@ scene {
 | plane | `{type:"plane",size:[3,2]}` | 로컬 XY 평면, 법선 +Z, 가로·세로 각 0 초과 1,000 이하 |
 | cylinder | `{type:"cylinder",radius:1,radiusTop:.7,height:3}` | Y축 방향, 중심 원점. 아래쪽 반지름 `radius`, 위쪽 반지름 `radiusTop`, 높이 `height` |
 | frame | `{type:"frame",size:[3,2],border:.06,depth:.08}` | XY 방향 직사각 테두리. size는 바깥 가로·세로, border는 테두리 너비, depth는 Z방향 두께 |
+| particles | `{type:"particles",capacity:128,radius:.055,cellSize:.6}` | `particles-v1` 확장 필수. capacity 1~2,048 정수, radius·cellSize는 0 초과 1,000 이하 |
 
 cylinder의 아래 반지름과 높이는 0 초과 1,000 이하이며 위 반지름만 0 이상 1,000 이하입니다. `radiusTop:0`으로 원뿔 끝을 표현합니다. frame의 크기·border·depth는 모두 0 초과 1,000 이하이며 border는 더 작은 바깥 크기의 절반보다 작아야 합니다. frame은 안쪽이 빈 테두리이고 image가 들어가는 plane과 별도 Element로 배치합니다. 바닥 plane은 보통 `rotation:[-90,0,0]`을 사용합니다.
 
@@ -210,6 +211,7 @@ block        = "{", {statement}, "}";
 statement    = ("store" | "let"), identifier, "=", expression, ";"
              | identifier, "=", expression, ";"
              | "if", "(", expression, ")", block, ["else", block]
+             | "for", "(", "let", identifier, "of", expression, ")", block
              | expression, ";";
 expression   = primary, {binaryOperator, primary};
 primary      = literal | identifier | "(", expression, ")"
@@ -223,7 +225,7 @@ primary      = literal | identifier | "(", expression, ")"
 arguments    = expression, {",", expression};
 ```
 
-위 expression EBNF는 아래 연산자 우선순위와 결합 규칙으로 해석합니다. `literal`은 숫자·문자열·bool·null입니다. 호출 가능한 대상은 열거한 builtin과 `ctx` API뿐입니다. 임의 함수 선언·호출, 반환문, 반복문, 재귀, import, 동적 코드 실행은 없습니다. API를 변수로 얻거나 `ctx["method"](...)`로 호출할 수 없습니다.
+위 expression EBNF는 아래 연산자 우선순위와 결합 규칙으로 해석합니다. `literal`은 숫자·문자열·bool·null입니다. 호출 가능한 대상은 열거한 builtin과 `ctx` API뿐입니다. 배열을 순회하는 제한된 `for (let 이름 of 배열) { ... }`를 지원합니다. 임의 함수 선언·호출, 반환문, while·일반 for·break·continue, 재귀, import, 동적 코드 실행은 없습니다. API를 변수로 얻거나 `ctx["method"](...)`로 호출할 수 없습니다.
 
 선언 가능한 훅은 아래 네 가지뿐이며 **이름·매개변수 철자·개수까지 일치**해야 합니다. 각 훅은 파일당 한 번이며 하나 이상의 훅이 필요합니다. 생략한 훅은 아무 동작도 하지 않습니다.
 
@@ -236,7 +238,7 @@ on onDestroy(ctx) { ctx.log("destroyed"); }
 
 전체 실행 예제는 [door.script](../worlds/room-a/scripts/door.script), [spin.script](../worlds/room-a/scripts/spin.script), [stone.script](../worlds/room-b/scripts/stone.script)를 참고합니다.
 
-`store`는 바인딩별 영속 저장소를 선언합니다. 일반적으로 onStart에서 초기화합니다. 같은 store 이름을 다시 선언하면 오류입니다. `let`은 이번 콜백에만 존재하며 종료 시 제거합니다. 블록별 별도 scope·shadowing은 없고 같은 콜백에서 이름을 재선언할 수 없습니다. 선언된 변수만 대입할 수 있습니다. `ctx`, `deltaSeconds`, `event`와 문법 키워드는 변수명으로 사용할 수 없으며 훅 인수는 읽기 전용입니다. 맵·배열 멤버에 직접 대입하는 구문은 없으며 새 값을 만들거나 API로 상태를 변경합니다.
+`store`는 바인딩별 영속 저장소를 선언합니다. 일반적으로 onStart에서 초기화합니다. 같은 store 이름을 다시 선언하면 오류입니다. `let`은 이번 콜백에만 존재하며 종료 시 제거합니다. 일반 블록에는 별도 scope·shadowing이 없고 같은 콜백에서 이름을 재선언할 수 없습니다. for-of의 반복 변수와 본문 let은 반복마다 별도 scope에 생기며 반복이 끝나면 제거됩니다. 바깥 변수에 대입한 값은 유지합니다. 순회할 배열은 반복 시작 시 한 번 평가하며 최대 2,048개 원소로 제한합니다. 선언된 변수만 대입할 수 있습니다. `ctx`, `deltaSeconds`, `event`와 문법 키워드는 변수명으로 사용할 수 없으며 훅 인수는 읽기 전용입니다. 맵·배열 멤버에 직접 대입하는 구문은 없으며 새 값을 만들거나 API로 상태를 변경합니다.
 
 | 우선순위 (높은 순) | 연산 |
 | --- | --- |
@@ -251,9 +253,9 @@ on onDestroy(ctx) { ctx.log("destroyed"); }
 
 이항 연산은 같은 우선순위에서 왼쪽 결합입니다. `&&`·`||`는 단락 평가하며 bool만 받습니다. if 조건·단항 `!`도 bool만 받습니다. 산술·관계 연산은 숫자이며 `+`는 문자열 두 개의 연결도 지원합니다. 암묵적 문자열·숫자·bool 변환은 없습니다. `/`·`%`의 0 제수와 비유한 결과는 오류입니다. `%`는 실수 나머지이며 음수 피연산자의 부호를 따릅니다. 동등 비교는 타입을 포함하고 배열·맵의 내용을 비교합니다.
 
-배열 index는 범위 안의 0 이상 정수입니다. 맵은 `.field` 또는 `["key"]`로 읽습니다. 없는 필드·키, 잘못된 타입·범위는 오류입니다. 배열 길이·추가·삭제 메서드는 없습니다.
+배열 index는 범위 안의 0 이상 정수입니다. 맵은 `.field` 또는 `["key"]`로 읽습니다. 없는 필드·키, 잘못된 타입·범위는 오류입니다. 배열 길이·추가·삭제 메서드는 없습니다. 길이는 메서드 대신 `len(array)` builtin으로 읽습니다.
 
-숫자 builtin은 `min(a,b)`, `max(a,b)`, `abs(a)`, `clamp(value,min,max)`, `mix(a,b,t)`입니다. clamp에서 min > max는 오류입니다. mix는 `a + (b-a)*t`이며 t를 자동으로 0~1에 제한하지 않습니다.
+숫자 builtin은 `min(a,b)`, `max(a,b)`, `abs(a)`, `clamp(value,min,max)`, `mix(a,b,t)`, `sqrt(x)`, `sin(x)`, `cos(x)`입니다. sqrt는 0 이상, sin·cos의 각도는 라디안입니다. `range(n)`은 정수 n=0~2,048에 대해 0~n-1 배열을 만들고, `len(value)`는 배열 원소 수 또는 문자열 UTF-8 byte 수를 반환합니다. 세 성분 벡터 연산은 `vadd(a,b)`, `vsub(a,b)`, `vmul(vector,scalar)`, `dot(a,b)`, `length(vector)`, `normalize(vector)`이며 영벡터의 normalize 결과는 `[0,0,0]`입니다. 이 함수와 for-of는 일반 Script에서도 사용할 수 있습니다. clamp에서 min > max는 오류입니다. mix는 `a + (b-a)*t`이며 t를 자동으로 0~1에 제한하지 않습니다.
 
 ## ctx 공개 API
 
@@ -294,7 +296,9 @@ onUpdate의 deltaSeconds는 실제 경과 초를 0~.05로 제한한 값입니다
 | 포탈 목록 / 포탈 ID | 16개 / 128 bytes |
 | 문자열·맵 키 | 8,192 UTF-8 bytes |
 | 노드 state / config 각각 | 65,536 추정 bytes |
-| 콜백별 문장·식 평가 단계 / 중첩 호출 깊이 | 4,096 / 16 |
+| 일반 콜백별 문장·식 평가 단계 / 중첩 호출 깊이 | 4,096 / 16 |
+| particles-v1 콜백별 / 공간 전체 단계 평가 | 65,536 / 262,144 |
+| for-of 배열 원소 수 | 2,048 |
 | 인스턴스 store + 현재 콜백 지역 값·인수 | 65,536 추정 bytes |
 
 KiB는 1,024 bytes입니다. 논리 데이터 크기는 숫자 8 bytes, bool·null 1 byte, 문자열 길이+1, 배열은 1+자식 합, 맵은 1+키 길이+1+값 합으로 계산하며 C++ allocator·컨테이너 전체 heap 비용을 뜻하지 않습니다. store·지역 변수 변경은 변경 후보를 먼저 검증하므로 초과한 값은 저장하지 않습니다. 임시 배열·맵과 문자열도 제한합니다. 단계·호출 예산은 콜백마다 초기화합니다. 수치·API·예산 오류도 소스 위치를 유지합니다.
@@ -302,3 +306,26 @@ KiB는 1,024 bytes입니다. 논리 데이터 크기는 숫자 8 bytes, bool·nu
 파서·검증·파일 예산 초과는 후보 활성화 전에 실패합니다. 콜백 평가·인스턴스 저장소 예산은 실행 중 해당 바인딩만 중지합니다. 평가 한도는 AST 인터프리터가 직접 확인하며 wall-clock timeout으로 실행 중인 C++ 코드를 선점한다고 주장하지 않습니다.
 
 제한 API와 평가 예산은 방어 장치이며 완전한 운영용 샌드박스가 아닙니다. 네이티브 파서·이미지 디코더·렌더러의 프로세스 격리와 서버 인증·권한·공유 상태는 없습니다. 대상은 신뢰하는 로컬 제작 문서와 신뢰하는 LAN 서버입니다. 다운로드한 Script도 각 브라우저에서 같은 API로 실행하며 방문자 간 상태 동기화는 하지 않습니다. 원격 연결은 암호화나 서버 인증이 없는 평문 LINK TCP입니다. [프로토콜의 신뢰 경계](../../docs/link-protocol-v0.1.md#trust-and-compatibility)를 따르며 HTTP로 자동 전환하지 않습니다.
+
+## 실험 확장 particles-v1
+
+`world.link`에 `extensions: ["particles-v1"];`를 선언하면 입자 형상과 API를 사용할 수 있습니다. 현재 허용 확장은 이 문자열 하나이며 중복·미지원 확장과 확장 없이 사용한 particles 형상은 준비 단계에서 거절합니다. version은 "0.1"을 유지하고 기존 LINK TCP 전송 프레임은 바꾸지 않습니다. 확장이 없는 기존 문서의 평가 예산은 그대로입니다.
+
+particles Element는 선언 capacity만큼의 입자 데이터를 담는 잎이며 입자는 개별 노드가 아닙니다. 시스템당 capacity 2,048, 공간 전체 선언 capacity 합계 8,192입니다. position·velocity는 해당 Element의 로컬 Vec3이고 각 성분 절댓값 1,000,000 이하입니다. 반지름은 0 초과 1,000 이하, color는 #RRGGBB, 입자 state는 추정 1,024 bytes 이하의 맵이며, 루트 맵·컨테이너·스칼라·null을 포함한 재귀 Value 개수 최대 64, 루트 깊이 0 기준 최대 깊이 16을 적용합니다. 부모 transform·visible을 렌더링에 적용합니다. 현재 렌더러는 입자 집합을 카메라를 향한 원판으로 그립니다. opacity·emission 광륜·wireframe을 시스템 Style에서 적용하고, 조명을 받지 않는 원판에는 roughness·metalness·textBackground를 적용하지 않습니다. wireframe에서는 광륜을 생략합니다. 개별 입자의 메시·노드 클릭·물리 충돌은 제공하지 않습니다. 입자 집합 클릭은 시스템 Element의 targetId로 기존 소유 Script에 전달합니다.
+
+| 추가 ctx API | 계약 |
+| --- | --- |
+| `spawnParticle(systemId,data)` | position 필수. velocity 기본 0, radius 기본 geometry, color 기본 생성 시 계산된 Style, state 기본 빈 맵. 숫자 ID 반환, capacity 부족은 null |
+| `particleIds(systemId)` | 읽기 스냅샷의 ID 오름차순 배열 |
+| `getParticle(systemId,id)` | `{id,position,velocity,radius,color,age,state}` 사본 또는 없는 ID는 null |
+| `setParticle(systemId,id,patch)` | position·velocity·radius·color·state 변경 예약. state는 전체 교체, id·age는 수정 불가 |
+| `removeParticle(systemId,id)` | 삭제 예약 |
+| `neighbors(systemId,id,radius,limit)` | 자신 제외, 거리 오름차순·동률 ID 오름차순. radius는 0 초과 cellSize 이하, limit은 1~64 정수 |
+| `particleCount(systemId)` | 예약 생성·삭제를 반영한 개수 |
+| `random()` | Runtime의 시드가 있는 난수열, [0,1) |
+
+systemId는 particles Element의 문자열 ID입니다. 입자 ID는 Runtime 전체에서 1부터 증가하는 1~1,000,000 정수이며 삭제 뒤 재사용하지 않습니다. 입자 API는 확장 선언이 필요합니다. 세부 인수·오류·예제는 [입자 제작 가이드](../../docs/guides/particles.md)를 따릅니다.
+
+각 생명주기 단계 시작에 읽기 스냅샷을 고정하고 모든 콜백이 끝난 뒤 예약 변경을 반영합니다. 생성 입자는 다음 단계부터 조회되며 삭제 예약한 입자는 이번 스냅샷에 남습니다. particleCount만 예약 개수를 포함합니다. onUpdate에서는 변경 반영 뒤 position += velocity × deltaSeconds, age += deltaSeconds로 자동 적분합니다. 노드 state·transform의 기존 즉시 변경 규칙은 유지합니다. Script 오류 전에 검증된 예약 변경은 반영합니다. 적분 결과의 좌표 범위 오류는 해당 입자 단계를 중단하고 reload까지 입자 API를 중지합니다.
+
+확장 공간의 콜백은 65,536 평가 단계, 공간 전체 한 단계는 262,144 평가 단계입니다. 한 단계 생성 256회, 생성·변경·삭제 합계 4,096회, 이웃 후보 검사 100,000회를 제한합니다. 파일·노드·store·지역 값 예산도 계속 적용합니다. 입자 계산과 난수 상태는 방문자별이며 reload 때 초기화합니다. 프레임 간격과 입력이 다르면 결과도 달라질 수 있으며 서버 공유 상태·과학적 정확성·생물학적 생명·완전한 프로세스 격리를 보장하지 않습니다.
