@@ -59,6 +59,6 @@ python .\scripts\generate_afterlight.py --output .\scratch\afterlight
 python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "..\link\native\worlds"
 ```
 
-같은 신뢰하는 LAN의 다른 PC에서 최신 브라우저로 `link://SERVER_IP:PORT/afterlight`를 엽니다. `SERVER_IP`와 `PORT`를 서버가 표시한 실제 IPv4와 포트로 바꿉니다. 브라우저가 문서·Script·이미지를 가져오며 **F5**로 다시 가져옵니다. 전체 설정과 전송 제한은 [LAN 안내](link-lan-v0.1.md)를 따릅니다.
+같은 신뢰하는 LAN의 다른 PC에서 최신 브라우저로 `link://SERVER_IP:PORT/afterlight`를 엽니다. `SERVER_IP`와 `PORT`를 서버가 표시한 실제 IPv4와 포트로 바꿉니다. 서버와 브라우저를 모두 최신 버전으로 맞추면 HTTP 대신 LINK TCP 연결 하나로 문서·Script·이미지를 가져오며 **F5**는 새 연결로 다시 가져옵니다. 현재 전송은 암호화·서버 인증이 없는 평문 TCP입니다. 전체 설정과 전송 제한은 [LAN 안내](link-lan-v0.1.md), 메시지 형식은 [LINK TCP 계약](link-protocol-v0.1.md)을 따릅니다.
 
 오크 기본색은 built-in imagegen으로 생성했습니다. 재현을 위한 전체 [원목 생성 프롬프트](../scripts/materials/afterlight-oak.prompt.txt)를 함께 보관합니다.

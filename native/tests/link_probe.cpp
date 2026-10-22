@@ -1,5 +1,6 @@
 #include "link/remote.hpp"
 #include "link/core.hpp"
+#include <algorithm>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -18,14 +19,22 @@ std::string utf8(const wchar_t* value){
 }
 }
 int wmain(int argc,wchar_t** argv){
-  if(argc<4||argc>5){std::cerr<<"Usage: link_http_probe LINK relative-resource maximum-bytes [cancel-after-ms]\n";return 1;}
+  if(argc<4||argc>6){std::cerr<<"Usage: link_protocol_probe LINK relative-resource maximum-bytes [cancel-after-ms | --repeat count]\n";return 1;}
   const auto started=std::chrono::steady_clock::now();
   try{
     const auto endpoint=linkworld::parseRemoteLink(utf8(argv[1]));
     const auto resource=utf8(argv[2]);const auto limit=std::stoull(utf8(argv[3]));
     std::stop_source stop;std::jthread timer;
     if(argc==5){const auto delay=std::stoul(utf8(argv[4]));timer=std::jthread([&stop,delay]{std::this_thread::sleep_for(std::chrono::milliseconds(delay));stop.request_stop();});}
-    const auto body=linkworld::fetchRemoteResource(endpoint,resource,limit,stop.get_token());
+    std::string body;
+    if(argc==6){
+      if(utf8(argv[4])!="--repeat")throw std::runtime_error("expected --repeat count");
+      const auto count=std::stoul(utf8(argv[5]));
+      if(count<1||count>300)throw std::runtime_error("repeat count must be between 1 and 300");
+      linkworld::RemoteSession session(endpoint);
+      for(unsigned long i=0;i<count;++i)body=session.fetch(resource,limit,stop.get_token());
+      session.close();
+    }else body=linkworld::fetchRemoteResource(endpoint,resource,limit,stop.get_token());
     std::cout<<"bytes="<<body.size()<<"\nhex=";
     for(std::size_t i=0;i<std::min<std::size_t>(32,body.size());++i)std::cout<<std::hex<<std::setfill('0')<<std::setw(2)<<static_cast<unsigned>(static_cast<unsigned char>(body[i]));
     std::cout<<"\n";return 0;

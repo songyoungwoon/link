@@ -1,6 +1,6 @@
 # LINK Protocol · 로컬 주소 v0.1
 
-이 문서는 LINK Browser가 `link://local/...` 주소를 등록된 로컬 디렉터리에 대응시키는 계약입니다. LINK(Linked Interactive Network)는 생태계, LINK Protocol은 주소·연결 규칙, LINK Browser는 네이티브 브라우저의 이름입니다. IPv4 서버에서 HTTP로 문서를 가져오는 기능은 별도 [LAN HTTP v0.1 계약](link-lan-v0.1.md)을 따르며, 아래 로컬 주소의 의미는 유지합니다.
+이 문서는 LINK Browser가 `link://local/...` 주소를 등록된 로컬 디렉터리에 대응시키는 계약입니다. LINK(Linked Interactive Network)는 생태계, LINK Protocol은 주소·연결 규칙, LINK Browser는 네이티브 브라우저의 이름입니다. IPv4 서버에 직접 연결해 문서를 가져오는 기능은 별도 [LINK TCP v0.1 계약](link-protocol-v0.1.md)을 따르며, 아래 로컬 주소의 의미는 유지합니다.
 
 ## 허용 주소
 
@@ -71,7 +71,7 @@ Script 목록의 문자열은 중복될 수 없고, 다른 문자열이 같은 c
 
 진입 문서의 선택 `portals` 목록은 파일 참조 대신 LINK 주소 또는 `/hello-world` 같은 현재 authority 기준 주소를 지정합니다. 사진 복도의 `/hello-world`는 로컬에서 `link://local/hello-world`를 열고, 원격으로 호스팅하면 같은 서버의 공간을 엽니다. 명시적 `link://local/...`은 언제나 방문한 브라우저의 로컬 루트입니다. 로컬 대상은 위 인코딩·경로·canonical 포함 검사를 통과해야 하고 대상 공간 디렉터리가 존재해야 합니다. 최대 16개이며 감지 상자·ID의 실제 문법은 [제작 언어 명세](../native/docs/language.md#1인칭-걷기와-포탈)를 따릅니다.
 
-포탈을 선언하는 단계에서는 로컬 대상 디렉터리의 존재를 확인하며 대상 문서를 읽거나 실행하지 않습니다. 원격 대상은 [LAN 주소 문법](link-lan-v0.1.md#portals)만 확인하고 진입 전에는 가져오지 않습니다. 사용자가 감지 상자에 걸어 들어갈 때 새 탐색 요청을 만들고 해당 주소의 world.link·리소스·Script를 준비합니다. 준비 실패·취소는 현재 실행을 유지하고 최신 세대 요청 검사를 적용합니다. 포탈 이동은 공간 간 탐색이므로 각 공간 내부 파일의 상대 참조 제한을 완화하지 않습니다. 로컬 대상은 파일을 읽고 원격 대상은 HTTP로 가져옵니다.
+포탈을 선언하는 단계에서는 로컬 대상 디렉터리의 존재를 확인하며 대상 문서를 읽거나 실행하지 않습니다. 원격 대상은 [LAN 주소 문법](link-lan-v0.1.md#portals)만 확인하고 진입 전에는 가져오지 않습니다. 사용자가 감지 상자에 걸어 들어갈 때 새 탐색 요청을 만들고 해당 주소의 world.link·리소스·Script를 준비합니다. 준비 실패·취소는 현재 실행을 유지하고 최신 세대 요청 검사를 적용합니다. 포탈 이동은 공간 간 탐색이므로 각 공간 내부 파일의 상대 참조 제한을 완화하지 않습니다. 로컬 대상은 파일을 읽고 원격 대상은 새 LINK TCP 세션으로 가져옵니다.
 
 ## 로딩·오류·취소
 
@@ -85,4 +85,4 @@ Script 목록의 문자열은 중복될 수 없고, 다른 문자열이 같은 c
 
 이 검사는 신뢰하는 로컬 문서가 잘못된 경로를 참조하는 문제를 줄입니다. canonical 검사와 실제 파일 열기 사이에는 시간 차이가 있으므로, 다른 프로세스가 동시에 링크·파일을 바꾸는 TOCTOU 공격까지 막는 OS 파일 핸들 기반 샌드박스는 아닙니다. native 파서·렌더러의 프로세스 격리도 제공하지 않습니다. 제한된 Script API와 평가 예산을 운영용 완전 격리로 해석하지 않습니다.
 
-숫자 IPv4 원격 주소와 평문 HTTP 전송은 [LAN HTTP v0.1](link-lan-v0.1.md)에 구현합니다. DNS·서버 발견, TLS, 인증·계정, 멀티플레이·공유 상태, OS `link://` 핸들러 등록은 후속 범위입니다. 문법·객체·Script·Style 규칙은 [LINK World Standards](link-world-v0.1.md)를 따릅니다. 주소·리소스 해석과 경로 제한을 검사하는 코드는 [native/tests](../native/tests)에 있으며 빌드 후 `ctest --preset release`로 실행합니다.
+숫자 IPv4 원격 주소와 평문 LINK TCP 전송은 [LINK TCP v0.1](link-protocol-v0.1.md)에 구현하며 실행·연결 확인 방법은 [LAN 안내](link-lan-v0.1.md)를 따릅니다. DNS·서버 발견, TLS, 인증·계정, 멀티플레이·공유 상태, OS `link://` 핸들러 등록은 후속 범위입니다. 문법·객체·Script·Style 규칙은 [LINK World Standards](link-world-v0.1.md)를 따릅니다. 주소·리소스 해석과 경로 제한을 검사하는 코드는 [native/tests](../native/tests)에 있으며 빌드 후 `ctest --preset release`로 실행합니다.

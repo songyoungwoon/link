@@ -3,17 +3,19 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <condition_variable>
+#include <cstdint>
 #include <memory>
-#include <mutex>
-#include <optional>
 #include <string_view>
+#include <utility>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
-#include <winhttp.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #endif
 
 namespace linkworld {
@@ -85,114 +87,47 @@ std::string resourcePath(const std::string& decoded,const std::string& label) {
     start=end+1;
   }
   if(normalized.empty())fail(label,"remote resource must name a file");
-  static constexpr char digits[]="0123456789ABCDEF";
-  std::string encoded;
-  encoded.reserve(normalized.size());
-  for(const unsigned char c:normalized) {
-    if(asciiAlnum(c)||c=='-'||c=='_'||c=='.'||c=='~'||c=='/')encoded+=static_cast<char>(c);
-    else {encoded+='%';encoded+=digits[c>>4];encoded+=digits[c&15];}
-  }
-  return encoded;
+  return normalized;
 }
 void cancelled(std::stop_token stop,const std::string& label) {
   if(stop.stop_requested())fail(label,"remote loading cancelled");
 }
 
-#ifdef _WIN32
 using Clock=std::chrono::steady_clock;
 constexpr auto transferTimeout=std::chrono::seconds(20);
-constexpr int operationTimeoutMs=3000;
-struct HttpHandle {
-  HINTERNET value=nullptr;
-  explicit HttpHandle(HINTERNET handle):value(handle){}
-  ~HttpHandle(){if(value)WinHttpCloseHandle(value);}
-  HttpHandle(const HttpHandle&)=delete;
-  HttpHandle& operator=(const HttpHandle&)=delete;
-};
-[[noreturn]] void httpFailure(const std::string& label,const char* operation,DWORD error) {
-  fail(label,std::string("remote HTTP ")+operation+" failed (WinHTTP "+std::to_string(error)+")");
+constexpr std::uint8_t hello=1,welcome=2,get=3,resource=4,errorMessage=5,goodbye=6;
+constexpr std::size_t headerBytes=16,maxErrorBytes=1026,maxRequests=256;
+std::uint32_t readU32(const char* bytes) {
+  std::uint32_t result=0;
+  for(unsigned i=0;i<4;++i)result=(result<<8)|static_cast<unsigned char>(bytes[i]);
+  return result;
 }
-struct Transfer {
-  std::mutex mutex;
-  std::condition_variable changed;
-  DWORD completion=0,error=0,bytes=0;
-  // WinHTTP can still write after cancellation until HANDLE_CLOSING.
-  std::array<char,16384> buffer{};
-};
-using Context=std::shared_ptr<Transfer>;
-void CALLBACK statusCallback(HINTERNET,DWORD_PTR context,DWORD status,void* information,DWORD length) noexcept {
-  if(!context)return;
-  auto* binding=reinterpret_cast<Context*>(context);
-  // HANDLE_CLOSING is the last notification for this handle. The binding owns
-  // the buffer throughout asynchronous teardown, even if the caller has left.
-  if(status==WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING){delete binding;return;}
-  const auto state=*binding;
-  {
-    std::lock_guard lock(state->mutex);
-    if(status==WINHTTP_CALLBACK_STATUS_REQUEST_ERROR) {
-      state->error=information&&length>=sizeof(WINHTTP_ASYNC_RESULT)
-        ?static_cast<WINHTTP_ASYNC_RESULT*>(information)->dwError:ERROR_WINHTTP_INTERNAL_ERROR;
-      state->completion=status;
-    } else if(status==WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE||
-              status==WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE||
-              status==WINHTTP_CALLBACK_STATUS_READ_COMPLETE) {
-      state->bytes=status==WINHTTP_CALLBACK_STATUS_READ_COMPLETE?length:0;
-      state->completion=status;
-    } else return;
-  }
-  state->changed.notify_one();
+void writeU32(char* bytes,std::uint32_t value) {
+  for(int i=3;i>=0;--i){bytes[i]=static_cast<char>(value&255);value>>=8;}
+}
+std::array<char,headerBytes> frameHeader(std::uint8_t type,std::uint32_t id,std::uint32_t bytes) {
+  std::array<char,headerBytes> result{'L','I','N','K',0,1,static_cast<char>(type),0};
+  writeU32(result.data()+8,id);writeU32(result.data()+12,bytes);
+  return result;
 }
 void checkDeadline(Clock::time_point deadline,std::stop_token stop,const std::string& label) {
   cancelled(stop,label);
-  if(Clock::now()>=deadline)fail(label,"remote HTTP transfer deadline exceeded (20 seconds)");
+  if(Clock::now()>=deadline)fail(label,"remote LINK transfer deadline exceeded (20 seconds)");
 }
-void prepare(const Context& state,Clock::time_point deadline,std::stop_token stop,const std::string& label) {
-  checkDeadline(deadline,stop,label);
-  std::lock_guard lock(state->mutex);
-  state->completion=0;state->error=0;state->bytes=0;
-}
-DWORD await(const Context& state,DWORD expected,Clock::time_point deadline,
-            std::stop_token stop,const std::string& label,const char* operation) {
-  std::unique_lock lock(state->mutex);
-  while(!state->completion) {
-    checkDeadline(deadline,stop,label);
-    state->changed.wait_until(lock,std::min(deadline,Clock::now()+std::chrono::milliseconds(50)));
+const char* errorName(unsigned code) {
+  switch(code) {
+    case 1:return "BAD_REQUEST";case 2:return "NOT_FOUND";case 3:return "FORBIDDEN";
+    case 4:return "TOO_LARGE";case 5:return "VERSION";case 6:return "BUSY";
+    case 7:return "INTERNAL";case 8:return "LIMIT";default:return nullptr;
   }
-  checkDeadline(deadline,stop,label);
-  if(state->error)httpFailure(label,operation,state->error);
-  if(state->completion!=expected)fail(label,"unexpected remote HTTP completion");
-  return state->bytes;
 }
-void option(HINTERNET handle,DWORD name,DWORD value,const std::string& label) {
-  if(!WinHttpSetOption(handle,name,&value,sizeof(value)))httpFailure(label,"configuration",GetLastError());
+RemoteLink checkedRemote(RemoteLink remote) {
+  const auto link="link://"+remote.authority()+"/"+remote.world;
+  const auto checked=parseRemoteLink(link);
+  if(checked.world!=remote.world)fail(link,"remote world must already be decoded");
+  return remote;
 }
-std::optional<std::size_t> contentLength(HINTERNET request,std::size_t maxBytes,const std::string& label) {
-  wchar_t value[64]{};
-  DWORD size=sizeof(value),index=0;
-  if(!WinHttpQueryHeaders(request,WINHTTP_QUERY_CONTENT_LENGTH,WINHTTP_HEADER_NAME_BY_INDEX,value,&size,&index)) {
-    const auto error=GetLastError();
-    if(error==ERROR_WINHTTP_HEADER_NOT_FOUND)return {};
-    httpFailure(label,"Content-Length header",error);
-  }
-  const std::wstring_view number(value,size/sizeof(wchar_t));
-  if(number.empty())fail(label,"invalid remote HTTP Content-Length");
-  std::size_t length=0;
-  for(const auto c:number) {
-    if(c<L'0'||c>L'9')fail(label,"invalid remote HTTP Content-Length");
-    const auto digit=static_cast<std::size_t>(c-L'0');
-    if(length>maxBytes/10||(length==maxBytes/10&&digit>maxBytes%10))
-      fail(label,"remote resource byte budget exceeded (maximum "+std::to_string(maxBytes)+")");
-    length=length*10+digit;
-  }
-  size=sizeof(value);
-  if(WinHttpQueryHeaders(request,WINHTTP_QUERY_CONTENT_LENGTH,WINHTTP_HEADER_NAME_BY_INDEX,value,&size,&index))
-    fail(label,"duplicate remote HTTP Content-Length");
-  if(GetLastError()!=ERROR_WINHTTP_HEADER_NOT_FOUND)httpFailure(label,"Content-Length header",GetLastError());
-  return length;
-}
-#endif
 } // namespace
-
 std::string RemoteLink::authority() const {return host+":"+std::to_string(port);}
 RemoteLink parseRemoteLink(const std::string& address) {
   if(address.size()>2048||!address.starts_with("link://"))
@@ -229,77 +164,194 @@ RemoteLink parseRemoteLink(const std::string& address) {
   return result;
 }
 
+struct RemoteSession::Impl {
+  RemoteLink remote;
+  std::string address;
+  std::uint32_t nextId=1;
+  std::size_t transferred=0;
+  bool ready=false,closed=false;
+#ifdef _WIN32
+  SOCKET socket=INVALID_SOCKET;
+  bool winsock=false;
+#endif
+  explicit Impl(RemoteLink endpoint):remote(checkedRemote(std::move(endpoint))),
+    address("link://"+remote.authority()+"/"+remote.world){}
+  ~Impl(){close();}
+  void close(bool graceful=true) noexcept {
+#ifdef _WIN32
+    if(socket!=INVALID_SOCKET) {
+      // Destruction must never wait on the network. EOF is also a valid close.
+      if(graceful&&ready) {
+        const auto header=frameHeader(goodbye,nextId,0);
+        (void)::send(socket,header.data(),static_cast<int>(header.size()),0);
+      }
+      (void)::shutdown(socket,SD_SEND);
+      (void)::closesocket(socket);socket=INVALID_SOCKET;
+    }
+    if(winsock){WSACleanup();winsock=false;}
+#else
+    (void)graceful;
+#endif
+    ready=false;closed=true;
+  }
+#ifdef _WIN32
+  [[noreturn]] void socketFailure(const std::string& label,const char* operation,int code) {
+    fail(label,std::string("remote LINK TCP ")+operation+" failed (Winsock "+std::to_string(code)+")");
+  }
+  void waitReady(bool writing,Clock::time_point deadline,std::stop_token stop,const std::string& label) {
+    for(;;) {
+      checkDeadline(deadline,stop,label);
+      fd_set reads,writes,errors;
+      FD_ZERO(&reads);FD_ZERO(&writes);FD_ZERO(&errors);
+      if(writing)FD_SET(socket,&writes);else FD_SET(socket,&reads);
+      FD_SET(socket,&errors);
+      const auto remaining=std::chrono::duration_cast<std::chrono::microseconds>(deadline-Clock::now()).count();
+      timeval timeout{};timeout.tv_usec=static_cast<long>(std::clamp<std::int64_t>(remaining,1,50000));
+      const int count=::select(0,&reads,&writes,&errors,&timeout);
+      if(count==SOCKET_ERROR)socketFailure(label,"wait",WSAGetLastError());
+      checkDeadline(deadline,stop,label);
+      if(FD_ISSET(socket,&errors)) {
+        int code=0,length=sizeof(code);
+        if(::getsockopt(socket,SOL_SOCKET,SO_ERROR,reinterpret_cast<char*>(&code),&length)==SOCKET_ERROR)
+          code=WSAGetLastError();
+        socketFailure(label,"connection",code?code:WSAECONNABORTED);
+      }
+      if(count)return;
+    }
+  }
+  void sendAll(std::string_view bytes,Clock::time_point deadline,std::stop_token stop,const std::string& label) {
+    std::size_t offset=0;
+    while(offset<bytes.size()) {
+      checkDeadline(deadline,stop,label);
+      const auto count=::send(socket,bytes.data()+offset,static_cast<int>(std::min<std::size_t>(bytes.size()-offset,16384)),0);
+      if(count==SOCKET_ERROR) {
+        const auto code=WSAGetLastError();
+        if(code==WSAEWOULDBLOCK){waitReady(true,deadline,stop,label);continue;}
+        socketFailure(label,"send",code);
+      }
+      if(!count)fail(label,"remote LINK connection closed during send");
+      offset+=static_cast<std::size_t>(count);
+    }
+  }
+  void receiveAll(char* bytes,std::size_t size,Clock::time_point deadline,std::stop_token stop,const std::string& label) {
+    std::size_t offset=0;
+    while(offset<size) {
+      checkDeadline(deadline,stop,label);
+      const auto count=::recv(socket,bytes+offset,static_cast<int>(std::min<std::size_t>(size-offset,16384)),0);
+      if(count==SOCKET_ERROR) {
+        const auto code=WSAGetLastError();
+        if(code==WSAEWOULDBLOCK){waitReady(false,deadline,stop,label);continue;}
+        socketFailure(label,"receive",code);
+      }
+      if(!count)fail(label,"truncated remote LINK frame (connection closed before expected bytes)");
+      offset+=static_cast<std::size_t>(count);
+    }
+  }
+  void sendFrame(std::uint8_t type,std::uint32_t id,std::string_view payload,
+                 Clock::time_point deadline,std::stop_token stop,const std::string& label) {
+    const auto header=frameHeader(type,id,static_cast<std::uint32_t>(payload.size()));
+    sendAll(std::string_view(header.data(),header.size()),deadline,stop,label);
+    sendAll(payload,deadline,stop,label);
+  }
+  std::string receiveFrame(std::uint8_t expected,std::uint32_t id,std::size_t cap,
+                           Clock::time_point deadline,std::stop_token stop,const std::string& label) {
+    std::array<char,headerBytes> header{};
+    receiveAll(header.data(),header.size(),deadline,stop,label);
+    if(std::string_view(header.data(),4)!="LINK")
+      fail(label,"expected LINK protocol magic; update the server (HTTP fallback is disabled)");
+    if(header[4]!=0||header[5]!=1)fail(label,"unsupported remote LINK wire version (expected 0.1)");
+    if(header[7]!=0)fail(label,"unsupported remote LINK frame flags");
+    if(readU32(header.data()+8)!=id)fail(label,"remote LINK response request id does not match");
+    const auto type=static_cast<std::uint8_t>(header[6]);
+    const auto length=static_cast<std::size_t>(readU32(header.data()+12));
+    if(type!=expected&&type!=errorMessage)fail(label,"unexpected remote LINK response type");
+    if(type==errorMessage) {
+      if(length<2||length>maxErrorBytes)fail(label,"invalid remote LINK ERROR payload length");
+    }else if(length>cap) {
+      fail(label,"remote resource byte budget exceeded (maximum "+std::to_string(cap)+")");
+    }
+    if(type==welcome&&length<3)fail(label,"invalid remote LINK WELCOME payload length");
+    // Length is validated before allocating or reading any payload.
+    std::string body(length,'\0');
+    receiveAll(body.data(),body.size(),deadline,stop,label);
+    checkDeadline(deadline,stop,label);
+    if(type==errorMessage) {
+      const auto code=(static_cast<unsigned>(static_cast<unsigned char>(body[0]))<<8)|
+                       static_cast<unsigned char>(body[1]);
+      const auto* name=errorName(code);
+      const std::string_view message(body.data()+2,body.size()-2);
+      if(!name||!validUtf8(message)||std::any_of(message.begin(),message.end(),[](unsigned char c){return c<32||c==127;}))
+        fail(label,"invalid remote LINK ERROR code or UTF-8 message");
+      fail(label,std::string("remote LINK error ")+name+" ("+std::to_string(code)+"): "+std::string(message));
+    }
+    return body;
+  }
+  void connect(Clock::time_point deadline,std::stop_token stop,const std::string& label) {
+    checkDeadline(deadline,stop,label);
+    WSADATA data{};
+    const auto started=WSAStartup(MAKEWORD(2,2),&data);
+    if(started)socketFailure(label,"startup",started);
+    winsock=true;
+    socket=::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+    if(socket==INVALID_SOCKET)socketFailure(label,"socket",WSAGetLastError());
+    u_long nonblocking=1;
+    if(ioctlsocket(socket,FIONBIO,&nonblocking)==SOCKET_ERROR)socketFailure(label,"nonblocking configuration",WSAGetLastError());
+    const int noDelay=1;
+    if(setsockopt(socket,IPPROTO_TCP,TCP_NODELAY,reinterpret_cast<const char*>(&noDelay),sizeof(noDelay))==SOCKET_ERROR)
+      socketFailure(label,"TCP_NODELAY",WSAGetLastError());
+    sockaddr_in endpoint{};endpoint.sin_family=AF_INET;endpoint.sin_port=htons(remote.port);
+    if(InetPtonA(AF_INET,remote.host.c_str(),&endpoint.sin_addr)!=1)fail(label,"invalid LINK IPv4 address");
+    if(::connect(socket,reinterpret_cast<const sockaddr*>(&endpoint),sizeof(endpoint))==SOCKET_ERROR) {
+      const auto code=WSAGetLastError();
+      if(code!=WSAEWOULDBLOCK&&code!=WSAEINPROGRESS)socketFailure(label,"connect",code);
+      waitReady(true,deadline,stop,label);
+      int connected=0,length=sizeof(connected);
+      if(getsockopt(socket,SOL_SOCKET,SO_ERROR,reinterpret_cast<char*>(&connected),&length)==SOCKET_ERROR)
+        socketFailure(label,"connect status",WSAGetLastError());
+      if(connected)socketFailure(label,"connect",connected);
+    }
+    std::string greeting("\0\1",2);greeting+=remote.world;
+    sendFrame(hello,0,greeting,deadline,stop,label);
+    if(receiveFrame(welcome,0,greeting.size(),deadline,stop,label)!=greeting)
+      fail(label,"remote LINK WELCOME does not match the requested world and World Standards version");
+    ready=true;
+  }
+  std::string fetch(const std::string& path,std::size_t cap,std::stop_token stop,const std::string& label) {
+    if(closed)fail(label,"remote LINK session is closed");
+    const auto deadline=Clock::now()+transferTimeout;
+    if(!ready)connect(deadline,stop,label);
+    if(nextId>maxRequests)fail(label,"remote LINK request count budget exceeded (maximum 256)");
+    if(transferred>=Limits::remoteWorldBytes)fail(label,"world transfer byte budget exceeded");
+    cap=std::min({cap,Limits::imageBytes,Limits::remoteWorldBytes-transferred});
+    std::string request(4,'\0');writeU32(request.data(),static_cast<std::uint32_t>(cap));request+=path;
+    sendFrame(get,nextId,request,deadline,stop,label);
+    auto body=receiveFrame(resource,nextId,cap,deadline,stop,label);
+    ++nextId;transferred+=body.size();
+    return body;
+  }
+#endif
+};
+
+RemoteSession::RemoteSession(RemoteLink remote):impl_(std::make_unique<Impl>(std::move(remote))){}
+RemoteSession::~RemoteSession()=default;
+void RemoteSession::close() noexcept {impl_->close();}
+std::string RemoteSession::fetch(const std::string& decodedRelative,std::size_t maxBytes,std::stop_token stop) {
+  const auto label=impl_->address+"/"+decodedRelative;
+  try {
+    const auto path=resourcePath(decodedRelative,label);
+    cancelled(stop,label);
+    if(!maxBytes)fail(label,"remote resource byte budget must be positive");
+#ifdef _WIN32
+    return impl_->fetch(path,maxBytes,stop,label);
+#else
+    (void)path;(void)maxBytes;
+    fail(label,"remote LINK TCP transport is supported only on Windows");
+#endif
+  }catch(...){impl_->close(false);throw;}
+}
 std::string fetchRemoteResource(const RemoteLink& remote,const std::string& decodedRelative,
                                std::size_t maxBytes,std::stop_token stop) {
-  const auto link="link://"+remote.authority()+"/"+remote.world;
-  const auto checked=parseRemoteLink(link);
-  // A manually constructed RemoteLink must already have a decoded world slug.
-  if(checked.world!=remote.world)fail(link,"remote world must already be decoded");
-  const auto label=link+"/"+decodedRelative;
-  const auto path="/"+remote.world+"/"+resourcePath(decodedRelative,label);
-  cancelled(stop,label);
-#ifdef _WIN32
-  const auto deadline=Clock::now()+transferTimeout;
-  HttpHandle session(WinHttpOpen(L"LINK-Browser/0.1",WINHTTP_ACCESS_TYPE_NO_PROXY,
-                                WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS,WINHTTP_FLAG_ASYNC));
-  if(!session.value)httpFailure(label,"session",GetLastError());
-  if(!WinHttpSetTimeouts(session.value,operationTimeoutMs,operationTimeoutMs,operationTimeoutMs,operationTimeoutMs))
-    httpFailure(label,"timeouts",GetLastError());
-  const std::wstring host(remote.host.begin(),remote.host.end()),object(path.begin(),path.end());
-  HttpHandle connection(WinHttpConnect(session.value,host.c_str(),remote.port,0));
-  if(!connection.value)httpFailure(label,"connection",GetLastError());
-  const wchar_t* accepts[]={L"*/*",nullptr};
-  // The path is already escaped from UTF-8 bytes; keep '%' intact.
-  HttpHandle request(WinHttpOpenRequest(connection.value,L"GET",object.c_str(),nullptr,
-                      WINHTTP_NO_REFERER,accepts,WINHTTP_FLAG_ESCAPE_DISABLE|WINHTTP_FLAG_REFRESH));
-  if(!request.value)httpFailure(label,"request",GetLastError());
-  option(request.value,WINHTTP_OPTION_DISABLE_FEATURE,
-         WINHTTP_DISABLE_REDIRECTS|WINHTTP_DISABLE_COOKIES|WINHTTP_DISABLE_AUTHENTICATION,label);
-  option(request.value,WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT,operationTimeoutMs,label);
-  option(request.value,WINHTTP_OPTION_MAX_RESPONSE_HEADER_SIZE,16384,label);
-  auto state=std::make_shared<Transfer>();
-  auto binding=std::make_unique<Context>(state);
-  if(WinHttpSetStatusCallback(request.value,statusCallback,
-     WINHTTP_CALLBACK_FLAG_SENDREQUEST_COMPLETE|WINHTTP_CALLBACK_FLAG_HEADERS_AVAILABLE|
-     WINHTTP_CALLBACK_FLAG_READ_COMPLETE|WINHTTP_CALLBACK_FLAG_REQUEST_ERROR|WINHTTP_CALLBACK_FLAG_HANDLES,0)
-     ==WINHTTP_INVALID_STATUS_CALLBACK)httpFailure(label,"callback",GetLastError());
-  const auto context=reinterpret_cast<DWORD_PTR>(binding.get());
-  if(!WinHttpSetOption(request.value,WINHTTP_OPTION_CONTEXT_VALUE,
-                       const_cast<DWORD_PTR*>(&context),sizeof(context)))
-    httpFailure(label,"callback context",GetLastError());
-  binding.release(); // Released only by the last HANDLE_CLOSING callback.
-  prepare(state,deadline,stop,label);
-  constexpr std::wstring_view headers=L"Accept-Encoding: identity\r\n";
-  if(!WinHttpSendRequest(request.value,headers.data(),static_cast<DWORD>(headers.size()),
-                         WINHTTP_NO_REQUEST_DATA,0,0,context))
-    httpFailure(label,"send",GetLastError());
-  (void)await(state,WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE,deadline,stop,label,"send");
-  prepare(state,deadline,stop,label);
-  if(!WinHttpReceiveResponse(request.value,nullptr))httpFailure(label,"response",GetLastError());
-  (void)await(state,WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE,deadline,stop,label,"response");
-  DWORD status=0,size=sizeof(status);
-  if(!WinHttpQueryHeaders(request.value,WINHTTP_QUERY_STATUS_CODE|WINHTTP_QUERY_FLAG_NUMBER,
-                         WINHTTP_HEADER_NAME_BY_INDEX,&status,&size,WINHTTP_NO_HEADER_INDEX))
-    httpFailure(label,"status",GetLastError());
-  if(status!=200)fail(label,"remote HTTP status "+std::to_string(status)+" (expected 200; redirects are disabled)");
-  const auto length=contentLength(request.value,maxBytes,label);
-  std::string body;
-  if(length)body.reserve(*length);
-  for(;;) {
-    prepare(state,deadline,stop,label);
-    if(!WinHttpReadData(request.value,state->buffer.data(),static_cast<DWORD>(state->buffer.size()),nullptr))
-      httpFailure(label,"read",GetLastError());
-    const auto bytes=await(state,WINHTTP_CALLBACK_STATUS_READ_COMPLETE,deadline,stop,label,"read");
-    if(!bytes)break;
-    if(bytes>maxBytes-body.size())fail(label,"remote resource byte budget exceeded (maximum "+std::to_string(maxBytes)+")");
-    body.append(state->buffer.data(),bytes);
-  }
-  if(length&&body.size()!=*length)fail(label,"remote HTTP body does not match Content-Length");
-  checkDeadline(deadline,stop,label);
-  return body;
-#else
-  (void)path;(void)maxBytes;
-  fail(label,"remote LINK HTTP transport is supported only on Windows");
-#endif
+  RemoteSession session(remote);
+  return session.fetch(decodedRelative,maxBytes,stop);
 }
 } // namespace linkworld

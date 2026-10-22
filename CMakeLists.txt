@@ -12,7 +12,7 @@ add_library(link_core
 target_include_directories(link_core PUBLIC native/include)
 target_link_libraries(link_core PUBLIC Threads::Threads)
 if(WIN32)
-  target_link_libraries(link_core PUBLIC winhttp)
+  target_link_libraries(link_core PUBLIC ws2_32)
 endif()
 if(MSVC)
   target_compile_options(link_core PUBLIC /W4 /utf-8 /permissive- /EHsc)
@@ -60,15 +60,15 @@ add_test(NAME link_remote_loader_tests COMMAND link_remote_loader_tests)
 set_tests_properties(link_remote_loader_tests PROPERTIES TIMEOUT 30)
 
 if(WIN32)
-  add_executable(link_http_probe native/tests/http_probe.cpp)
-  target_link_libraries(link_http_probe PRIVATE link_core)
+  add_executable(link_protocol_probe native/tests/link_probe.cpp)
+  target_link_libraries(link_protocol_probe PRIVATE link_core)
   find_package(Python3 COMPONENTS Interpreter QUIET)
   if(Python3_Interpreter_FOUND)
     add_test(NAME link_remote_transport COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_SOURCE_DIR}/native/tests/network_integration.py"
-      --probe "$<TARGET_FILE:link_http_probe>" --loader "$<TARGET_FILE:link_remote_loader_tests>"
+      --probe "$<TARGET_FILE:link_protocol_probe>" --loader "$<TARGET_FILE:link_remote_loader_tests>"
       --worlds "${CMAKE_SOURCE_DIR}/native/worlds")
-    set_tests_properties(link_remote_transport PROPERTIES TIMEOUT 60)
+    set_tests_properties(link_remote_transport PROPERTIES TIMEOUT 90)
   endif()
 endif()
 
