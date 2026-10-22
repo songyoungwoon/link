@@ -130,6 +130,7 @@ The home screen puts **LINK**, an address field, and shortcuts to **흑룡이 �
 - A C++ lexer, document parsers, and an AST interpreter for LINK's own authoring languages.
 - A renderer-independent object model with hierarchy, transforms, IDs, state, and instance-local script storage.
 - Style resolution, primitive geometry, local or downloaded image resources, and native rendering.
+- Experimental `particles-v1`: bounded particle systems, local-neighbor queries, vector math, and Script-driven artificial-life experiments. [Authoring guide](docs/guides/particles.md).
 - Walking and local or remote portals, bounded LINK resource transfers, cancellable loading, fresh reload, validation errors, and cleanup when worlds change.
 - Automated core, image, and path-confinement checks, plus native input smoke tests. Run the included checks with `ctest --preset release` after building.
 
@@ -144,6 +145,7 @@ The included worlds exercise the same browser and runtime:
 | Photo corridor — **흑룡이 전시회** | `link://local/heukryong` | Walk past photographs, double-click an image, and enter the portal at the end. |
 | Hello World | `link://local/hello-world` | Step through the corridor portal onto a cosmic plaza. Walk toward monumental 3D letters and a vast ring beneath planets and stars. |
 | [AFTERLIGHT](docs/afterlight.md) | `link://local/afterlight` | Explore a small afternoon room with baked daylight; open a book and toggle a table lamp. |
+| [PARTICLE LIFE](docs/particle-life.md) | `link://local/particle-life` | An image-free particle lab: local interactions, energy, bounded reproduction, and a movable source. |
 | Room A | `link://local/room-a` | Open a hinged door and watch a time-based rotating sculpture. |
 | Room B | `link://local/room-b` | Test independent object state with two breakable stones. |
 

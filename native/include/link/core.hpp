@@ -38,9 +38,10 @@ struct Material { std::string color="#c4d9d0"; double roughness=.65,metalness=0,
 using StylePatch=Value::Map;
 struct StyleRule { enum class Kind { Class,Id }; Kind kind; std::string selector; StylePatch properties; };
 struct Geometry {
-  enum class Type { Box,Sphere,Plane,Cylinder,Frame };
+  enum class Type { Box,Sphere,Plane,Cylinder,Frame,Particles };
   Type type=Type::Box; Vec3 size{1,1,1}; double radius=.5;
   double radiusTop=.5,height=1,border=.06,depth=.08;
+  std::size_t capacity=256; double cellSize=.6;
 };
 enum class Kind { Object,Component,Element };
 struct NodeDefinition {
@@ -65,6 +66,7 @@ struct World {
   std::vector<Viewpoint> views;
   std::optional<WalkSettings> walk;
   std::vector<Portal> portals;
+  std::vector<std::string> extensions;
   std::string background="#111c21";
   std::optional<FogSettings> fog;
   bool grid=true;
@@ -74,6 +76,9 @@ struct Limits {
   static constexpr std::size_t manifestBytes=65536, documentBytes=1048576, scriptBytes=131072;
   static constexpr std::size_t tokens=40000, astNodes=20000, parseDepth=64, nodes=500,nodeDepth=16,scripts=16;
   static constexpr std::size_t stringBytes=8192,stateBytes=65536,evalSteps=4096,callDepth=16,storageBytes=65536;
+  static constexpr std::size_t worldParticles=8192,particleCapacity=2048,particleStateBytes=1024;
+  static constexpr std::size_t particleStateValues=64,particleStateDepth=16;
+  static constexpr std::size_t particleCandidateChecks=100000,particleMutations=4096,particleSpawns=256,particleLifetimeIds=1000000;
   static constexpr std::size_t imageBytes=16*1024*1024,images=128,textBytes=1024,views=128,portals=16;
 };
 using LogFn=std::function<void(bool error,const std::string& message)>;
