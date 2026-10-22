@@ -34,7 +34,7 @@ component     = "component", identifier, "{", {field | component | element}, "}"
 element       = "element", identifier, "{", {field}, "}";
 ```
 
-`world.link`의 모든 필수 필드는 아래 예시에 있습니다. 선택 필드 `views`로 이름 있는 카메라 위치를, `environment`로 배경색과 격자 표시를, `walk`와 `portals`로 1인칭 이동과 포탈을 지정할 수 있습니다. 미지원 필드·중복 필드·`version`이 `"0.1"`이 아닌 문서는 거절합니다. `scripts`는 비어 있어도 되며 파일 참조 문자열과 해석된 실제 파일 모두 중복을 거절합니다. 상대 참조는 `world.link`가 위치한 공간 디렉터리 기준입니다. LINK의 허용 주소와 경로 제한은 [로컬 LINK 명세](../../docs/link-local-v0.1.md)와 [LAN HTTP 계약](../../docs/link-lan-v0.1.md)을 따릅니다. 로컬 파일과 원격 전송은 같은 `version: "0.1"` 문서 문법을 사용합니다.
+`world.link`의 모든 필수 필드는 아래 예시에 있습니다. 선택 필드 `views`로 이름 있는 카메라 위치를, `environment`로 배경색과 격자 표시를, `walk`와 `portals`로 1인칭 이동과 포탈을 지정할 수 있습니다. 미지원 필드·중복 필드·`version`이 `"0.1"`이 아닌 문서는 거절합니다. `scripts`는 비어 있어도 되며 파일 참조 문자열과 해석된 실제 파일 모두 중복을 거절합니다. 상대 참조는 `world.link`가 위치한 공간 디렉터리 기준입니다. LINK의 허용 주소와 경로 제한은 [로컬 LINK 명세](../../docs/link-local-v0.1.md)와 [LINK TCP 계약](../../docs/link-protocol-v0.1.md)을 따릅니다. 로컬 파일과 원격 전송은 같은 `version: "0.1"` 문서 문법을 사용합니다.
 
 ```text
 world {
@@ -80,7 +80,7 @@ walk 맵의 `min`·`max`는 필수 세 성분 벡터이며 각 수치는 유한�
 
 `portals`는 선택 배열이며 최대 16개입니다. 각 맵에는 `id`, `address`, `position`, `size`가 모두 필요하고 그 외 필드는 허용하지 않습니다. id는 128 bytes 이하의 native 식별자이며 포탈 목록 안에서 유일해야 합니다. position은 카메라 눈 위치를 감지하는 축 정렬 상자의 중심, size는 전체 폭·높이·깊이입니다. position에는 기존 유한 Vec3 좌표 상한을 적용하고 size의 각 성분은 0 초과 1,000 이하입니다. 포탈의 시각적 테두리는 별도 Element 형상으로 선언합니다.
 
-address는 절대 LINK 주소 또는 `/hello-world`처럼 현재 authority 기준 주소입니다. 상대 대상은 로컬에서 `link://local/hello-world`, 원격에서는 같은 IPv4와 포트의 `hello-world`로 해석합니다. 명시적 `link://local/...`은 원격 공간에서도 방문한 브라우저의 로컬 루트를 가리킵니다. 로컬 대상은 `resolveLink`의 경로·인코딩·canonical 포함 규칙을 지키고 디렉터리가 존재해야 합니다. 원격 대상은 LAN 주소 문법만 검사합니다. 선언 시 대상 문서를 읽거나 실행하거나 네트워크로 가져오지 않습니다. 실제 진입 때 파일 읽기 또는 HTTP 다운로드를 수행하고 기존 검증·generation·취소·활성화 규칙을 따릅니다.
+address는 절대 LINK 주소 또는 `/hello-world`처럼 현재 authority 기준 주소입니다. 상대 대상은 로컬에서 `link://local/hello-world`, 원격에서는 같은 IPv4와 포트의 `hello-world`로 해석합니다. 명시적 `link://local/...`은 원격 공간에서도 방문한 브라우저의 로컬 루트를 가리킵니다. 로컬 대상은 `resolveLink`의 경로·인코딩·canonical 포함 규칙을 지키고 디렉터리가 존재해야 합니다. 원격 대상은 LAN 주소 문법만 검사합니다. 선언 시 대상 문서를 읽거나 실행하거나 네트워크로 가져오지 않습니다. 실제 진입 때 파일 읽기 또는 LINK TCP 리소스 전송을 수행하고 기존 검증·generation·취소·활성화 규칙을 따릅니다.
 
 진입 판정은 이전 눈 위치에서 새 눈 위치까지의 선분과 상자를 비교하여 가장 먼저 만나는 포탈을 선택합니다. 한 프레임에 얇은 상자를 통과하는 경우도 감지하며, 시작점이 이미 그 포탈 안이면 반복 진입으로 처리하지 않습니다. walk·portals를 선언하지 않은 기존 Room A/B는 변경하지 않습니다.
 
@@ -288,7 +288,7 @@ onUpdate의 deltaSeconds는 실제 경과 초를 0~.05로 제한한 값입니다
 | 전체 노드 / 노드 깊이 (루트=1) / script 파일 | 500 / 16 / 16 |
 | Element classes | 64 |
 | image 고유 참조 / 이미지 파일 각각 | 128 / 16 MiB |
-| 원격 공간 다운로드 합계 / HTTP 파일별 기한 | 64 MiB / 20초 |
+| 원격 공간 다운로드 합계 / LINK 네트워크 작업별 기한 | 64 MiB / 20초 |
 | text 문자열 | 1,024 UTF-8 bytes |
 | 이름 있는 카메라 views | 128 |
 | 포탈 목록 / 포탈 ID | 16개 / 128 bytes |
@@ -301,4 +301,4 @@ KiB는 1,024 bytes입니다. 논리 데이터 크기는 숫자 8 bytes, bool·nu
 
 파서·검증·파일 예산 초과는 후보 활성화 전에 실패합니다. 콜백 평가·인스턴스 저장소 예산은 실행 중 해당 바인딩만 중지합니다. 평가 한도는 AST 인터프리터가 직접 확인하며 wall-clock timeout으로 실행 중인 C++ 코드를 선점한다고 주장하지 않습니다.
 
-제한 API와 평가 예산은 방어 장치이며 완전한 운영용 샌드박스가 아닙니다. 네이티브 파서·이미지 디코더·렌더러의 프로세스 격리와 서버 인증·권한·공유 상태는 없습니다. 대상은 신뢰하는 로컬 제작 문서와 신뢰하는 LAN 서버입니다. 다운로드한 Script도 각 브라우저에서 같은 API로 실행하며 방문자 간 상태 동기화는 하지 않습니다. 평문 HTTP의 신뢰 경계는 [LAN 계약](../../docs/link-lan-v0.1.md#trust-boundary-and-future-profiles)을 따릅니다.
+제한 API와 평가 예산은 방어 장치이며 완전한 운영용 샌드박스가 아닙니다. 네이티브 파서·이미지 디코더·렌더러의 프로세스 격리와 서버 인증·권한·공유 상태는 없습니다. 대상은 신뢰하는 로컬 제작 문서와 신뢰하는 LAN 서버입니다. 다운로드한 Script도 각 브라우저에서 같은 API로 실행하며 방문자 간 상태 동기화는 하지 않습니다. 원격 연결은 암호화나 서버 인증이 없는 평문 LINK TCP입니다. [프로토콜의 신뢰 경계](../../docs/link-protocol-v0.1.md#trust-and-compatibility)를 따르며 HTTP로 자동 전환하지 않습니다.

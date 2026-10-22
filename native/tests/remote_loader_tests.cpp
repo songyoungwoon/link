@@ -7,6 +7,7 @@
 #include <iostream>
 #include <set>
 #include <stop_token>
+#include <thread>
 
 namespace {
 void check(bool condition,const std::string& message){if(!condition)throw std::runtime_error(message);}
@@ -112,6 +113,18 @@ void visitPortals(const std::string& address,const std::filesystem::path& worlds
   check(snapshots()==before,"portal round trip leaves no temporary snapshots");
   check(counters().activeWorlds==beforeRuntime.activeWorlds&&counters().activeBindings==beforeRuntime.activeBindings,"portal round trip releases Runtime and Script bindings");
 }
+void cancelledIntegration(const std::string& address,const std::filesystem::path& worldsRoot,unsigned delayMs) {
+  using namespace linkworld;const auto before=snapshots();std::stop_source stop;
+  const auto started=std::chrono::steady_clock::now();bool rejected=false;
+  std::jthread timer([&]{std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));stop.request_stop();});
+  try{loadWorld(address,worldsRoot,stop.get_token());}catch(const Error& error) {
+    rejected=true;check(std::string(error.what()).find("cancelled")!=std::string::npos,"unexpected cancellation failure: "+std::string(error.what()));
+    check(error.location.file.starts_with("link://"),"cancelled load identifies its LINK origin");
+  }
+  check(rejected,"in-flight remote world unexpectedly loaded");
+  check(std::chrono::steady_clock::now()-started<std::chrono::milliseconds(delayMs+1400),"in-flight load cancellation exceeded its bound");
+  check(snapshots()==before,"cancelled remote load removes its partial snapshot");
+}
 void integration(const std::string& address,const std::filesystem::path& worldsRoot) {
   using namespace linkworld;const auto origin=parseRemoteLink(address);
   auto first=loadWorld(address,worldsRoot);const auto firstDirectory=first->directory;
@@ -154,19 +167,22 @@ int main(int argc,char** argv) {
   try {
     unitTests();
     if(argc>1) {
-      const std::string usage="usage: link_remote_loader_tests [--integration LINK-address local-worlds-root | --visit-portals LINK-address local-worlds-root | --reject LINK-address local-worlds-root error-substring]";
+      const std::string usage="usage: link_remote_loader_tests [--integration LINK-address local-worlds-root | --visit-portals LINK-address local-worlds-root | --reject LINK-address local-worlds-root error-substring | --cancel LINK-address local-worlds-root delay-ms]";
 #ifdef _WIN32
       const auto argument=[&](int index){std::string value;for(const auto character:std::wstring(argv[index])){check(character>=0&&character<=127,"remote test option must be ASCII");value+=static_cast<char>(character);}return value;};
 #else
       const auto argument=[&](int index){return std::string(argv[index]);};
 #endif
-      const auto option=argument(1);check((argc==4&&(option=="--integration"||option=="--visit-portals"))||(argc==5&&option=="--reject"),usage);
+      const auto option=argument(1);check((argc==4&&(option=="--integration"||option=="--visit-portals"))||(argc==5&&(option=="--reject"||option=="--cancel")),usage);
       if(option=="--integration") {
         integration(argument(2),std::filesystem::path(argv[3]));
         std::cout<<"PASS remote Script execution, snapshot loading, reload isolation, image lifetime and cleanup\n";
       }else if(option=="--visit-portals") {
         visitPortals(argument(2),std::filesystem::path(argv[3]));
         std::cout<<"PASS remote portal traversal, return, Script execution and snapshot cleanup\n";
+      }else if(option=="--cancel") {
+        cancelledIntegration(argument(2),std::filesystem::path(argv[3]),static_cast<unsigned>(std::stoul(argument(4))));
+        std::cout<<"PASS in-flight native LINK cancellation and partial snapshot cleanup\n";
       }else {
         rejectedIntegration(argument(2),std::filesystem::path(argv[3]),argument(4));
         std::cout<<"PASS remote failure diagnostics and snapshot cleanup\n";

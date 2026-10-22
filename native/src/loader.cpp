@@ -66,11 +66,12 @@ std::string localWorld(const std::string& address) {
 }
 struct RemoteSnapshot {
   RemoteLink remote;
+  RemoteSession session;
   std::string address;
   std::filesystem::path parent,directory;
   std::vector<std::pair<std::filesystem::path,std::size_t>> files;
   std::size_t transferred=0;
-  RemoteSnapshot(RemoteLink source,std::string origin):remote(std::move(source)),address(std::move(origin)) {
+  RemoteSnapshot(RemoteLink source,std::string origin):remote(std::move(source)),session(remote),address(std::move(origin)) {
     std::error_code error;const auto temporary=std::filesystem::temp_directory_path(error);
     if(error)throw Error({address,1,1},"cannot locate temporary snapshot directory: "+error.message());
     parent=canonical(temporary,address);std::random_device random;
@@ -108,7 +109,7 @@ struct RemoteSnapshot {
     }
     if(transferred>=Limits::remoteWorldBytes)throw Error(where,"world transfer byte budget exceeded (maximum "+std::to_string(Limits::remoteWorldBytes)+")");
     const auto encoded=path.generic_u8string();const std::string decodedRelative(encoded.begin(),encoded.end());
-    const auto bytes=fetchRemoteResource(remote,decodedRelative,std::min(cap,Limits::remoteWorldBytes-transferred),stop);
+    const auto bytes=session.fetch(decodedRelative,std::min(cap,Limits::remoteWorldBytes-transferred),stop);
     transferred+=bytes.size();cancelled(stop,where.file);
     std::error_code error;std::filesystem::create_directories(file.parent_path(),error);
     if(error)throw Error(where,"cannot create snapshot resource directory: "+error.message());
@@ -320,6 +321,6 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
     }
   }
   for(std::size_t i=0;i<scripts.size();++i){const auto source=read(scriptFiles[i],Limits::scriptBytes,stop,label(scripts[i],scriptFiles[i]));cancelled(stop,address);result->programs.emplace(scripts[i],parseScript(source,label(scripts[i],scriptFiles[i])));cancelled(stop,address);}
-  cancelled(stop,address);return result;
+  cancelled(stop,address);if(snapshot)snapshot->session.close();return result;
 }
 } // namespace linkworld

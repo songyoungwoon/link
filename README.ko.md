@@ -16,7 +16,7 @@
 
 **우리의 비전: An open standard for connected virtual worlds.**
 
-제작자가 세계를 만들고 사람들이 하나의 브라우저로 세계 사이를 이동하는 생태계를 지향합니다. 현재 구현은 Windows C++20 네이티브 브라우저와 **실험적 v0.1**이며, 로컬 공간과 초기 **LAN HTTP 전송**을 지원합니다. 서버 컴퓨터의 실제 IPv4 주소를 사용해 `link://192.168.0.10:8000/hello-world`처럼 다른 컴퓨터의 세계를 엽니다.
+제작자가 세계를 만들고 사람들이 하나의 브라우저로 세계 사이를 이동하는 생태계를 지향합니다. 현재 구현은 Windows C++20 네이티브 브라우저와 **실험적 v0.1**이며, 로컬 공간과 **직접 연결하는 LINK TCP v0.1 전송**을 지원합니다. 서버 컴퓨터의 실제 IPv4 주소를 사용해 `link://192.168.0.10:8000/hello-world`처럼 다른 컴퓨터의 세계를 엽니다.
 
 **[첫 세계 만들기 →](docs/guides/README.md)** · [Element](docs/guides/element.md) · [Script](docs/guides/script.md) · [Style](docs/guides/style.md)
 
@@ -24,11 +24,11 @@
 
 | 기반 | 역할 | 현재 프로토타입 |
 | --- | --- | --- |
-| **LINK Protocol** | 세계의 주소·탐색과 브라우저 ↔ 공간/서버의 통신 계약을 정의합니다. | 로컬 `link://local/...`·IPv4 LAN 주소, 공간 내부 리소스 제한, 포탈 이동. |
+| **LINK Protocol** | 세계의 주소·탐색과 브라우저 ↔ 공간/서버의 통신 계약을 정의합니다. | 로컬 `link://local/...`·IPv4 서버 연결, 바이너리 핸드셰이크와 리소스 교환, 포탈 이동. |
 | **LINK Browser** | 세계를 방문하고 렌더링하며 탐색·상호작용합니다. | 3D 렌더링·걷기·상호작용·reload·공간 수명 관리를 갖춘 Windows 네이티브 앱. |
 | **World Standards** | 제작자가 세계를 표현할 공통 규격입니다. | 구조의 **Element**, 동작의 **Script**, 외형의 **Style**을 C++ 런타임이 해석하고 실행. |
 
-프로토콜은 주소와 세계 문서의 전송 방법을, 제작 규격은 그곳에 무엇이 있는지를 정의합니다. 브라우저는 그 세계를 실행합니다. [LAN v0.1 계약](docs/link-lan-v0.1.md)은 원격 LINK 주소를 HTTP 리소스로 연결하며 세계 문서 형식은 v0.1을 유지합니다.
+프로토콜은 주소와 세계 문서의 전송 방법을, 제작 규격은 그곳에 무엇이 있는지를 정의합니다. 브라우저는 그 세계를 실행합니다. [LINK TCP v0.1 계약](docs/link-protocol-v0.1.md)은 공간을 불러올 때 하나의 TCP 연결에서 수행하는 바이너리 핸드셰이크와 크기가 제한된 리소스 메시지를 정의합니다. 세계 문서 형식은 v0.1을 유지하며 HTTP를 사용하지 않습니다.
 
 ## 세계 만들기
 
@@ -91,7 +91,7 @@ ctest --preset release
 
 ## LAN으로 다른 컴퓨터의 세계 열기
 
-서버는 별도 형제 저장소 `link-server`에 있으며 Python 3.10 이상과 표준 라이브러리를 사용합니다. **서버와 브라우저를 모두 갱신**하세요. 이전 로컬 전용 브라우저는 원격 주소를 열 수 없습니다.
+서버는 별도 형제 저장소 `link-server`에 있으며 Python 3.10 이상과 표준 라이브러리를 사용합니다. **서버와 브라우저를 모두 갱신**하세요. 현재 브라우저는 직접 LINK TCP로 연결하므로 이전 HTTP 방식 브라우저·서버와 전송 방식이 다릅니다.
 
 서버 PC의 `link-server` 폴더에서 실행합니다.
 
@@ -109,7 +109,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 
 `192.168.0.10`은 예시이므로 서버의 실제 IPv4 주소로 바꿉니다. 포트를 생략하면 `8000`입니다. 서버의 `hello-world`·`second-world` 예제에는 이미지·클라이언트 Script·같은 서버로 이어지는 포탈이 있습니다. **F5**는 문서를 새로 가져오고 준비 실패·취소 때는 현재 공간을 유지합니다.
 
-신뢰하는 LAN용 평문 HTTP이며 DNS·HTTPS·인증·멀티플레이어 상태·OS `link://` 핸들러 등록은 후속 범위입니다. 서버가 Windows 방화벽을 자동 변경하지 않습니다. 리소스 제한·기존 공간 호스팅·접속 확인 방법은 [LAN 계약과 설정 안내](docs/link-lan-v0.1.md)를 따릅니다.
+신뢰하는 네트워크용 평문 LINK TCP이며, 자체 프로토콜만으로 암호화나 서버 인증을 제공하지 않습니다. TLS·DNS/IPv6·인증·멀티플레이어 상태·OS `link://` 핸들러 등록은 후속 범위입니다. HTTP로 자동 전환하지 않으며 서버의 `--transport http`는 이전 브라우저용 명시적 호환 모드입니다. 서버가 Windows 방화벽을 자동 변경하지 않습니다. 리소스 제한·기존 공간 호스팅·접속 확인 방법은 [LAN 계약과 설정 안내](docs/link-lan-v0.1.md)를 따릅니다.
 
 ## 탐색과 상호작용
 
@@ -130,7 +130,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 - LINK 자체 제작 언어의 C++ lexer·문서 parser·Script AST 인터프리터.
 - 계층·변환·ID·상태·인스턴스별 Script 저장소를 갖춘 렌더러 독립 객체 모델.
 - Style 계산, 기본 형상, 로컬·다운로드 이미지 리소스와 네이티브 렌더링.
-- 걷기·로컬 및 원격 포탈, 제한된 HTTP 다운로드·취소 가능한 로딩·새로 가져오는 reload·검증 오류 처리·공간 전환 정리.
+- 걷기·로컬 및 원격 포탈, 크기가 제한된 LINK 리소스 전송·취소 가능한 로딩·새로 가져오는 reload·검증 오류 처리·공간 전환 정리.
 - 핵심 로직·이미지·경로 제한 자동 검사와 네이티브 입력 smoke. 빌드 후 `ctest --preset release`로 포함된 자동 검사를 실행할 수 있습니다.
 
 현재 대상은 **신뢰하는 로컬 문서와 LAN 서버**입니다. 다운로드한 Script는 각 브라우저의 공간 인스턴스에서 동일한 제한 API로 실행합니다. 입력·인터프리터 예산을 적용하며 프로세스 격리와 강화된 권한은 후속입니다. 문법과 API는 실험 단계로 변경될 수 있습니다.
@@ -162,7 +162,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 
 **세계를 만들고, 경계를 탐색하고, 세계가 연결되는 방식을 함께 다듬어 주세요.**
 
-[제작 가이드](docs/guides/README.md) · [World Standards](docs/link-world-v0.1.md) · [로컬 프로토콜](docs/link-local-v0.1.md) · [LAN 프로토콜](docs/link-lan-v0.1.md) · [LINK Browser 실행](#link-browser-실행)
+[제작 가이드](docs/guides/README.md) · [World Standards](docs/link-world-v0.1.md) · [로컬 프로토콜](docs/link-local-v0.1.md) · [LINK TCP 프로토콜](docs/link-protocol-v0.1.md) · [LAN 연결 안내](docs/link-lan-v0.1.md) · [LINK Browser 실행](#link-browser-실행)
 
 ## 라이선스
 
