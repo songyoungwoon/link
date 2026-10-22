@@ -58,6 +58,8 @@ examples/
 
 각 가이드의 전체 코드와 `examples/first-world`의 실제 파일은 같은 예제입니다. 필요한 파일을 직접 열어 수정해도 됩니다. 문법 전체의 기준은 [제작 언어 명세](../../native/docs/language.md), 주소·경로 기준은 [로컬 LINK Protocol 명세](../link-local-v0.1.md)와 [LINK TCP 계약](../link-protocol-v0.1.md)에서 확인합니다.
 
+많은 개체의 행동 규칙을 작성하려면 [입자 시스템 제작 가이드](particles.md)와 이미지 없는 [PARTICLE LIFE 실험실](../particle-life.md)을 참고하세요. `particles-v1`은 Element·Script·Style의 선택 확장이며 LINK 전송 방식은 그대로입니다.
+
 작은 실내를 구성하는 응용 예제는 [AFTERLIGHT · 오후의 방](../afterlight.md)에서 살펴볼 수 있습니다. 실제 3D 형상과 정적 표면 베이크를 함께 사용하며 책·조명·커튼에 일반 Script 동작을 붙입니다.
 
 ## 나만의 공간으로 복사하기

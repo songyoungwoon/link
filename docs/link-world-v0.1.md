@@ -32,7 +32,7 @@ styleDocument = {"defaults", "{", {field}, "}"
 hook = "on", hookName, "(", parameters, ")", block;
 ```
 
-전체 ID는 공간 안에서 유일합니다. Element는 box·sphere·plane·cylinder·frame의 잎이며 상태·Script를 갖지 않습니다. plane은 선택 `image` 또는 `text` 필드를 지원하고 두 필드는 함께 사용할 수 없습니다. 현재 사진 공간은 28개의 image plane과 액자를 사용하며 문구용 text plane은 배치하지 않습니다. Hello World!의 문자는 box 형상을 묶어 두께를 표현합니다. Object와 Component는 데이터 state, 초기 config, Script 하나를 가집니다. 오른손 Y-up, m·초·degree XYZ이며 변환은 `T × Rx × Ry × Rz × S`, 부모 visible도 자식에 적용됩니다.
+전체 ID는 공간 안에서 유일합니다. Element는 box·sphere·plane·cylinder·frame과 선택 확장의 particles 형상을 담는 잎이며 상태·Script를 갖지 않습니다. plane은 선택 `image` 또는 `text` 필드를 지원하고 두 필드는 함께 사용할 수 없습니다. 현재 사진 공간은 28개의 image plane과 액자를 사용하며 문구용 text plane은 배치하지 않습니다. Hello World!의 문자는 box 형상을 묶어 두께를 표현합니다. Object와 Component는 데이터 state, 초기 config, Script 하나를 가집니다. 오른손 Y-up, m·초·degree XYZ이며 변환은 `T × Rx × Ry × Rz × S`, 부모 visible도 자식에 적용됩니다.
 
 진입 문서는 선택 `views`로 이름 있는 카메라 위치 메타데이터를, `environment`로 배경색·격자 표시를 지정합니다. `views`는 내부 검증에 유지하며 현재 사용자 화면에는 시점 선택 콤보 상자·이전/다음 시점 버튼을 제공하지 않습니다. `walk`는 고정 눈높이의 수평 1인칭 이동 범위·속도를, `portals`는 진입 감지 상자와 대상 LINK를 선언합니다. 두 기능을 선언하지 않은 Room A/B는 기존 관찰 카메라와 동작을 유지합니다. 이미지 경로는 각 공간 안으로 제한하며 파일당 16 MiB·고유 참조 128개로 제한합니다. 로컬 파일은 canonical 포함 검사를, 원격 파일은 같은 공간의 LINK 리소스 경로와 임시 스냅샷 검사를 거칩니다. 원격 공간의 다운로드 총합은 64 MiB입니다. 실제 이미지 디코딩과 텍스처 생성은 렌더러가 담당합니다. 자세한 형상·이미지·텍스트·시점·걷기·포탈 문법은 위 언어 명세를 따릅니다.
 
@@ -48,7 +48,7 @@ Style 계산 순서는 실행기 기본값, defaults, 이름 있는 material 참
 
 `ctx.id`, `ctx.config`, `ctx.find(id)`, `getState`·`setState`, `getTransform`·`setTransform`, `setStyle`·`clearStyle`, `log`를 제공합니다. 자기 노드와 명시적 ID 조회만 사용하며 렌더러 포인터·OS 핸들·DOM·파일·네트워크 API는 없습니다. 인수·반환·실패·병합 규칙은 [API 표](../native/docs/language.md#ctx-공개-api)를 따릅니다. 런타임 노드 삭제 API는 v0.1에 없습니다.
 
-각 콜백은 4,096 평가 단계와 중첩 호출 16, 인스턴스 저장소·현재 지역 값 합 64 KiB로 제한합니다. 반복문·재귀·import는 없습니다. 이는 평가 비용을 제한하는 방어 장치이고 운영용 완전 격리는 아닙니다.
+기본 콜백은 4,096 평가 단계와 중첩 호출 16, 인스턴스 저장소·현재 지역 값 합 64 KiB로 제한합니다. 최대 2,048개 배열 원소를 순회하는 `for (let 이름 of 배열)`와 수학·Vec3 연산을 지원하고, 일반 for·while·재귀·import는 없습니다. particles-v1 확장 공간은 아래의 별도 단계 예산을 적용합니다. 이는 평가 비용을 제한하는 방어 장치이고 운영용 완전 격리는 아닙니다.
 
 ## 탐색과 자원 소유권
 
@@ -70,3 +70,15 @@ Runtime이 노드·상태·Script 인스턴스를 소유하고 공유된 불변 
 OpenGL 고정 기능 조명에서 roughness는 shininess, metalness는 specular 강도로 근사합니다. opacity<1은 blending을 켜고 깊이 쓰기를 끈 후 요소 중심의 카메라 깊이순으로 정렬합니다. 복잡하게 교차하는 투명 형상의 완전한 정렬은 보장하지 않습니다. opacity=0은 렌더·클릭 대상에서 제외합니다. plane은 양면입니다.
 
 창 크기·DPI 변경 시 viewport와 글꼴 배치를 갱신하고 최소화·0 크기 타깃에서는 렌더링을 건너뜁니다. 현재 구현은 Windows 네이티브 셸을 대상으로 하며, 다른 OS·다중 모니터 사이의 DPI 이동·장시간 성능은 지원 범위를 확장할 때 별도 확인이 필요합니다.
+
+## 입자와 인공생명 실험: particles-v1
+
+`version: "0.1"` 안에서 선택하는 실험 확장입니다. world 블록에 `extensions: ["particles-v1"];`를 선언하고 Element에 `geometry: {type:"particles",capacity:128,radius:.055,cellSize:.6};`를 사용합니다. 미지원·중복 확장과 확장 없이 사용한 particles 형상은 준비 단계 오류입니다. 기존 문서와 LINK TCP 전송 프레임은 유지합니다.
+
+입자는 노드가 아닌 시스템 내부의 데이터입니다. Object·Component에 바인딩한 Script 하나가 `for (let id of ctx.particleIds("cells"))`로 각 입자를 처리합니다. 시스템당 capacity 최대 2,048, 전체 선언 capacity 합계 8,192이며 로컬 위치·속도·반지름·색·나이·state 맵을 가집니다. position·velocity는 시스템 Element 좌표계이고 부모 transform은 렌더링에 적용합니다.
+
+API는 `spawnParticle`, `particleIds`, `getParticle`, `setParticle`, `removeParticle`, `neighbors`, `particleCount`, `random`입니다. 입자 state 교체는 전체 교체이며 노드 state의 얕은 병합과 다릅니다. 입자 state는 추정 1,024 bytes·재귀 값 64개·중첩 깊이 16 이하입니다. 개수는 루트와 컨테이너를 포함하고 루트 깊이는 0입니다. 같은 생명주기 단계에서는 고정 스냅샷을 읽고 모든 콜백 뒤 변경을 반영합니다. 새 입자는 다음 단계부터 조회되고 개수는 예약 생성·삭제까지 반영합니다. onUpdate 뒤 브라우저가 속도로 위치와 나이를 적분합니다.
+
+확장 공간의 바인딩 콜백은 65,536 평가 단계, 공간 전체 한 단계는 262,144 평가 단계입니다. 단계당 생성 256회·생성과 변경·삭제 합계 4,096회·이웃 후보 검사 100,000회와 기존 문서·저장소 예산을 적용합니다. API 계약·반복 범위·수학 함수와 예제는 [입자 제작 가이드](guides/particles.md), 실제 실행 공간은 [PARTICLE LIFE](particle-life.md)에서 확인합니다.
+
+이는 제한된 군집·인공생명 알고리즘의 실행 기반입니다. 현재 입자는 일괄 렌더링하는 카메라 방향 원판이며, 사용자 메시·자동 충돌·물리학·생물학·의식·방문자 간 공유 시뮬레이션은 제공하지 않습니다.

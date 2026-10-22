@@ -8,7 +8,7 @@ find_package(Threads REQUIRED)
 
 add_library(link_core
   native/src/core.cpp native/src/text.cpp native/src/loader.cpp
-  native/src/script.cpp native/src/runtime.cpp native/src/navigation.cpp native/src/walk.cpp native/src/remote.cpp)
+  native/src/particles.cpp native/src/script.cpp native/src/runtime.cpp native/src/navigation.cpp native/src/walk.cpp native/src/remote.cpp)
 target_include_directories(link_core PUBLIC native/include)
 target_link_libraries(link_core PUBLIC Threads::Threads)
 if(WIN32)
@@ -49,11 +49,16 @@ if(WIN32)
 endif()
 
 enable_testing()
-add_executable(link_tests native/tests/main.cpp native/tests/parser_tests.cpp native/tests/script_tests.cpp native/tests/runtime_tests.cpp native/tests/exhibition_tests.cpp native/tests/afterlight_tests.cpp native/tests/walk_tests.cpp native/tests/guide_tests.cpp native/tests/network_tests.cpp)
+add_executable(link_tests native/tests/main.cpp native/tests/parser_tests.cpp native/tests/script_tests.cpp native/tests/runtime_tests.cpp native/tests/exhibition_tests.cpp native/tests/afterlight_tests.cpp native/tests/walk_tests.cpp native/tests/guide_tests.cpp native/tests/network_tests.cpp native/tests/particle_tests.cpp native/tests/script_particle_tests.cpp native/tests/particle_runtime_tests.cpp)
 target_link_libraries(link_tests PRIVATE link_core)
 target_compile_definitions(link_tests PRIVATE LINK_SOURCE_DIR="${CMAKE_SOURCE_DIR}/native")
 add_test(NAME link_core_tests COMMAND link_tests)
-set_tests_properties(link_core_tests PROPERTIES TIMEOUT 30)
+if(LINK_ASAN)
+  # The core suite includes repeated interpreted particle updates under heap instrumentation.
+  set_tests_properties(link_core_tests PROPERTIES TIMEOUT 60)
+else()
+  set_tests_properties(link_core_tests PROPERTIES TIMEOUT 30)
+endif()
 add_executable(link_remote_loader_tests native/tests/remote_loader_tests.cpp)
 target_link_libraries(link_remote_loader_tests PRIVATE link_core)
 add_test(NAME link_remote_loader_tests COMMAND link_remote_loader_tests)

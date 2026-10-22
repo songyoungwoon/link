@@ -139,11 +139,19 @@ std::size_t raycast(const Runtime& runtime,const Camera& camera,int x,int y,int 
   for(std::size_t i=0;i<runtime.nodes().size();++i) {
     const auto& n=runtime.nodes()[i];if(n.definition.kind!=Kind::Element||!matrices.visible[i]||runtime.material(i).opacity<=0)continue;
     Matrix inv;if(!inverse(matrices.world[i],inv))continue;
-    double t=intersect(n.definition.geometry,inv.point(camera.eye()),inv.direction(direction));if(t<closest){closest=t;hit=i;}
+    double t=std::numeric_limits<double>::infinity();
+    if(n.definition.geometry.type==Geometry::Type::Particles) {
+      if(const auto* particles=runtime.particleEngine())for(const auto& [id,particle]:particles->live(i)) {
+        (void)id;Geometry sphere;sphere.type=Geometry::Type::Sphere;sphere.radius=particle.radius;
+        t=std::min(t,intersect(sphere,sub(inv.point(camera.eye()),particle.position),inv.direction(direction)));
+      }
+    }else t=intersect(n.definition.geometry,inv.point(camera.eye()),inv.direction(direction));
+    if(t<closest){closest=t;hit=i;}
   }
   return hit;
 }
 void geometry(const Geometry& g) {
+  if(g.type==Geometry::Type::Particles)return;
   if(g.type==Geometry::Type::Frame){Geometry box;box.type=Geometry::Type::Box;box.size={g.size[0],g.border,g.depth};for(double sign:{-1.,1.}){glPushMatrix();glTranslated(0,sign*(g.size[1]-g.border)/2,0);geometry(box);glPopMatrix();}box.size={g.border,g.size[1]-2*g.border,g.depth};for(double sign:{-1.,1.}){glPushMatrix();glTranslated(sign*(g.size[0]-g.border)/2,0,0);geometry(box);glPopMatrix();}return;}
   if(g.type==Geometry::Type::Cylinder){constexpr int slices=40;double half=g.height/2;glBegin(GL_QUAD_STRIP);for(int i=0;i<=slices;++i){double angle=2*pi*i/slices,c=std::cos(angle),s=std::sin(angle);auto n=unit({c,(g.radius-g.radiusTop)/g.height,s});glNormal3dv(n.data());glVertex3d(g.radius*c,-half,g.radius*s);glVertex3d(g.radiusTop*c,half,g.radiusTop*s);}glEnd();for(int end=0;end<2;++end){double r=end?g.radiusTop:g.radius,y=end?half:-half;if(r<=0)continue;glBegin(GL_TRIANGLE_FAN);glNormal3d(0,end?1:-1,0);glVertex3d(0,y,0);for(int i=0;i<=slices;++i){double angle=(end?-1:1)*2*pi*i/slices;glVertex3d(r*std::cos(angle),y,r*std::sin(angle));}glEnd();}return;}
   if(g.type==Geometry::Type::Sphere) {
@@ -160,6 +168,57 @@ void geometry(const Geometry& g) {
   glNormal3d(-1,0,0);glVertex3d(-x,-y,-z);glVertex3d(-x,-y,z);glVertex3d(-x,y,z);glVertex3d(-x,y,-z);
   glNormal3d(0,1,0);glVertex3d(-x,y,z);glVertex3d(x,y,z);glVertex3d(x,y,-z);glVertex3d(-x,y,-z);
   glNormal3d(0,-1,0);glVertex3d(-x,-y,-z);glVertex3d(x,-y,-z);glVertex3d(x,-y,z);glVertex3d(-x,-y,z);glEnd();
+}
+// Batched camera-facing disks, with one optional additive halo batch per cloud,
+// rather than a sphere mesh and scene-node dispatch for every particle.
+// Simulation positions/radii are local to the cloud and inherit its transform.
+void particleCloud(const ParticleEngine& engine,std::size_t node,const Matrix& world,
+                   const Camera& camera,const Material& material) {
+  const auto& particles=engine.live(node);if(particles.empty())return;
+  Matrix inv;if(!inverse(world,inv))return;
+  const auto right=unit(inv.direction(camera.right())),up=unit(inv.direction(camera.up()));
+  constexpr int sides=12;
+  std::array<Vec3,sides+1> ring{};
+  for(int side=0;side<=sides;++side) {
+    const auto angle=side*2*pi/sides;ring[side]=add(mul(right,std::cos(angle)),mul(up,std::sin(angle)));
+  }
+  glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_POLYGON_BIT|GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  glDisable(GL_LIGHTING);glDisable(GL_TEXTURE_2D);glPolygonMode(GL_FRONT_AND_BACK,material.wireframe?GL_LINE:GL_FILL);
+  glBegin(GL_TRIANGLES);
+  for(const auto& [id,particle]:particles) {
+    (void)id;
+    const auto rgb=static_cast<unsigned>(std::stoul(particle.color.substr(1),nullptr,16));
+    const Vec3 color{double((rgb>>16)&255)/255,double((rgb>>8)&255)/255,double(rgb&255)/255};
+    for(int side=0;side<sides;++side) {
+      const auto center=particle.position;
+      const auto a=add(center,mul(ring[side],particle.radius));
+      const auto b=add(center,mul(ring[side+1],particle.radius));
+      glColor4d(std::min(1.,color[0]*1.15+.06),std::min(1.,color[1]*1.15+.06),std::min(1.,color[2]*1.15+.06),material.opacity);
+      glVertex3dv(center.data());
+      glColor4d(color[0]*.64,color[1]*.64,color[2]*.64,material.opacity);
+      glVertex3dv(a.data());glVertex3dv(b.data());
+    }
+  }
+  glEnd();
+  if(material.emission>0&&!material.wireframe) {
+    glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE);glDepthMask(GL_FALSE);
+    const auto strength=material.emission/(1+material.emission);
+    glBegin(GL_TRIANGLES);
+    for(const auto& [id,particle]:particles) {
+      (void)id;
+      const auto rgb=static_cast<unsigned>(std::stoul(particle.color.substr(1),nullptr,16));
+      const Vec3 color{double((rgb>>16)&255)/255,double((rgb>>8)&255)/255,double(rgb&255)/255};
+      for(int side=0;side<sides;++side) {
+        const auto center=particle.position;
+        const auto a=add(center,mul(ring[side],particle.radius*2.1));
+        const auto b=add(center,mul(ring[side+1],particle.radius*2.1));
+        glColor4d(color[0],color[1],color[2],.2*strength*material.opacity);glVertex3dv(center.data());
+        glColor4d(color[0],color[1],color[2],0);glVertex3dv(a.data());glVertex3dv(b.data());
+      }
+    }
+    glEnd();
+  }
+  glPopAttrib();
 }
 // The surface class marks a texture used as an architectural material, rather
 // than an exhibition photograph. Keep these out of the standalone photo viewer.
@@ -184,7 +243,7 @@ public:
   explicit Desktop(std::filesystem::path root):navigator_(std::move(root),[this](bool error,const std::string& message){log(error,message);}){}
   ~Desktop(){navigator_.stop();destroyGl();if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(addressFont_)DeleteObject(addressFont_);if(background_)DeleteObject(background_);if(paper_)DeleteObject(paper_);if(photoBrush_)DeleteObject(photoBrush_);}
   int run(int show);
-  std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath,shellSmokePath,afterlightSmokePath;
+  std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath,shellSmokePath,afterlightSmokePath,particleSmokePath;
 private:
   Navigator navigator_;NativeTextures textures_;HWND window_=nullptr,viewport_=nullptr,address_=nullptr,status_=nullptr,nodes_=nullptr,inspector_=nullptr,logs_=nullptr;
   std::map<int,HWND> controls_;HDC glDc_=nullptr;HGLRC glContext_=nullptr;HFONT font_=nullptr,mono_=nullptr;HBRUSH background_=nullptr,paper_=nullptr;
@@ -207,6 +266,8 @@ private:
   void createControls();void initGl();void destroyGl();void render(bool present=true);void frame();void command(int);void request(const std::string&);
   void log(bool,const std::string&);void refreshInspector();void click(int,int);bool clickBinding(std::size_t);void smoke();void finishSmoke(bool);bool capture(const std::filesystem::path&);
   void afterlightSmoke();void finishAfterlightSmoke(bool);
+  void particleSmoke();void finishParticleSmoke(bool);
+  int particleStage_=0;std::size_t particleInitial_=0;Vec3 particleStart_{};Clock::time_point particleTime_=Clock::now();std::string particleFailure_;
   void jumpView(int);void openPhoto(std::size_t);void closePhoto();void movePhoto(int);void setPhotoControls();void clearWorldGraphics();void renderPhoto();bool clickImage(bool);void gallerySmoke();void finishGallerySmoke(bool);
   bool walking()const;bool movementKey(WPARAM)const;void updateWalk(double);void lookWalk(int,int);
   void drawButton(const DRAWITEMSTRUCT&);void drawIcon(HDC,int,int,int,int,COLORREF);void toggleTools();void showMenu();void refreshShell();void createFonts();bool shortcut(WPARAM,bool);void shellSmoke();void finishShellSmoke(bool);bool homeLayoutFits()const;
@@ -403,11 +464,11 @@ void Desktop::render(bool present){
   auto matrices=sceneMatrices(*runtime);std::vector<std::size_t> opaque,transparent;
   for(std::size_t i=0;i<runtime->nodes().size();++i)if(runtime->nodes()[i].definition.kind==Kind::Element&&matrices.visible[i]){auto material=runtime->material(i);if(material.opacity<=0)continue;const auto* text=runtime->nodes()[i].definition.text.empty()?nullptr:textures_.text(runtime->nodes()[i].definition.id);const bool alphaText=text&&!text->textBackground;(material.opacity<1||alphaText?transparent:opaque).push_back(i);}
   std::sort(transparent.begin(),transparent.end(),[&](auto a,auto b){return dot(sub(matrices.world[a].point({0,0,0}),camera_.eye()),camera_.forward())>dot(sub(matrices.world[b].point({0,0,0}),camera_.eye()),camera_.forward());});
-  auto draw=[&](std::size_t i){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());const auto& node=runtime->nodes()[i].definition;auto material=runtime->material(i);const Texture* texture=node.image.empty()?textures_.text(node.id):textures_.image(node.image);if(texture)texturedQuad(*texture,node.geometry.size[0],node.geometry.size[1],material.opacity);else{applyMaterial(material);geometry(node.geometry);}glPopMatrix();};
+  auto draw=[&](std::size_t i){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());const auto& node=runtime->nodes()[i].definition;auto material=runtime->material(i);const Texture* texture=node.image.empty()?textures_.text(node.id):textures_.image(node.image);if(node.geometry.type==Geometry::Type::Particles){if(const auto* engine=runtime->particleEngine())particleCloud(*engine,i,matrices.world[i],camera_,material);}else if(texture)texturedQuad(*texture,node.geometry.size[0],node.geometry.size[1],material.opacity);else{applyMaterial(material);geometry(node.geometry);}glPopMatrix();};
   glDisable(GL_BLEND);glDepthMask(GL_TRUE);for(auto i:opaque)draw(i);glEnable(GL_BLEND);glDepthMask(GL_FALSE);for(auto i:transparent)draw(i);glDepthMask(GL_TRUE);glDisable(GL_BLEND);glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
   // Small additive shells soften authored light sources while keeping their real geometry.
   glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_CURRENT_BIT|GL_POLYGON_BIT);glDisable(GL_LIGHTING);glDisable(GL_TEXTURE_2D);glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE);glDepthMask(GL_FALSE);
-  for(std::size_t i=0;i<runtime->nodes().size();++i){const auto& node=runtime->nodes()[i].definition;if(node.kind!=Kind::Element||!matrices.visible[i]||!node.image.empty()||!node.text.empty())continue;const auto material=runtime->material(i);if(material.emission<=0||material.opacity<=0)continue;const auto rgb=static_cast<unsigned>(std::stoul(material.color.substr(1),nullptr,16));
+  for(std::size_t i=0;i<runtime->nodes().size();++i){const auto& node=runtime->nodes()[i].definition;if(node.kind!=Kind::Element||node.geometry.type==Geometry::Type::Particles||!matrices.visible[i]||!node.image.empty()||!node.text.empty())continue;const auto material=runtime->material(i);if(material.emission<=0||material.opacity<=0)continue;const auto rgb=static_cast<unsigned>(std::stoul(material.color.substr(1),nullptr,16));
     for(auto [scale,alpha]:{std::pair{1.10,.018},std::pair{1.045,.045}}){glColor4d(double((rgb>>16)&255)/255,double((rgb>>8)&255)/255,double(rgb&255)/255,alpha*std::min(material.emission,2.)*material.opacity);glPushMatrix();glMultMatrixd(matrices.world[i].m.data());glScaled(scale,scale,scale);geometry(node.geometry);glPopMatrix();}
   }glPopAttrib();
   if(toolsOpen_&&!selected_.empty()){glDisable(GL_LIGHTING);glColor3f(.68f,.87f,.66f);glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);glLineWidth(1.5f);glEnable(GL_POLYGON_OFFSET_LINE);glPolygonOffset(-1,-1);
@@ -569,7 +630,7 @@ void Desktop::frame(){
   if(navigator_.error()!=lastError_){lastError_=navigator_.error();InvalidateRect(window_,nullptr,FALSE);}
   if(runtime&&!minimized_&&viewWidth_>0&&viewHeight_>0){updateWalk(delta);runtime->update(std::clamp(delta,0.,.1));}
   if(now-lastInspect_>std::chrono::milliseconds(200)){refreshInspector();lastInspect_=now;if(toolsOpen_){RECT footer{contentWidth_,height_-px(31),width_,height_};InvalidateRect(window_,&footer,FALSE);}}
-  render();if(!shellSmokePath.empty())shellSmoke();else if(!afterlightSmokePath.empty())afterlightSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
+  render();if(!particleSmokePath.empty())particleSmoke();else if(!shellSmokePath.empty())shellSmoke();else if(!afterlightSmokePath.empty())afterlightSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
   else if(!capturePath.empty()&&!navigator_.loading()&&!textures_.loading()&&now-started_>std::chrono::seconds(2)){capture(capturePath);capturePath.clear();}
 }
 
@@ -662,6 +723,60 @@ bool Desktop::clickImage(bool doubleClick){
     return selected_==runtime->nodes()[index].definition.id&&(!doubleClick||photoOpen_);
   }
   return false;
+}
+void Desktop::particleSmoke(){
+  const auto fail=[&](const std::string& text){particleFailure_=text;finishParticleSmoke(false);};
+  if(Clock::now()-started_>std::chrono::seconds(30)){fail("Particle verification timeout: "+navigator_.error()+renderError_);return;}
+  if(navigator_.loading()||textures_.loading())return;
+  auto* runtime=navigator_.current();
+  if(particleStage_==4){
+    if(runtime||textures_.count()||counters().activeWorlds||counters().activeBindings){fail("Home retained particle world resources");return;}
+    finishParticleSmoke(true);return;
+  }
+  if(!runtime||runtime->world().id!="particle-life"||!runtime->particleEngine()){fail("Particle laboratory did not activate");return;}
+  if(runtime->activeBindings()!=1){fail("Particle algorithm stopped with a Script error");return;}
+  const auto* engine=runtime->particleEngine();
+  if(particleStage_==0){
+    particleInitial_=runtime->particleCount();
+    if(particleInitial_!=56||!photoNodes_.empty()||textures_.imageCount()){fail("Unexpected particle population or image asset");return;}
+    particleStart_=engine->get("organisms",1)->position;particleTime_=Clock::now();particleStage_=1;return;
+  }
+  if(particleStage_==1){
+    if(Clock::now()-particleTime_<std::chrono::milliseconds(700))return;
+    if(engine->get("organisms",1)->position==particleStart_){fail("Native particle simulation did not move");return;}
+    auto scene=particleSmokePath;scene.replace_extension(L".scene.bmp");if(!capture(scene)){fail("Particle frame capture failed");return;}
+    const auto matrices=sceneMatrices(*runtime);const auto tangent=std::tan(45*pi/360),aspect=double(viewWidth_)/viewHeight_;
+    bool clicked=false;
+    for(std::size_t node=0;node<runtime->nodes().size()&&!clicked;++node)if(runtime->nodes()[node].definition.id=="organisms"){
+      for(const auto& [id,particle]:engine->live(node)){
+        (void)id;const auto to=sub(matrices.world[node].point(particle.position),camera_.eye());const auto depth=dot(to,camera_.forward());
+        if(depth<=.05)continue;
+        const int x=int((dot(to,camera_.right())/(depth*tangent*aspect)+1)*viewWidth_/2),y=int((1-dot(to,camera_.up())/(depth*tangent))*viewHeight_/2);
+        if(x<0||x>=viewWidth_||y<0||y>=viewHeight_||raycast(*runtime,camera_,x,y,viewWidth_,viewHeight_)!=node)continue;
+        SendMessageW(viewport_,WM_LBUTTONDOWN,MK_LBUTTON,MAKELPARAM(x,y));SendMessageW(viewport_,WM_LBUTTONUP,0,MAKELPARAM(x,y));
+        clicked=true;break;
+      }
+    }
+    if(!clicked||runtime->find("culture").state.at("focus").number()!=1){fail("Particle raycast did not reach the owning Script");return;}
+    particleTime_=Clock::now();particleStage_=2;return;
+  }
+  if(particleStage_==2){
+    if(Clock::now()-particleTime_<std::chrono::milliseconds(250))return;
+    const auto ids=engine->ids("nutrients");
+    if(ids.empty()||engine->get("nutrients",ids.front())->position[0]<.8){fail("Interaction did not move the energy source");return;}
+    command(Reload);particleStage_=3;return;
+  }
+  if(particleStage_==3){
+    if(runtime->find("culture").state.at("focus").number()!=0||runtime->particleCount()!=56||!engine->get("organisms",1)){fail("Reload did not reset particles and Script state");return;}
+    command(Home);particleStage_=4;
+  }
+}
+void Desktop::finishParticleSmoke(bool okay){
+  if(!particleSmokePath.parent_path().empty())std::filesystem::create_directories(particleSmokePath.parent_path());
+  std::ofstream output(particleSmokePath);
+  output<<"{\n  \"passed\": "<<(okay?"true":"false")<<",\n  \"failure\": "<<std::quoted(particleFailure_)<<",\n  \"initialParticles\": "<<particleInitial_<<",\n  \"realParticleRaycast\": "<<(okay?"true":"false")<<",\n  \"reloadAndCleanup\": "<<(okay?"true":"false")<<",\n  \"liveTexturesAfterHome\": "<<textures_.count()<<",\n  \"renderedFrames\": "<<frames_<<"\n}\n";
+  output.close();std::cout<<(okay?"Particle native smoke PASS\n":"Particle native smoke FAIL: "+particleFailure_+"\n");
+  particleSmokePath.clear();exitCode_=okay?0:2;DestroyWindow(window_);
 }
 void Desktop::afterlightSmoke(){
   const auto fail=[&](const std::string& message){afterlightFailure_=message;finishAfterlightSmoke(false);};
@@ -883,7 +998,7 @@ int Desktop::run(int show){
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);INITCOMMONCONTROLSEX common{sizeof(common),ICC_STANDARD_CLASSES};InitCommonControlsEx(&common);HINSTANCE instance=GetModuleHandleW(nullptr);WNDCLASSEXW frame{};frame.cbSize=sizeof(frame);frame.hInstance=instance;frame.lpfnWndProc=windowProc;frame.hCursor=LoadCursorW(nullptr,IDC_ARROW);frame.hIcon=LoadIconW(nullptr,IDI_APPLICATION);frame.lpszClassName=L"LINK.NativeShell";frame.style=CS_HREDRAW|CS_VREDRAW;RegisterClassExW(&frame);
   WNDCLASSEXW view{};view.cbSize=sizeof(view);view.hInstance=instance;view.lpfnWndProc=viewProc;view.hCursor=LoadCursorW(nullptr,IDC_CROSS);view.lpszClassName=L"LINK.WorldViewport";view.style=CS_OWNDC|CS_DBLCLKS;RegisterClassExW(&view);
   HWND main=CreateWindowExW(0,frame.lpszClassName,L"LINK Browser — Linked Interactive Network",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,this);
-  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);if(!initialAddress.empty())request(initialAddress);else if(!afterlightSmokePath.empty())request("link://local/afterlight");else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
+  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);if(!initialAddress.empty())request(initialAddress);else if(!particleSmokePath.empty())request("link://local/particle-life");else if(!afterlightSmokePath.empty())request("link://local/afterlight");else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
   MSG message{};while(GetMessageW(&message,nullptr,0,0)>0){
     if(message.message==WM_KEYDOWN&&shortcut(message.wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))continue;
     if((message.message==WM_KEYDOWN||message.message==WM_KEYUP)&&GetFocus()==viewport_&&walking()&&movementKey(message.wParam)){TranslateMessage(&message);DispatchMessageW(&message);continue;}
@@ -906,8 +1021,9 @@ int runDesktop(int argc,wchar_t** argv){
       else if(arg==L"--gallery-smoke"&&i+1<argc)app.gallerySmokePath=argv[++i];
       else if(arg==L"--shell-smoke"&&i+1<argc)app.shellSmokePath=argv[++i];
       else if(arg==L"--afterlight-smoke"&&i+1<argc)app.afterlightSmokePath=argv[++i];
+      else if(arg==L"--particle-smoke"&&i+1<argc)app.particleSmokePath=argv[++i];
       else if(arg==L"--help"){
-        std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json] [--shell-smoke report.json] [--afterlight-smoke report.json]\n";
+        std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json] [--shell-smoke report.json] [--afterlight-smoke report.json] [--particle-smoke report.json]\n";
         return 0;
       }else{std::cerr<<"Unknown or incomplete argument: "<<utf8(arg)<<'\n';return 1;}
     }

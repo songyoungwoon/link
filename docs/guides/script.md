@@ -87,7 +87,7 @@ on onDestroy(ctx) {
 
 같은 Script 파일을 두 Component에 연결하면 파싱된 코드는 공유해도 store·config·콜백 지역 값은 바인딩마다 분리됩니다. 예를 들어 한쪽 config의 speed를 90으로 정하면 그쪽만 빠르게 회전합니다.
 
-`store`는 보통 onStart에서 한 번 선언합니다. onUpdate에서 같은 store를 반복 선언하면 다음 갱신에서 중복 선언 오류가 납니다. `let`도 같은 콜백 안에서 이름을 중복 선언할 수 없으며 `if` 블록마다 별도 scope가 생기지 않습니다. `ctx`, `deltaSeconds`, `event`는 읽기 전용 예약 이름입니다.
+`store`는 보통 onStart에서 한 번 선언합니다. onUpdate에서 같은 store를 반복 선언하면 다음 갱신에서 중복 선언 오류가 납니다. `let`도 같은 콜백 안에서 이름을 중복 선언할 수 없으며 `if` 블록마다 별도 scope가 생기지 않습니다. `for-of`의 반복 변수와 본문 let에는 매 반복 별도 scope를 적용합니다. `ctx`, `deltaSeconds`, `event`는 읽기 전용 예약 이름입니다.
 
 state·transform 조회는 **값의 사본**을 돌려줍니다. `state.selected = true;` 같은 멤버 대입은 지원하지 않습니다. 원래 노드를 변경하려면 `ctx.setState({selected:true});`를 사용합니다. state 패치는 최상위 키를 얕게 병합하고 중첩 맵은 값 전체를 교체합니다.
 
@@ -144,7 +144,7 @@ ctx.setTransform({rotation: [0, angle, 0]});
 
 Transform 패치에는 `position`, `rotation`, `scale`, `visible`만 넣습니다. 벡터를 바꿀 때는 세 성분 전체가 필요합니다. Style 패치에는 [지원 Style 속성](style.md#4-지원-속성과-범위)만 넣으며 Element만 대상으로 합니다. 존재하지 않는 ID, 잘못된 인수 개수·타입, Element에 대한 setState는 실행 오류입니다.
 
-이 API는 현재 공간 안의 동작을 다룹니다. 파일·네트워크·OS·렌더러·셸 UI 접근이나 런타임 노드 생성·삭제 API는 없습니다. 다른 공간으로 이동시키려면 Script 호출을 만들어내지 말고 [매니페스트 포탈](element.md#7-걷기와-포탈은-필요할-때-추가하기)을 사용합니다.
+이 API는 현재 공간 안의 동작을 다룹니다. 파일·네트워크·OS·렌더러·셸 UI 접근이나 일반 런타임 노드 생성·삭제 API는 없습니다. 별도 `particles-v1` 확장에서는 노드가 아닌 입자 데이터를 생성·수정·삭제할 수 있습니다. [입자 제작 가이드](particles.md)의 전용 API와 예산을 따릅니다. 다른 공간으로 이동시키려면 Script 호출을 만들어내지 말고 [매니페스트 포탈](element.md#7-걷기와-포탈은-필요할-때-추가하기)을 사용합니다.
 
 ## 8. 지원하는 식과 문장
 
@@ -154,19 +154,23 @@ Transform 패치에는 `position`, `rotation`, `scale`, `visible`만 넣습니�
 | --- | --- |
 | 선언·대입 | `store angle = 0;`, `let speed = 45;`, `angle = angle + 1;` |
 | 분기 | `if (조건) { ... } else { ... }` |
+| 제한된 반복 | `for (let id of 배열) { ... }` — 최대 2,048개 원소 |
 | 산술 | `+`, `-`, `*`, `/`, `%`, 단항 `+`·`-` |
 | 비교 | `<`, `<=`, `>`, `>=`, `==`, `!=` |
 | 논리 | `!`, `&&`, `||` — bool만 사용, 단락 평가 |
-| 수치 builtin | `min(a,b)`, `max(a,b)`, `abs(a)`, `clamp(value,min,max)`, `mix(a,b,t)` |
+| 수치 builtin | `min(a,b)`, `max(a,b)`, `abs(a)`, `clamp(value,min,max)`, `mix(a,b,t)`, `sqrt(x)`, `sin(x)`, `cos(x)` |
+| 배열·벡터 builtin | `range(n)`, `len(value)`, `vadd(a,b)`, `vsub(a,b)`, `vmul(vector,scalar)`, `dot(a,b)`, `length(vector)`, `normalize(vector)` |
 
 `* / %`가 `+ -`보다 먼저, 비교가 논리식보다 먼저 계산됩니다. 조건은 bool이어야 하고 숫자 0을 false처럼 자동 변환하지 않습니다. 문자열끼리는 `+`로 이어 붙일 수 있습니다. `mix`는 `a + (b-a)*t`이며 t를 자동 제한하지 않습니다.
 
-Script는 이 전용 문법의 AST 인터프리터입니다. JavaScript나 Lua의 코드, `function`, `return`, `for`, `while`, 임의 함수 호출, import, `Math.sin`, DOM API는 지원하지 않습니다. 콜백 밖 전역 문장을 적는 대신 onStart 안에서 초기화합니다. 문자열은 큰따옴표를 쓰고 문장 끝에는 세미콜론을 붙입니다.
+Script는 이 전용 문법의 AST 인터프리터입니다. JavaScript나 Lua의 코드, `function`, `return`, 일반 `for(초기식;조건;증가식)`, `while`, 임의 함수 호출, import, `Math.sin`, DOM API는 지원하지 않습니다. 콜백 밖 전역 문장을 적는 대신 onStart 안에서 초기화합니다. 문자열은 큰따옴표를 쓰고 문장 끝에는 세미콜론을 붙입니다.
+
+배열 순회는 최초에 평가한 스냅샷을 사용합니다. 반복 변수와 반복 본문의 let은 각 반복이 끝나면 제거되고 바깥 변수에 대입한 값은 유지됩니다. `range(n)`은 정수 n=0~2,048에 대해 0~n-1 배열을 만들고, `len(value)`는 배열 원소 수 또는 문자열 UTF-8 byte 수를 반환합니다. sin·cos는 라디안, 벡터 함수는 세 성분 배열을 사용합니다. 세부 인수·범위·예제는 [입자와 반복 가이드](particles.md#제한된-반복과-벡터-연산)를 참고하세요. 반복과 수학 함수 자체에는 입자 확장 선언이 필요하지 않습니다.
 
 ## 9. 오류와 실행 제한
 
 파일의 문법 오류는 공간 활성화 전에 발견됩니다. 콜백 실행 오류는 해당 바인딩을 중지하지만 다른 바인딩은 계속 실행합니다. 오류 전에 이미 적용한 API 변경은 되돌리지 않습니다. 중지된 바인딩도 공간이 종료될 때 onDestroy를 한 번 시도하고 종료 오류는 로그로 남깁니다.
 
-각 콜백의 문장·식 평가는 최대 4,096단계, 호출 깊이는 16입니다. 바인딩의 store와 현재 콜백 값·인수 합계는 추정 64KiB, 노드 state와 config는 각각 추정 64KiB입니다. Script 파일은 최대 128KiB, 공간당 등록 파일은 최대 16개입니다. 문자열·맵 키는 각각 최대 8,192 UTF-8 bytes입니다. 자세한 예산 계산과 문법은 [제작 언어 명세](../../native/docs/language.md)를 참고합니다.
+기본 콜백의 문장·식 평가는 최대 4,096단계, 호출 깊이는 16입니다. `particles-v1` 확장 공간은 콜백별 65,536단계와 공간 전체 단계당 262,144단계를 적용합니다. 바인딩의 store와 현재 콜백 값·인수 합계는 추정 64KiB, 노드 state와 config는 각각 추정 64KiB입니다. Script 파일은 최대 128KiB, 공간당 등록 파일은 최대 16개입니다. 문자열·맵 키는 각각 최대 8,192 UTF-8 bytes입니다. 자세한 예산 계산과 문법은 [제작 언어 명세](../../native/docs/language.md)를 참고합니다.
 
 첫 수정으로 config의 `speed:45`를 `speed:90`으로 바꿔 봅니다. 다음에는 `activeColor`를 바꾸고 클릭을 두 번 해 봅니다. 매번 저장 후 새로 고침하여 초기 상태부터 확인하면 설정·상태·외형의 관계를 익히기 쉽습니다.

@@ -130,6 +130,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 - LINK 자체 제작 언어의 C++ lexer·문서 parser·Script AST 인터프리터.
 - 계층·변환·ID·상태·인스턴스별 Script 저장소를 갖춘 렌더러 독립 객체 모델.
 - Style 계산, 기본 형상, 로컬·다운로드 이미지 리소스와 네이티브 렌더링.
+- 실험 확장 `particles-v1`: 제한된 입자 시스템, 이웃 검색, 벡터 연산, Script로 작성하는 인공생명 실험. [제작 가이드](docs/guides/particles.md).
 - 걷기·로컬 및 원격 포탈, 크기가 제한된 LINK 리소스 전송·취소 가능한 로딩·새로 가져오는 reload·검증 오류 처리·공간 전환 정리.
 - 핵심 로직·이미지·경로 제한 자동 검사와 네이티브 입력 smoke. 빌드 후 `ctest --preset release`로 포함된 자동 검사를 실행할 수 있습니다.
 
@@ -144,6 +145,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 | **흑룡이 전시회** | `link://local/heukryong` | 사진 복도를 걷고 더블클릭으로 사진을 연 뒤 끝의 포탈에 들어갑니다. |
 | Hello World | `link://local/hello-world` | 복도 끝 포탈을 넘어 우주 광장에 발을 내딛습니다. 행성과 별 아래, 거대한 고리와 입체 글자를 향해 걸으며 첫 지평선을 탐험합니다. |
 | [AFTERLIGHT · 오후의 방](docs/afterlight.md) | `link://local/afterlight` | 미리 계산한 오후빛이 드는 작은 방을 걷고 책을 열거나 스탠드를 켭니다. |
+| [PARTICLE LIFE](docs/particle-life.md) | `link://local/particle-life` | 이미지 없이 이웃 반응·에너지·제한된 증식과 원천 이동을 관찰하는 입자 실험실입니다. |
 | Room A | `link://local/room-a` | 힌지 문을 열고 시간에 따라 회전하는 조형물을 봅니다. |
 | Room B | `link://local/room-b` | 두 돌의 독립 상태와 파괴 동작을 확인합니다. |
 
