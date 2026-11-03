@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:link:authoring:v1:patch",
+  "title": "LINK Authoring v1 patch",
+  "description": "Structural schema for a local-world authoring patch, not a JSON world scene or Script program. File size, duplicate JSON keys, UTF-8 byte limits, current revision, target kinds, references, materials and full-world semantics are additionally checked by LINKAuthor.",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "const": "link-authoring-v1"
+    },
+    "baseRevision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/set"
+          },
+          {
+            "$ref": "#/$defs/add"
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "profile",
+    "baseRevision",
+    "operations"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "geometry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "box"
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "required": [
+            "type",
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "sphere"
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "radius"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "plane"
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "type",
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "cylinder"
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "radiusTop": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "radius",
+            "radiusTop",
+            "height"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "frame"
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "border": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "depth": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "size",
+            "border",
+            "depth"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "particles"
+            },
+            "capacity": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2048
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "cellSize": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "capacity",
+            "radius",
+            "cellSize"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Complete geometry replacement. The C++ loader additionally enforces frame border < min(size)/2 and the particles-v1 world extension and total capacity budget."
+    },
+    "properties": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nonempty display name; UTF-8 byte and source string budgets are checked by LINKAuthor."
+        },
+        "position": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "rotation": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "scale": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "geometry": {
+          "$ref": "#/$defs/geometry"
+        },
+        "classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "style": {
+          "$ref": "#/$defs/identifier"
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "set": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "set"
+        },
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "properties": {
+          "$ref": "#/$defs/properties"
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "add": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "add"
+        },
+        "parent": {
+          "$ref": "#/$defs/identifier"
+        },
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "const": "element"
+        },
+        "properties": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/properties"
+            },
+            {
+              "required": [
+                "geometry"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "parent",
+        "id",
+        "kind",
+        "properties"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

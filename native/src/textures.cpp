@@ -122,13 +122,14 @@ Texture NativeTextures::upload(const CpuImage& image){
 }
 void NativeTextures::release(Texture& texture){if(!texture.id)return;glDeleteTextures(1,&texture.id);liveBytes_-=texture.bytes;++deleted_;texture={};}
 void NativeTextures::clearViewer(){release(viewer_);}
-void NativeTextures::clear(){clearViewer();for(auto& [key,t]:images_)release(t);for(auto& [key,t]:texts_)release(t);images_.clear();texts_.clear();jobs_.clear();completed_=0;}
+void NativeTextures::clear(){clearViewer();for(auto& [key,t]:images_)release(t);for(auto& [key,t]:texts_)release(t);images_.clear();texts_.clear();jobs_.clear();pendingText_.clear();completed_=0;}
 void NativeTextures::begin(const World& world){
   clear();if(world.images.size()>128)throw std::runtime_error("World has more than 128 image resources");
   try{
     std::vector<Job> plaques;std::size_t textBytes=0;
+    const std::size_t textLimit=std::find(world.extensions.begin(),world.extensions.end(),"shared-state-v1")!=world.extensions.end()?32:16;
     for(const auto& node:world.nodes)if(!node.text.empty()){
-      if(plaques.size()>=16)throw std::runtime_error("World has more than 16 text plaques");
+      if(plaques.size()>=textLimit)throw std::runtime_error("World exceeds its text plaque budget");
       const auto material=resolveStyle(node,world);const double aspect=node.geometry.size[0]/node.geometry.size[1];
       plaques.push_back({node.id,node.text,material.color,{},aspect,material.textBackground});textBytes+=mipBytes({1024,textHeight(aspect)});
     }
@@ -146,6 +147,7 @@ void NativeTextures::begin(const World& world){
     // Preserve authored detail up to 2048. Reduce the largest allocations first
     // until the entire scene, including text and all mip levels, fits 150 MiB.
     // The separate 256 MiB hard limit also covers the full-resolution viewer.
+    if(textBytes>sceneBudget)throw std::runtime_error("World text exceeds the scene texture budget");
     const auto imageBudget=sceneBudget-textBytes;
     while(imageBytes>imageBudget){
       auto largest=images.end();
@@ -166,6 +168,26 @@ void NativeTextures::load(const World& world,LogFn log){
   if(log)log(false,"Native photo textures: "+std::to_string(images_.size())+" images + "+std::to_string(texts_.size())+" plaques, "+std::to_string(liveBytes_/1024/1024)+" MiB");
 }
 const Texture* NativeTextures::image(const std::string& key)const{auto found=images_.find(key);return found==images_.end()?nullptr:&found->second;}
+void NativeTextures::queueText(const std::string& id,const std::string& content){
+  if(content.size()>Limits::textBytes)throw std::runtime_error("Dynamic text byte budget exceeded");
+  if(pendingText_.size()>=32&&!pendingText_.contains(id))throw std::runtime_error("Dynamic text queue budget exceeded");
+  pendingText_.insert_or_assign(id,content.empty()?" ":content);
+}
+void NativeTextures::stepText(unsigned maxItems){
+  if(loading())return;
+  for(unsigned i=0;i<maxItems&&!pendingText_.empty();++i){
+    auto update=pendingText_.begin();
+    auto job=std::find_if(jobs_.begin(),jobs_.end(),[&](const Job& value){return value.key==update->first&&!value.text.empty();});
+    if(job!=jobs_.end()&&job->text!=update->second){
+      auto found=texts_.find(update->first);
+      if(found!=texts_.end()){
+        auto next=upload(rasterText(update->second,job->aspect,job->color,job->textBackground));next.textBackground=job->textBackground;
+        release(found->second);found->second=next;job->text=update->second;
+      }
+    }
+    pendingText_.erase(update);
+  }
+}
 const Texture* NativeTextures::text(const std::string& key)const{auto found=texts_.find(key);return found==texts_.end()?nullptr:&found->second;}
 const Texture& NativeTextures::viewer(const std::filesystem::path& path){clearViewer();viewer_=upload(decodeImage(path,2048));return viewer_;}
 } // namespace linkworld

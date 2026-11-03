@@ -15,6 +15,11 @@
 #include <commctrl.h>
 #include <GL/gl.h>
 #include "link/desktop.hpp"
+#include "link/xr.hpp"
+#include "link/shared.hpp"
+#include "link/remote.hpp"
+#include "link/text.hpp"
+#include <charconv>
 #include "link/navigation.hpp"
 #include "link/walk.hpp"
 #include "link/textures.hpp"
@@ -92,14 +97,14 @@ SceneMatrices sceneMatrices(const Runtime& runtime) {
   return result;
 }
 struct Camera {
-  Vec3 target{0,1,0};double yaw=.65,pitch=.48,distance=10;
-  Vec3 eye() const { return add(target,{distance*std::cos(pitch)*std::sin(yaw),distance*std::sin(pitch),distance*std::cos(pitch)*std::cos(yaw)}); }
-  void jump(Vec3 position,Vec3 aim) { target=aim;auto d=sub(position,target);distance=std::clamp(std::sqrt(dot(d,d)),.3,220.);yaw=std::atan2(d[0],d[2]);pitch=std::clamp(std::asin(std::clamp(d[1]/distance,-1.,1.)),-1.48,1.48); }
+  Vec3 target{0,1,0};double yaw=.65,pitch=.48,distance=10;std::optional<VrPose> tracked;
+  Vec3 eye() const { if(tracked)return tracked->position;return add(target,{distance*std::cos(pitch)*std::sin(yaw),distance*std::sin(pitch),distance*std::cos(pitch)*std::cos(yaw)}); }
+  void jump(Vec3 position,Vec3 aim) { tracked.reset();target=aim;auto d=sub(position,target);distance=std::clamp(std::sqrt(dot(d,d)),.3,220.);yaw=std::atan2(d[0],d[2]);pitch=std::clamp(std::asin(std::clamp(d[1]/distance,-1.,1.)),-1.48,1.48); }
   void reset(const World& world) {jump(world.eye,world.target);}
-  Vec3 forward() const { return unit(sub(target,eye())); }
-  Vec3 right() const { return unit(cross(forward(),{0,1,0})); }
-  Vec3 up() const { return cross(right(),forward()); }
-  Matrix view() const { auto s=right(),u=up(),f=forward(),e=eye();Matrix m;m.m={s[0],u[0],-f[0],0,s[1],u[1],-f[1],0,s[2],u[2],-f[2],0,-dot(s,e),-dot(u,e),dot(f,e),1};return m; }
+  Vec3 forward() const { return tracked?vrRotate(tracked->orientation,{0,0,-1}):unit(sub(target,eye())); }
+  Vec3 right() const { return tracked?vrRotate(tracked->orientation,{1,0,0}):unit(cross(forward(),{0,1,0})); }
+  Vec3 up() const { return tracked?vrRotate(tracked->orientation,{0,1,0}):cross(right(),forward()); }
+  Matrix view() const { if(tracked){Matrix result;result.m=vrViewMatrix(*tracked).m;return result;}auto s=right(),u=up(),f=forward(),e=eye();Matrix m;m.m={s[0],u[0],-f[0],0,s[1],u[1],-f[1],0,s[2],u[2],-f[2],0,-dot(s,e),-dot(u,e),dot(f,e),1};return m; }
 };
 double intersect(const Geometry& g,Vec3 o,Vec3 d) {
   constexpr double inf=std::numeric_limits<double>::infinity();
@@ -131,24 +136,30 @@ double intersect(const Geometry& g,Vec3 o,Vec3 d) {
   }
   return nearT>1e-6?nearT:farT>1e-6?farT:inf;
 }
-std::size_t raycast(const Runtime& runtime,const Camera& camera,int x,int y,int width,int height) {
-  if(width<=0||height<=0)return noParent;
-  double tangent=std::tan(45*pi/360),aspect=double(width)/height;
-  Vec3 direction=unit(add(camera.forward(),add(mul(camera.right(),((2.*x/width)-1)*aspect*tangent),mul(camera.up(),(1-2.*y/height)*tangent))));
+std::size_t raycastRay(const Runtime& runtime,Vec3 origin,Vec3 direction,double* hitDistance=nullptr) {
   auto matrices=sceneMatrices(runtime);double closest=std::numeric_limits<double>::infinity();std::size_t hit=noParent;
   for(std::size_t i=0;i<runtime.nodes().size();++i) {
     const auto& n=runtime.nodes()[i];if(n.definition.kind!=Kind::Element||!matrices.visible[i]||runtime.material(i).opacity<=0)continue;
+    bool excluded=false;auto ancestor=i;
+    while(ancestor!=noParent){if(!runtime.nodes()[ancestor].definition.raycast){excluded=true;break;}ancestor=runtime.nodes()[ancestor].definition.parent;}
+    if(excluded)continue;
     Matrix inv;if(!inverse(matrices.world[i],inv))continue;
     double t=std::numeric_limits<double>::infinity();
     if(n.definition.geometry.type==Geometry::Type::Particles) {
       if(const auto* particles=runtime.particleEngine())for(const auto& [id,particle]:particles->live(i)) {
         (void)id;Geometry sphere;sphere.type=Geometry::Type::Sphere;sphere.radius=particle.radius;
-        t=std::min(t,intersect(sphere,sub(inv.point(camera.eye()),particle.position),inv.direction(direction)));
+        t=std::min(t,intersect(sphere,sub(inv.point(origin),particle.position),inv.direction(direction)));
       }
-    }else t=intersect(n.definition.geometry,inv.point(camera.eye()),inv.direction(direction));
+    }else t=intersect(n.definition.geometry,inv.point(origin),inv.direction(direction));
     if(t<closest){closest=t;hit=i;}
   }
-  return hit;
+  if(hitDistance)*hitDistance=closest;return hit;
+}
+std::size_t raycast(const Runtime& runtime,const Camera& camera,int x,int y,int width,int height) {
+  if(width<=0||height<=0)return noParent;
+  const double tangent=std::tan(45*pi/360),aspect=double(width)/height;
+  const Vec3 direction=unit(add(camera.forward(),add(mul(camera.right(),((2.*x/width)-1)*aspect*tangent),mul(camera.up(),(1-2.*y/height)*tangent))));
+  return raycastRay(runtime,camera.eye(),direction);
 }
 void geometry(const Geometry& g) {
   if(g.type==Geometry::Type::Particles)return;
@@ -237,17 +248,45 @@ void applyMaterial(const Material& m) {
   glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,spec);glMaterialf(GL_FRONT_AND_BACK,GL_SHININESS,float(4+(1-m.roughness)*100));
   glPolygonMode(GL_FRONT_AND_BACK,m.wireframe?GL_LINE:GL_FILL);
 }
-enum ControlId {Address=100,Open,Reload,Home,Stop,Cancel,Gallery,RoomA,RoomB,NodeList,Inspector,Logs,Status,PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle,Menu,DeveloperTools,DeveloperClose,ErrorDetails,FocusAddress};
+enum ControlId {Address=100,Open,Reload,Home,Stop,Cancel,Gallery,RoomA,RoomB,NodeList,Inspector,Logs,Status,PreviousPhoto,NextPhoto,ClosePhoto,PhotoTitle,Menu,DeveloperTools,DeveloperClose,ErrorDetails,FocusAddress,VrToggle,VrRecenter,VrSnap,VrSmooth};
 class Desktop {
 public:
   explicit Desktop(std::filesystem::path root):navigator_(std::move(root),[this](bool error,const std::string& message){log(error,message);}){}
-  ~Desktop(){navigator_.stop();destroyGl();if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(addressFont_)DeleteObject(addressFont_);if(background_)DeleteObject(background_);if(paper_)DeleteObject(paper_);if(photoBrush_)DeleteObject(photoBrush_);}
+  ~Desktop(){stopShared();stopVr();navigator_.stop();destroyGl();if(font_)DeleteObject(font_);if(mono_)DeleteObject(mono_);if(addressFont_)DeleteObject(addressFont_);if(background_)DeleteObject(background_);if(paper_)DeleteObject(paper_);if(photoBrush_)DeleteObject(photoBrush_);}
   int run(int show);
   std::string initialAddress;std::filesystem::path capturePath,smokePath,gallerySmokePath,shellSmokePath,afterlightSmokePath,particleSmokePath;
+  bool initialVr=false;VrLocomotionOptions vrOptions;
+  std::string playerName="Explorer",profile="default";std::filesystem::path profileDirectory;
+  std::filesystem::path vrCheckPath,vrSmokePath;
 private:
+  std::unique_ptr<OpenXrSession> xr_;
+  std::unique_ptr<SharedSession> shared_;
+  std::size_t sharedGeneration_=0;std::string sharedKey_,sharedSavedToken_,sharedError_,sharedStatus_;
+  std::optional<Vec3> sharedTeleport_;std::optional<double> sharedRespawn_;bool sharedFirst_=true;
+  void startShared(Runtime&);void stopShared();void pollShared();
+  void updateViewer(Runtime&,const Camera&,const std::optional<VrPose>& weapon={});
+  void syncDynamicText(Runtime&);
+  std::filesystem::path sessionFile() const;
+  std::string readSessionToken(const std::string&) const;
+  void saveSessionToken(const std::string&,const std::string&);
+
+  bool frameInProgress_=false;unsigned modalLoops_=0;
+  VrRig vrRig_;bool vrWanted_=false,vrRigReset_=true,vrRecenter_=false,vrRendering_=false,vrReferenceChangePending_=false;
+  std::optional<VrPose> vrLastHead_;
+  std::array<std::optional<VrRay>,2> vrRays_;
+  std::array<double,2> vrDistances_{4,4};
+  std::string vrError_,vrRuntime_;
+  std::string vrInputState_,vrSessionState_;std::wstring vrInputText_;
+  bool vrInputFocused_=false,vrHeadTracked_=false,vrLeftStickActive_=false,vrRightStickActive_=false;
+  std::size_t vrFocusedFrames_=0;
+  void setVrInputStatus(const std::string&,const std::wstring&);
+  std::size_t vrFrames_=0,vrHeadSamples_=0,vrLeftSamples_=0,vrRightSamples_=0,vrClicks_=0;
+  int vrOldSwapInterval_=1;bool vrSwapChanged_=false;
+  void startVr();void stopVr();void frameVr(double desktopDelta);void drawVrRays();void reportVr(const std::filesystem::path&,bool,const std::string&,bool);
+  void drawScene(const Camera&,const VrMatrix&,int,int);
   Navigator navigator_;NativeTextures textures_;HWND window_=nullptr,viewport_=nullptr,address_=nullptr,status_=nullptr,nodes_=nullptr,inspector_=nullptr,logs_=nullptr;
   std::map<int,HWND> controls_;HDC glDc_=nullptr;HGLRC glContext_=nullptr;HFONT font_=nullptr,mono_=nullptr;HBRUSH background_=nullptr,paper_=nullptr;
-  HFONT addressFont_=nullptr;HBRUSH photoBrush_=nullptr;HWND tooltip_=nullptr;RECT addressPill_{},viewRect_{};bool toolsOpen_=false,shellActive_=false,shellLoading_=false,shellError_=false,addressComposing_=false;int hovered_=0;int homeAnchor_=0,contentWidth_=0;
+  HFONT addressFont_=nullptr;HBRUSH photoBrush_=nullptr;HWND tooltip_=nullptr;RECT addressPill_{},viewRect_{};bool toolsOpen_=false,shellActive_=false,shellLoading_=false,shellError_=false,shellVr_=false,addressComposing_=false;int hovered_=0;int homeAnchor_=0,contentWidth_=0;
   int shellStage_=0;std::size_t shellCreated_=0;bool shellHome_=false,shellFocus_=false,shellTools_=false,shellResize_=false,shellDpi_=false,shellReload_=false,shellCancel_=false,shellFailure_=false;std::string shellFailureMessage_;
   UINT dpi_=96;int width_=1280,height_=820,viewWidth_=0,viewHeight_=0;Camera camera_;bool minimized_=false,dragged_=false;int dragButton_=0;POINT lastMouse_{},downMouse_{};
   std::array<bool,256> walkKeys_{};
@@ -313,7 +352,7 @@ void Desktop::initGl(){
   auto text=[](GLenum key){const auto* p=glGetString(key);return p?std::string(reinterpret_cast<const char*>(p)):std::string("unknown");};glDescription_=text(GL_VENDOR)+" / "+text(GL_RENDERER)+" / "+text(GL_VERSION);
   glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glEnable(GL_NORMALIZE);glEnable(GL_LIGHTING);glEnable(GL_LIGHT0);glEnable(GL_LIGHT1);glLightModeli(GL_LIGHT_MODEL_TWO_SIDE,GL_TRUE);glDisable(GL_CULL_FACE);glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);glClearColor(.066f,.11f,.13f,1);log(false,"WGL ready: "+glDescription_);
 }
-void Desktop::destroyGl(){if(glContext_){wglMakeCurrent(glDc_,glContext_);textures_.clear();wglMakeCurrent(nullptr,nullptr);wglDeleteContext(glContext_);glContext_=nullptr;}if(glDc_&&viewport_){ReleaseDC(viewport_,glDc_);glDc_=nullptr;}}
+void Desktop::destroyGl(){stopVr();if(glContext_){wglMakeCurrent(glDc_,glContext_);textures_.clear();wglMakeCurrent(nullptr,nullptr);wglDeleteContext(glContext_);glContext_=nullptr;}if(glDc_&&viewport_){ReleaseDC(viewport_,glDc_);glDc_=nullptr;}}
 void Desktop::layout(){
   if(!viewport_)return;
   RECT client{};GetClientRect(window_,&client);width_=client.right;height_=client.bottom;
@@ -351,7 +390,7 @@ void Desktop::layout(){
   const bool hasStatus=active||loading||shellError_;
   ShowWindow(status_,hasStatus?SW_SHOW:SW_HIDE);ShowWindow(controls_[ErrorDetails],shellError_?SW_SHOW:SW_HIDE);
   LONG_PTR statusStyle=GetWindowLongPtrW(status_,GWL_STYLE);statusStyle&=~SS_TYPEMASK;statusStyle|=active?SS_LEFT:SS_CENTER;SetWindowLongPtrW(status_,GWL_STYLE,statusStyle);
-  if(active){MoveWindow(status_,px(18),height_-px(24),std::max(px(160),contentWidth_-(shellError_?px(112):px(330))),px(20),TRUE);MoveWindow(controls_[ErrorDetails],contentWidth_-px(87),height_-px(28),px(72),px(25),TRUE);}
+  if(active){MoveWindow(status_,px(18),height_-px(24),std::max(px(160),contentWidth_-(shellError_?px(112):xr_?px(36):px(330))),px(20),TRUE);MoveWindow(controls_[ErrorDetails],contentWidth_-px(87),height_-px(28),px(72),px(25),TRUE);}
   else{MoveWindow(status_,px(28),homeAnchor_+px(244),std::max(px(100),contentWidth_-px(56)),px(22),TRUE);MoveWindow(controls_[ErrorDetails],(contentWidth_-px(76))/2,homeAnchor_+px(272),px(76),px(27),TRUE);}
   for(auto id:{NodeList,Inspector,Logs,DeveloperClose})ShowWindow(controls_[id],toolsOpen_?SW_SHOW:SW_HIDE);
   if(toolsOpen_){
@@ -435,7 +474,7 @@ void Desktop::paint(){
   if(active){
     RECT bar{0,0,contentWidth_,px(64)};FillRect(dc,&bar,paper_);
     HPEN line=CreatePen(PS_SOLID,1,RGB(229,234,239));auto old=SelectObject(dc,line);MoveToEx(dc,0,px(63),nullptr);LineTo(dc,contentWidth_,px(63));SelectObject(dc,old);DeleteObject(line);
-    if(!shellError_&&contentWidth_>px(540))drawText(dc,photoOpen_?L"← → 사진 이동   ·   Esc 닫기":walking()?L"WASD 이동  ·  드래그 둘러보기":L"드래그 회전  ·  우클릭 이동  ·  휠 확대",{contentWidth_-px(308),height_-px(23),contentWidth_-px(17),height_-px(3)},RGB(102,116,134),11,false,DT_RIGHT|DT_TOP|DT_SINGLELINE);
+    if(!xr_&&!shellError_&&contentWidth_>px(540))drawText(dc,photoOpen_?L"← → 사진 이동   ·   Esc 닫기":walking()?L"WASD 이동  ·  드래그 둘러보기":L"드래그 회전  ·  우클릭 이동  ·  휠 확대",{contentWidth_-px(308),height_-px(23),contentWidth_-px(17),height_-px(3)},RGB(102,116,134),11,false,DT_RIGHT|DT_TOP|DT_SINGLELINE);
   }else{
     drawText(dc,L"LINK Browser",{px(26),px(24),px(210),px(45)},RGB(107,119,134),12);
     drawText(dc,L"LINK",{0,homeAnchor_-px(121),contentWidth_,homeAnchor_-px(20)},RGB(30,41,55),83,true,DT_CENTER|DT_TOP|DT_SINGLELINE);
@@ -457,14 +496,27 @@ void Desktop::paint(){
 }
 void Desktop::render(bool present){
   auto* runtime=navigator_.current();if(!runtime||!glContext_||viewWidth_<=0||viewHeight_<=0||minimized_)return;
-  wglMakeCurrent(glDc_,glContext_);if(photoOpen_){renderPhoto();if(present)SwapBuffers(glDc_);++frames_;return;}unsigned background=static_cast<unsigned>(std::stoul(runtime->world().background.substr(1),nullptr,16));glClearColor(float((background>>16)&255)/255,float((background>>8)&255)/255,float(background&255)/255,1);glViewport(0,0,viewWidth_,viewHeight_);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);glMatrixMode(GL_PROJECTION);glLoadIdentity();double nearZ=.05,top=nearZ*std::tan(45*pi/360),aspect=double(viewWidth_)/viewHeight_;glFrustum(-top*aspect,top*aspect,-top,top,nearZ,500);glMatrixMode(GL_MODELVIEW);auto view=camera_.view();glLoadMatrixd(view.m.data());
+  wglMakeCurrent(glDc_,glContext_);
+  if(photoOpen_){renderPhoto();if(present)SwapBuffers(glDc_);++frames_;return;}
+  const double nearZ=.05,top=nearZ*std::tan(45*pi/360),aspect=double(viewWidth_)/viewHeight_;
+  VrFov fov;fov.angleLeft=std::atan(-top*aspect/nearZ);fov.angleRight=-fov.angleLeft;fov.angleDown=-45*pi/360;fov.angleUp=-fov.angleDown;
+  drawScene(camera_,vrProjectionMatrix(fov,nearZ,500),viewWidth_,viewHeight_);
+  if(present)SwapBuffers(glDc_);++frames_;
+}
+void Desktop::drawScene(const Camera& camera,const VrMatrix& projection,int width,int height){
+  auto* runtime=navigator_.current();if(!runtime)return;
+  const auto background=static_cast<unsigned>(std::stoul(runtime->world().background.substr(1),nullptr,16));
+  glClearColor(float((background>>16)&255)/255,float((background>>8)&255)/255,float(background&255)/255,1);
+  glViewport(0,0,width,height);glEnable(GL_DEPTH_TEST);glEnable(GL_LIGHTING);glDisable(GL_TEXTURE_2D);
+  glDepthMask(GL_TRUE);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  glMatrixMode(GL_PROJECTION);glLoadMatrixd(projection.m.data());glMatrixMode(GL_MODELVIEW);const auto view=camera.view();glLoadMatrixd(view.m.data());
   if(runtime->world().fog){const auto& fog=*runtime->world().fog;const auto color=static_cast<unsigned>(std::stoul(fog.color.substr(1),nullptr,16));GLfloat rgba[]={float((color>>16)&255)/255,float((color>>8)&255)/255,float(color&255)/255,1};glEnable(GL_FOG);glFogi(GL_FOG_MODE,GL_LINEAR);glFogfv(GL_FOG_COLOR,rgba);glFogf(GL_FOG_START,float(fog.start));glFogf(GL_FOG_END,float(fog.end));}else glDisable(GL_FOG);
   GLfloat ambient[]={.26f,.28f,.30f,1},key[]={.74f,.72f,.66f,1},fill[]={.22f,.28f,.33f,1},keyPos[]={-.6f,1,.8f,0},fillPos[]={.7f,.4f,-.8f,0};glLightModelfv(GL_LIGHT_MODEL_AMBIENT,ambient);glLightfv(GL_LIGHT0,GL_DIFFUSE,key);glLightfv(GL_LIGHT0,GL_SPECULAR,key);glLightfv(GL_LIGHT0,GL_POSITION,keyPos);glLightfv(GL_LIGHT1,GL_DIFFUSE,fill);glLightfv(GL_LIGHT1,GL_POSITION,fillPos);
   if(runtime->world().grid){glDisable(GL_LIGHTING);glColor3f(.17f,.25f,.25f);glBegin(GL_LINES);for(int i=-12;i<=12;++i){glVertex3d(i,-.025,-12);glVertex3d(i,-.025,12);glVertex3d(-12,-.025,i);glVertex3d(12,-.025,i);}glEnd();glEnable(GL_LIGHTING);}
   auto matrices=sceneMatrices(*runtime);std::vector<std::size_t> opaque,transparent;
   for(std::size_t i=0;i<runtime->nodes().size();++i)if(runtime->nodes()[i].definition.kind==Kind::Element&&matrices.visible[i]){auto material=runtime->material(i);if(material.opacity<=0)continue;const auto* text=runtime->nodes()[i].definition.text.empty()?nullptr:textures_.text(runtime->nodes()[i].definition.id);const bool alphaText=text&&!text->textBackground;(material.opacity<1||alphaText?transparent:opaque).push_back(i);}
-  std::sort(transparent.begin(),transparent.end(),[&](auto a,auto b){return dot(sub(matrices.world[a].point({0,0,0}),camera_.eye()),camera_.forward())>dot(sub(matrices.world[b].point({0,0,0}),camera_.eye()),camera_.forward());});
-  auto draw=[&](std::size_t i){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());const auto& node=runtime->nodes()[i].definition;auto material=runtime->material(i);const Texture* texture=node.image.empty()?textures_.text(node.id):textures_.image(node.image);if(node.geometry.type==Geometry::Type::Particles){if(const auto* engine=runtime->particleEngine())particleCloud(*engine,i,matrices.world[i],camera_,material);}else if(texture)texturedQuad(*texture,node.geometry.size[0],node.geometry.size[1],material.opacity);else{applyMaterial(material);geometry(node.geometry);}glPopMatrix();};
+  std::sort(transparent.begin(),transparent.end(),[&](auto a,auto b){return dot(sub(matrices.world[a].point({0,0,0}),camera.eye()),camera.forward())>dot(sub(matrices.world[b].point({0,0,0}),camera.eye()),camera.forward());});
+  auto draw=[&](std::size_t i){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());const auto& node=runtime->nodes()[i].definition;auto material=runtime->material(i);const Texture* texture=node.image.empty()?textures_.text(node.id):textures_.image(node.image);if(node.geometry.type==Geometry::Type::Particles){if(const auto* engine=runtime->particleEngine())particleCloud(*engine,i,matrices.world[i],camera,material);}else if(texture)texturedQuad(*texture,node.geometry.size[0],node.geometry.size[1],material.opacity);else{applyMaterial(material);geometry(node.geometry);}glPopMatrix();};
   glDisable(GL_BLEND);glDepthMask(GL_TRUE);for(auto i:opaque)draw(i);glEnable(GL_BLEND);glDepthMask(GL_FALSE);for(auto i:transparent)draw(i);glDepthMask(GL_TRUE);glDisable(GL_BLEND);glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
   // Small additive shells soften authored light sources while keeping their real geometry.
   glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_CURRENT_BIT|GL_POLYGON_BIT);glDisable(GL_LIGHTING);glDisable(GL_TEXTURE_2D);glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE);glDepthMask(GL_FALSE);
@@ -474,7 +526,7 @@ void Desktop::render(bool present){
   if(toolsOpen_&&!selected_.empty()){glDisable(GL_LIGHTING);glColor3f(.68f,.87f,.66f);glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);glLineWidth(1.5f);glEnable(GL_POLYGON_OFFSET_LINE);glPolygonOffset(-1,-1);
     for(std::size_t i=0;i<runtime->nodes().size();++i){if(runtime->nodes()[i].definition.kind!=Kind::Element||!matrices.visible[i])continue;auto p=i;bool selected=false;while(p!=noParent){if(runtime->nodes()[p].definition.id==selected_){selected=true;break;}p=runtime->nodes()[p].definition.parent;}if(selected){glPushMatrix();glMultMatrixd(matrices.world[i].m.data());geometry(runtime->nodes()[i].definition.geometry);glPopMatrix();}}
     glDisable(GL_POLYGON_OFFSET_LINE);glLineWidth(1);glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);glEnable(GL_LIGHTING);
-  }if(present)SwapBuffers(glDc_);++frames_;
+  }
 }
 void Desktop::renderPhoto(){
   glDisable(GL_FOG);glViewport(0,0,viewWidth_,viewHeight_);glClearColor(.055f,.065f,.07f,1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,viewWidth_,0,viewHeight_,-1,1);glMatrixMode(GL_MODELVIEW);glLoadIdentity();glDisable(GL_DEPTH_TEST);glDisable(GL_BLEND);
@@ -484,6 +536,238 @@ void Desktop::renderPhoto(){
       if(texture){double availableW=std::max(1,viewWidth_-px(54)),availableH=std::max(1,viewHeight_-px(143));double w=availableW,h=w/texture->aspect;if(h>availableH){h=availableH;w=h*texture->aspect;}glPushMatrix();glTranslated(viewWidth_/2.,(viewHeight_+px(3))/2.,0);texturedQuad(*texture,w,h);glPopMatrix();}
   }}glEnable(GL_DEPTH_TEST);
 }
+
+std::filesystem::path Desktop::sessionFile() const {
+  if(!profileDirectory.empty())return profileDirectory/(profile+".sessions");
+  std::vector<wchar_t> path(32768);const auto size=GetEnvironmentVariableW(L"LOCALAPPDATA",path.data(),static_cast<DWORD>(path.size()));
+  const auto base=size&&size<path.size()?std::filesystem::path(path.data()):std::filesystem::temp_directory_path();
+  return base/L"LINK"/L"profiles"/(profile+".sessions");
+}
+std::string Desktop::readSessionToken(const std::string& key) const {
+  try{
+    std::ifstream input(sessionFile(),std::ios::binary);if(!input)return {};
+    std::string body((std::istreambuf_iterator<char>(input)),{});if(body.size()>65536)return {};
+    Cursor cursor(lex(body,"LINK profile"));const auto value=cursor.value();if(!cursor.done())return {};
+    const auto found=value.map().find(key);if(found==value.map().end())return {};
+    const auto token=found->second.string();return token.size()<=256?token:std::string{};
+  }catch(...){return {};}
+}
+void Desktop::saveSessionToken(const std::string& key,const std::string& token){
+  if(token.empty()||token.size()>256)return;
+  Value::Map tokens;
+  try{
+    std::ifstream input(sessionFile(),std::ios::binary);
+    if(input){std::string body((std::istreambuf_iterator<char>(input)),{});if(body.size()<=65536){Cursor cursor(lex(body,"LINK profile"));auto value=cursor.value();if(cursor.done())tokens=value.map();}}
+  }catch(...){tokens.clear();}
+  if(tokens.size()>=128&&!tokens.contains(key))tokens.erase(tokens.begin());tokens.insert_or_assign(key,token);
+  const auto file=sessionFile();std::filesystem::create_directories(file.parent_path());auto temporary=file;temporary+=L".tmp";
+  {std::ofstream output(temporary,std::ios::binary|std::ios::trunc);output<<Value(tokens).display();if(!output)throw std::runtime_error("Cannot save LINK profile");}
+  if(!MoveFileExW(temporary.c_str(),file.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Cannot replace LINK profile");
+}
+void Desktop::startShared(Runtime& runtime){
+  stopShared();
+  if(std::find(runtime.world().extensions.begin(),runtime.world().extensions.end(),"shared-state-v1")==runtime.world().extensions.end())return;
+  try{
+    const auto remote=parseRemoteLink(runtime.world().address);sharedKey_=remote.authority()+"/"+remote.world;
+    sharedSavedToken_=readSessionToken(sharedKey_);shared_=std::make_unique<SharedSession>(runtime.world().address,sharedSavedToken_,playerName);
+    sharedError_.clear();sharedStatus_="멀티플레이어 서버 연결 중";sharedFirst_=true;sharedRespawn_.reset();sharedTeleport_.reset();
+    const auto generation=sharedGeneration_;
+    runtime.setActionSink([this,generation](const std::string& kind,Value::Map payload){return generation==sharedGeneration_&&shared_&&shared_->sendAction(kind,std::move(payload));});
+    log(false,"Shared world connecting: "+runtime.world().address);
+  }catch(const std::exception&){sharedError_="공유 세계는 원격 LINK 서버 주소로 접속해주세요.";log(true,"Shared world requires a remote LINK server.");}
+}
+void Desktop::stopShared(){
+  ++sharedGeneration_;
+  if(shared_){shared_->stop();shared_.reset();}
+  sharedStatus_.clear();sharedError_.clear();sharedKey_.clear();sharedSavedToken_.clear();sharedTeleport_.reset();sharedRespawn_.reset();sharedFirst_=true;
+}
+void Desktop::pollShared(){
+  if(!shared_)return;auto* runtime=navigator_.current();if(!runtime)return;
+  try{
+    if(auto snapshot=shared_->poll()){
+      const auto& self=snapshot->at("self").map();
+      const auto position=valueVec3(self.at("position"));const double respawn=self.at("respawn").number();
+      if(sharedFirst_||!sharedRespawn_||respawn!=*sharedRespawn_){
+        camera_.jump(position,add(position,camera_.forward()));sharedTeleport_=position;vrLastHead_.reset();
+        sharedFirst_=false;sharedRespawn_=respawn;
+      }
+      sharedStatus_="멀티플레이어 연결됨 · "+self.at("name").string();
+      runtime->setSharedState(std::move(*snapshot));
+    }
+    const auto error=shared_->error();if(!error.empty()&&error!=sharedError_){sharedError_=error;log(true,"Shared session: "+error);}
+    const auto token=shared_->token();
+    if(!token.empty()&&token!=sharedSavedToken_){saveSessionToken(sharedKey_,token);sharedSavedToken_=token;log(false,"Shared player profile saved.");}
+  }catch(const std::exception&){log(true,"Invalid shared-world state or profile storage failure.");stopShared();sharedError_="공유 세계 상태를 처리하지 못했습니다. 다시 접속해주세요.";}
+}
+void Desktop::updateViewer(Runtime& runtime,const Camera& camera,const std::optional<VrPose>& weapon){
+  const auto rotation=[](Vec3 right,Vec3 up,Vec3 backward){
+    const double y=std::asin(std::clamp(backward[0],-1.,1.));double x=0,z=0;
+    if(std::abs(std::cos(y))>1e-6){x=std::atan2(-backward[1],backward[2]);z=std::atan2(-up[0],right[0]);}
+    else x=std::atan2(right[1],up[1]);
+    return Vec3{x*180/pi,y*180/pi,z*180/pi};
+  };
+  const auto forward=camera.forward(),right=camera.right(),up=camera.up();const auto angles=rotation(right,up,mul(forward,-1));
+  Vec3 weaponPosition=add(camera.eye(),add(mul(forward,.55),add(mul(right,.28),mul(up,-.27))));
+  Vec3 weaponAngles={angles[0]+30,angles[1],angles[2]-20};
+  if(weapon){weaponPosition=weapon->position;weaponAngles=rotation(vrRotate(weapon->orientation,{1,0,0}),vrRotate(weapon->orientation,{0,1,0}),vrRotate(weapon->orientation,{0,0,1}));}
+  runtime.setViewerState(Value::Map{{"position",vecValue(camera.eye())},{"rotation",vecValue(angles)},{"forward",vecValue(forward)},
+    {"weaponPosition",vecValue(weaponPosition)},{"weaponRotation",vecValue(weaponAngles)}});
+  if(shared_&&!sharedFirst_)shared_->updatePose(camera.eye(),std::atan2(-forward[0],-forward[2])*180/pi);
+}
+void Desktop::syncDynamicText(Runtime& runtime){
+  for(const auto& [id,text]:runtime.takeTextChanges())textures_.queueText(id,text);
+  textures_.stepText(1);
+}
+
+void Desktop::startVr(){
+  if(xr_)return;
+  if(!navigator_.current()||navigator_.loading()||textures_.loading()){
+    if(!navigator_.current()){vrWanted_=false;vrError_="Open a world before starting VR.";log(true,vrError_);}return;
+  }
+  try{
+    closePhoto();wglMakeCurrent(glDc_,glContext_);
+    auto session=std::make_unique<OpenXrSession>();session->initialize(glDc_,glContext_);
+    if(shared_&&!sharedFirst_)sharedTeleport_=camera_.eye();
+    vrRuntime_=session->runtimeName();xr_=std::move(session);vrRigReset_=true;vrRecenter_=false;vrLastHead_.reset();vrRays_={};
+    vrFrames_=vrHeadSamples_=vrLeftSamples_=vrRightSamples_=vrClicks_=0;vrError_.clear();
+    vrFocusedFrames_=0;vrInputFocused_=vrHeadTracked_=vrLeftStickActive_=vrRightStickActive_=false;
+    vrInputState_.clear();vrSessionState_.clear();setVrInputStatus("waiting-session",L"VR 연결 대기 · 헤드셋에서 LINK 앱을 열어주세요");
+    using GetInterval=int(WINAPI*)();using SetInterval=BOOL(WINAPI*)(int);
+    const auto get=reinterpret_cast<GetInterval>(wglGetProcAddress("wglGetSwapIntervalEXT"));
+    const auto set=reinterpret_cast<SetInterval>(wglGetProcAddress("wglSwapIntervalEXT"));
+    if(get&&set){vrOldSwapInterval_=get();vrSwapChanged_=set(0)!=FALSE;}
+    SetWindowTextW(window_,L"LINK Browser — VR / OpenXR");log(false,"OpenXR ready: "+vrRuntime_);
+  }catch(const std::exception& error){vrWanted_=false;vrError_=error.what();log(true,vrError_);}
+}
+void Desktop::stopVr(){
+  if(xr_){if(glContext_)wglMakeCurrent(glDc_,glContext_);xr_->abortFrame();xr_->shutdown();xr_.reset();}
+  if(vrSwapChanged_&&glContext_){using SetInterval=BOOL(WINAPI*)(int);const auto set=reinterpret_cast<SetInterval>(wglGetProcAddress("wglSwapIntervalEXT"));if(set)set(vrOldSwapInterval_);}
+  vrSwapChanged_=false;vrRendering_=false;vrLastHead_.reset();vrRays_={};vrRigReset_=true;walkKeys_.fill(false);vrReferenceChangePending_=false;
+  vrInputText_.clear();
+  if(window_&&IsWindow(window_))SetWindowTextW(window_,L"LINK Browser — Linked Interactive Network");
+}
+void Desktop::setVrInputStatus(const std::string& state,const std::wstring& text){
+  vrInputText_=text;
+  if(state!=vrInputState_){
+    vrInputState_=state;log(false,"OpenXR input: "+state+" (session="+(xr_?xr_->sessionStateName():"NONE")+")");
+  }
+}
+void Desktop::reportVr(const std::filesystem::path& path,bool okay,const std::string& error,bool check){
+  if(!path.parent_path().empty())std::filesystem::create_directories(path.parent_path());
+  const bool synthetic=vrRuntime_.find("LINK Synthetic Test Runtime")!=std::string::npos;
+  Value report=Value::Map{{"syntheticRuntime",synthetic},{"desktopWorldLoaded",navigator_.current()!=nullptr},{"passed",okay},{"kind",check?"openxr-capability-check":"openxr-frame-smoke"},{"runtime",vrRuntime_},{"failure",error},
+    {"submittedFrames",static_cast<double>(vrFrames_)},{"trackedHeadSamples",static_cast<double>(vrHeadSamples_)},
+    {"focusedInputFrames",static_cast<double>(vrFocusedFrames_)},{"sessionState",vrSessionState_},{"inputState",vrInputState_},
+    {"inputFocused",vrInputFocused_},{"headTracked",vrHeadTracked_},{"leftStickActive",vrLeftStickActive_},{"rightStickActive",vrRightStickActive_},
+    {"locomotionAvailable",navigator_.current()&&navigator_.current()->world().walk.has_value()},
+    {"leftControllerSamples",static_cast<double>(vrLeftSamples_)},{"rightControllerSamples",static_cast<double>(vrRightSamples_)},
+    {"triggerInteractions",static_cast<double>(vrClicks_)},{"headsetFramesVerified",!check&&okay&&!synthetic},
+    {"humanComfortVerified",false},{"graphics",glDescription_}};
+  std::ofstream output(path,std::ios::binary);output<<report.display()<<'\n';if(!output)throw std::runtime_error("Cannot write VR report");
+}
+void Desktop::drawVrRays(){
+  glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT|GL_POINT_BIT|GL_DEPTH_BUFFER_BIT);
+  glDisable(GL_LIGHTING);glDisable(GL_TEXTURE_2D);glDisable(GL_FOG);glDepthMask(GL_FALSE);glLineWidth(2);
+  for(std::size_t hand=0;hand<2;++hand)if(vrRays_[hand]){
+    const auto& ray=*vrRays_[hand];const auto point=add(ray.origin,mul(ray.direction,std::min(vrDistances_[hand],12.)));
+    glColor3f(hand?.25f:.40f,hand?.85f:.65f,hand?.75f:1.f);glBegin(GL_LINES);glVertex3dv(ray.origin.data());glVertex3dv(point.data());glEnd();
+    if(vrDistances_[hand]<12){glPointSize(7);glBegin(GL_POINTS);glVertex3dv(point.data());glEnd();}
+  }
+  glPopAttrib();
+}
+void Desktop::frameVr(double desktopDelta){
+  if(!xr_)return;
+  try{
+    wglMakeCurrent(glDc_,glContext_);xr_->pollEvents();
+    const std::string sessionState=xr_->sessionStateName();
+    if(sessionState!=vrSessionState_){vrSessionState_=sessionState;log(false,"OpenXR session: "+sessionState);}
+    if(xr_->exitRequested()){vrWanted_=false;stopVr();return;}
+    if(!xr_->running()){
+      vrInputFocused_=vrHeadTracked_=vrLeftStickActive_=vrRightStickActive_=false;
+      setVrInputStatus("waiting-session",L"VR 연결 대기 · 헤드셋에서 LINK 앱을 열어주세요");
+      // STOPPING may leave a valid idle session that later becomes READY again.
+      // Keep the ordinary desktop world live while waiting for that transition.
+      if(auto* runtime=navigator_.current();runtime&&!minimized_&&viewWidth_>0&&viewHeight_>0){
+        updateWalk(desktopDelta);updateViewer(*runtime,camera_);runtime->update(std::clamp(desktopDelta,0.,.1));syncDynamicText(*runtime);
+      }
+      render();return;
+    }
+    const auto frame=xr_->beginFrame();if(!frame.begun)return;
+    if(frame.exitPressed){xr_->endFrame(false);vrWanted_=false;stopVr();return;}
+    auto* runtime=navigator_.current();
+    vrReferenceChangePending_=vrReferenceChangePending_||frame.referenceSpaceChanged;
+    const bool tracked=frame.head.valid()&&frame.head.positionTracked&&frame.head.orientationTracked;
+    const bool visible=frame.shouldRender&&runtime&&frame.head.valid()&&frame.eyes[0].pose.valid()&&frame.eyes[1].pose.valid();
+    const auto handTracked=[&](std::size_t index){const auto& hand=frame.hands[index];return hand.active&&hand.aim.valid()&&hand.aim.positionTracked&&hand.aim.orientationTracked;};
+    vrInputFocused_=xr_->focused()&&frame.inputFocused;vrHeadTracked_=tracked;
+    vrLeftStickActive_=handTracked(0)&&frame.hands[0].stickActive;
+    vrRightStickActive_=handTracked(1)&&frame.hands[1].stickActive;
+    if(vrInputFocused_)++vrFocusedFrames_;
+    if(!vrInputFocused_)setVrInputStatus("waiting-focus",L"VR 입력 포커스 대기 · 헤드셋의 안내를 확인하고 Meta 메뉴를 닫아주세요");
+    else if(!tracked)setVrInputStatus("waiting-head-tracking",L"VR 머리 추적 대기 · 헤드셋의 추적 상태를 확인해주세요");
+    else if(!visible)setVrInputStatus("waiting-frame",L"VR 화면 준비 중 · 헤드셋 연결 상태를 확인해주세요");
+    else if(!handTracked(0)&&!handTracked(1))setVrInputStatus("waiting-controllers",L"VR 컨트롤러 추적 대기 · 컨트롤러를 깨워주세요");
+    else {
+      std::wstring text=std::wstring(L"VR · 왼쪽 스틱 ")+(vrLeftStickActive_?L"준비":L"대기")+L" · 오른쪽 스틱 "+(vrRightStickActive_?L"준비":L"대기");
+      if(!runtime->world().walk)text+=L" · 관찰 모드(걷기 설정 없음)";
+      text+=L" · F8 종료 · F9 시점 맞추기";
+      setVrInputStatus(vrLeftStickActive_&&vrRightStickActive_?"ready":"partial-controllers",text);
+    }
+    refreshShell();
+    const double localHeight=frame.floorLevel?0.:(runtime&&runtime->world().walk?runtime->world().walk->eyeHeight:1.65);
+    const auto normalize=[&](const VrPose& pose){auto result=pose;result.position[1]+=localHeight;return result;};
+    if(visible){
+      const auto head=normalize(frame.head);
+      if(vrRigReset_||vrRecenter_||frame.recenterPressed){vrRig_=vrResetRig(runtime->world(),head);vrRigReset_=vrRecenter_=vrReferenceChangePending_=false;vrLastHead_.reset();}
+      else if(vrReferenceChangePending_&&vrLastHead_){
+        const auto oldForward=vrRotate(vrLastHead_->orientation,{0,0,-1}),newForward=vrRotate(head.orientation,{0,0,-1});
+        vrRig_.yaw=std::atan2(-oldForward[0],-oldForward[2])-std::atan2(-newForward[0],-newForward[2]);
+        vrRig_.position=sub(vrLastHead_->position,vrRotate(vrQuaternionFromYaw(vrRig_.yaw),head.position));vrRig_.turnArmed=false;vrReferenceChangePending_=false;
+      }
+      if(sharedTeleport_){
+        const auto current=vrStageToWorld(vrRig_,head).position;
+        vrRig_.position[0]+=(*sharedTeleport_)[0]-current[0];vrRig_.position[2]+=(*sharedTeleport_)[2]-current[2];
+        sharedTeleport_.reset();vrLastHead_.reset();
+      }
+      const bool inputReady=vrInputFocused_&&tracked&&!navigator_.loading()&&!textures_.loading();
+      VrInput input;input.focused=inputReady;input.headTracked=tracked;
+      input.moveActive=handTracked(0)&&frame.hands[0].stickActive;input.turnActive=handTracked(1)&&frame.hands[1].stickActive;
+      input.move={frame.hands[0].thumbstick[0],frame.hands[0].thumbstick[1]};input.turn=frame.hands[1].thumbstick[0];
+      vrAdvanceRig(vrRig_,runtime->world(),head,input,frame.dt,vrOptions);
+      const auto worldHead=vrStageToWorld(vrRig_,head);
+      if(inputReady&&vrLastHead_)if(const auto* portal=enteredPortal(runtime->world(),vrLastHead_->position,worldHead.position)){log(false,"VR portal "+portal->id+" -> "+portal->address);request(portal->address);}
+      vrLastHead_=worldHead;
+      Camera viewer;viewer.tracked=worldHead;std::optional<VrPose> weapon;
+      if(handTracked(1)){
+        const auto aim=vrStageToWorld(vrRig_,normalize(frame.hands[1].aim));
+        weapon=vrCompose(aim,{{0,-.04,-.12},{0,0,0,1}}); // Authored weapons point along local -Z.
+      }
+      updateViewer(*runtime,viewer,weapon);
+      if(inputReady)runtime->update(frame.dt);syncDynamicText(*runtime);
+      if(tracked)++vrHeadSamples_;
+      for(std::size_t hand=0;hand<2;++hand){
+        const bool usable=inputReady&&handTracked(hand);vrRays_[hand]=vrControllerRay(vrRig_,normalize(frame.hands[hand].aim),usable);vrDistances_[hand]=12;
+        if(usable){if(hand==0)++vrLeftSamples_;else ++vrRightSamples_;}
+        if(vrRays_[hand]){
+          double distance=12;const auto hit=raycastRay(*runtime,vrRays_[hand]->origin,vrRays_[hand]->direction,&distance);
+          if(hit!=noParent&&distance<=12){vrDistances_[hand]=distance;if(frame.hands[hand].selectPressed){const auto id=runtime->nodes()[hit].definition.id;selected_=runtime->interact(id);++vrClicks_;xr_->haptic(hand);refreshInspector();}}
+        }
+      }
+      vrRendering_=true;
+      for(std::size_t eye=0;eye<2;++eye){
+        xr_->bindEye(eye);Camera camera;camera.tracked=vrStageToWorld(vrRig_,normalize(frame.eyes[eye].pose));
+        drawScene(camera,vrProjectionMatrix(frame.eyes[eye].fov),frame.eyes[eye].width,frame.eyes[eye].height);drawVrRays();
+      }
+      if(!minimized_)xr_->mirror(viewWidth_,viewHeight_);xr_->endFrame();vrRendering_=false;
+      if(!minimized_)SwapBuffers(glDc_);++vrFrames_;++frames_;
+    }else{
+      vrRig_.turnArmed=false;vrRays_={};xr_->endFrame(false);
+    }
+  }catch(const std::exception& error){
+    if(xr_)xr_->abortFrame();vrError_=error.what();vrWanted_=false;log(true,vrError_);stopVr();refreshShell();render();
+  }
+}
+
 void Desktop::request(const std::string& address){walkKeys_.fill(false);navigator_.request(address);SetWindowTextW(address_,wide(address).c_str());lastError_.clear();renderError_.clear();refreshShell();}
 bool Desktop::walking()const{auto* runtime=navigator_.current();return runtime&&runtime->world().walk.has_value();}
 bool Desktop::movementKey(WPARAM key)const{return key=='W'||key=='A'||key=='S'||key=='D'||key==VK_UP||key==VK_LEFT||key==VK_DOWN||key==VK_RIGHT;}
@@ -501,6 +785,9 @@ void Desktop::updateWalk(double seconds){
   if(const auto* portal=enteredPortal(world,from,to)){const auto address=portal->address;log(false,"Portal "+portal->id+" -> "+address);request(address);}
 }
 void Desktop::command(int id){
+  if(id==VrToggle){if(xr_){vrWanted_=false;stopVr();vrError_.clear();}else{vrWanted_=true;startVr();}refreshShell();return;}
+  if(id==VrRecenter){vrRecenter_=true;return;}
+  if(id==VrSnap||id==VrSmooth){vrOptions.turnMode=id==VrSnap?VrTurnMode::Snap:VrTurnMode::Smooth;vrRig_.turnArmed=false;return;}
   if(id==Menu){showMenu();return;}
   if(id==DeveloperTools||id==DeveloperClose){toggleTools();return;}
   if(id==ErrorDetails){if(!toolsOpen_)toggleTools();SetFocus(logs_);return;}
@@ -509,7 +796,7 @@ void Desktop::command(int id){
   if(id==Gallery)request("link://local/heukryong");
   if(id==RoomA)request("link://local/room-a");if(id==RoomB)request("link://local/room-b");
   if(id==Reload){auto address=displayAddress_;if(!address.empty())request(address);}
-  if(id==Home||id==Stop){clearWorldGraphics();navigator_.stop();selected_.clear();displayAddress_.clear();mode_=id==Home?L"시작 화면":L"실행 중지됨";lastError_.clear();renderError_.clear();SetWindowTextW(address_,L"");refreshInspector();refreshShell();SetFocus(address_);InvalidateRect(window_,nullptr,FALSE);}
+  if(id==Home||id==Stop){vrWanted_=false;stopVr();vrError_.clear();clearWorldGraphics();navigator_.stop();selected_.clear();displayAddress_.clear();mode_=id==Home?L"시작 화면":L"실행 중지됨";lastError_.clear();renderError_.clear();SetWindowTextW(address_,L"");refreshInspector();refreshShell();SetFocus(address_);InvalidateRect(window_,nullptr,FALSE);}
   if(id==Cancel){navigator_.cancel();if(textures_.loading()){clearWorldGraphics();navigator_.stop();mode_=L"사진 준비 취소";}lastError_.clear();log(false,"Loading cancelled.");}
   if(id==PreviousPhoto)movePhoto(-1);
   if(id==NextPhoto)movePhoto(1);
@@ -525,10 +812,17 @@ void Desktop::showMenu(){
   walkKeys_.fill(false);HMENU menu=CreatePopupMenu();const bool active=navigator_.current()!=nullptr,loading=navigator_.loading()||textures_.loading();
   AppendMenuW(menu,MF_STRING,FocusAddress,L"주소로 이동\tCtrl+L");AppendMenuW(menu,MF_STRING|(!displayAddress_.empty()?0:MF_GRAYED),Reload,L"새로 고침\tF5");
   AppendMenuW(menu,MF_STRING,Home,L"홈");AppendMenuW(menu,MF_STRING|(active?0:MF_GRAYED),Stop,L"실행 중지");if(loading)AppendMenuW(menu,MF_STRING,Cancel,L"로딩 취소\tEsc");
+  AppendMenuW(menu,MF_SEPARATOR,0,nullptr);
+  AppendMenuW(menu,MF_STRING|(!active||loading?MF_GRAYED:0),VrToggle,xr_?L"VR 모드 종료\tF8":L"VR 모드 시작\tF8");
+  if(xr_)AppendMenuW(menu,MF_STRING,VrRecenter,L"VR 시점 다시 맞추기\tF9");
+  AppendMenuW(menu,MF_STRING|(vrOptions.turnMode==VrTurnMode::Snap?MF_CHECKED:0),VrSnap,L"VR 스냅 회전");
+  AppendMenuW(menu,MF_STRING|(vrOptions.turnMode==VrTurnMode::Smooth?MF_CHECKED:0),VrSmooth,L"VR 부드러운 회전");
   AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING|(toolsOpen_?MF_CHECKED:0),DeveloperTools,L"개발자 도구\tF12");
   RECT anchor{};GetWindowRect(controls_[Menu],&anchor);int selected=TrackPopupMenuEx(menu,TPM_RETURNCMD|TPM_RIGHTALIGN|TPM_TOPALIGN,anchor.right,anchor.bottom+px(5),window_,nullptr);DestroyMenu(menu);if(selected)command(selected);
 }
 bool Desktop::shortcut(WPARAM key,bool control){
+  if(key==VK_F8){command(VrToggle);return true;}
+  if(key==VK_F9){if(xr_)command(VrRecenter);return true;}
   if(control&&(key=='L'||key=='l')){command(FocusAddress);return true;}
   if(key==VK_F12){command(DeveloperTools);return true;}
   if(key==VK_F5){command(Reload);return true;}
@@ -538,14 +832,19 @@ bool Desktop::shortcut(WPARAM key,bool control){
   return false;
 }
 void Desktop::refreshShell(){
-  auto* runtime=navigator_.current();const bool active=runtime!=nullptr,loading=navigator_.loading()||textures_.loading(),error=!navigator_.error().empty()||!renderError_.empty();
-  bool changed=active!=shellActive_||loading!=shellLoading_||error!=shellError_;shellActive_=active;shellLoading_=loading;shellError_=error;
+  auto* runtime=navigator_.current();const bool active=runtime!=nullptr,loading=navigator_.loading()||textures_.loading(),error=!navigator_.error().empty()||!renderError_.empty()||!vrError_.empty();
+  bool changed=active!=shellActive_||loading!=shellLoading_||error!=shellError_||bool(xr_)!=shellVr_;shellActive_=active;shellLoading_=loading;shellError_=error;shellVr_=bool(xr_);
   std::wstring text=runtime?wide(runtime->world().name):L"";
   if(navigator_.loading())text=L"공간을 여는 중…";else if(textures_.loading())text=L"사진 준비 중 · "+std::to_wstring(textures_.completed())+L" / "+std::to_wstring(textures_.total());
+  else if(!vrError_.empty())text=L"VR: "+wide(vrError_);
   else if(error)text=active?L"공간을 열지 못했습니다 · 현재 공간 유지":L"공간을 열지 못했습니다. 주소를 확인해 주세요.";
+  else if(!sharedError_.empty())text=L"멀티플레이어: "+wide(sharedError_);
+  else if(xr_)text=vrInputText_.empty()?L"VR 연결 대기":vrInputText_;
+  else if(shared_)text=wide(sharedStatus_)+L" · 클릭/트리거 공격 · F8 VR";
   setText(status_,text);if(changed)layout();
 }
 void Desktop::clearWorldGraphics(){
+  stopShared();
   walkKeys_.fill(false);
   photoOpen_=false;viewerTexture_=nullptr;photoNodes_.clear();
   if(glContext_)wglMakeCurrent(glDc_,glContext_);
@@ -612,25 +911,40 @@ bool Desktop::clickBinding(std::size_t binding){
   return false;
 }
 void Desktop::frame(){
+  if(frameInProgress_)return;
+  frameInProgress_=true;
+  struct FrameGuard{bool& active;~FrameGuard(){active=false;}} frameGuard{frameInProgress_};
   auto now=Clock::now();double delta=std::chrono::duration<double>(now-previous_).count();previous_=now;
   navigator_.poll();auto* runtime=navigator_.current();auto c=counters();
   if(runtime&&createdSeen_!=c.createdWorlds){
-    clearWorldGraphics();createdSeen_=c.createdWorlds;camera_.reset(runtime->world());displayAddress_=runtime->world().address;selected_.clear();mode_=L"실행 중";lastStructure_.clear();renderError_.clear();viewIndex_=0;photoIndex_=0;
+    clearWorldGraphics();createdSeen_=c.createdWorlds;camera_.reset(runtime->world());vrRigReset_=true;vrLastHead_.reset();displayAddress_=runtime->world().address;selected_.clear();mode_=L"실행 중";lastStructure_.clear();renderError_.clear();viewIndex_=0;photoIndex_=0;
     for(std::size_t i=0;i<runtime->nodes().size();++i)if(photoImage(runtime->nodes()[i].definition))photoNodes_.push_back(i);
     texturesStarted_=now;
     try{textures_.begin(runtime->world());}catch(const std::exception& error){renderError_=error.what();clearWorldGraphics();navigator_.stop();runtime=nullptr;log(true,renderError_);mode_=L"사진 준비 실패";}
+    if(runtime)startShared(*runtime);
     layout();if(runtime)SetFocus(viewport_);InvalidateRect(window_,nullptr,FALSE);
   }
-  if(runtime&&textures_.loading()&&!minimized_){
+  if(runtime&&textures_.loading()&&(!minimized_||xr_)){
     const auto stepStart=Clock::now();
     try{textures_.step();}catch(const std::exception& error){renderError_=error.what();clearWorldGraphics();navigator_.stop();runtime=nullptr;log(true,renderError_);mode_=L"사진 준비 실패";}
     maxTextureStepMs_=std::max(maxTextureStepMs_,std::chrono::duration<double,std::milli>(Clock::now()-stepStart).count());
   }
+  pollShared();
   refreshShell();
   if(navigator_.error()!=lastError_){lastError_=navigator_.error();InvalidateRect(window_,nullptr,FALSE);}
-  if(runtime&&!minimized_&&viewWidth_>0&&viewHeight_>0){updateWalk(delta);runtime->update(std::clamp(delta,0.,.1));}
+  if(vrWanted_&&!xr_&&runtime&&!navigator_.loading()&&!textures_.loading())startVr();
+  if(runtime&&!xr_&&!minimized_&&viewWidth_>0&&viewHeight_>0){updateWalk(delta);updateViewer(*runtime,camera_);runtime->update(std::clamp(delta,0.,.1));syncDynamicText(*runtime);}
   if(now-lastInspect_>std::chrono::milliseconds(200)){refreshInspector();lastInspect_=now;if(toolsOpen_){RECT footer{contentWidth_,height_-px(31),width_,height_};InvalidateRect(window_,&footer,FALSE);}}
-  render();if(!particleSmokePath.empty())particleSmoke();else if(!shellSmokePath.empty())shellSmoke();else if(!afterlightSmokePath.empty())afterlightSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
+  if(xr_)frameVr(delta);else render();
+  if(!vrSmokePath.empty()){
+    if(vrFrames_>=120){
+      const auto path=vrSmokePath;vrSmokePath.clear();const bool okay=vrHeadSamples_>0&&vrFocusedFrames_>0;
+      const std::string failure=!vrHeadSamples_?"No physically tracked head samples":!vrFocusedFrames_?"No focused OpenXR input frames. Enable Unknown Sources in Meta Quest Link Settings > General, reopen LINK in the headset, and close the Meta menu.":"";
+      reportVr(path,okay,failure,false);exitCode_=okay?0:2;vrWanted_=false;stopVr();DestroyWindow(window_);return;
+    }
+    if(Clock::now()-started_>std::chrono::seconds(40)||(!xr_&&!vrWanted_)){const auto path=vrSmokePath;vrSmokePath.clear();reportVr(path,false,vrError_.empty()?"No renderable headset frames. Wear the headset and launch Quest Link, then retry.":vrError_,false);exitCode_=2;stopVr();DestroyWindow(window_);return;}
+  }
+  if(!particleSmokePath.empty())particleSmoke();else if(!shellSmokePath.empty())shellSmoke();else if(!afterlightSmokePath.empty())afterlightSmoke();else if(!gallerySmokePath.empty())gallerySmoke();else if(!smokePath.empty())smoke();
   else if(!capturePath.empty()&&!navigator_.loading()&&!textures_.loading()&&now-started_>std::chrono::seconds(2)){capture(capturePath);capturePath.clear();}
 }
 
@@ -959,13 +1273,17 @@ LRESULT Desktop::message(UINT message,WPARAM wParam,LPARAM lParam){
     case WM_COMMAND:if(LOWORD(wParam)==Address&&HIWORD(wParam)==EN_CHANGE){InvalidateRect(address_,nullptr,TRUE);return 0;}if(LOWORD(wParam)==Address&&(HIWORD(wParam)==EN_SETFOCUS||HIWORD(wParam)==EN_KILLFOCUS)){InvalidateRect(window_,&addressPill_,FALSE);return 0;}if(HIWORD(wParam)==BN_CLICKED||(LOWORD(wParam)==NodeList&&HIWORD(wParam)==LBN_SELCHANGE))command(LOWORD(wParam));return 0;
     case WM_KEYDOWN:if(shortcut(wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))return 0;break;
     case WM_DRAWITEM:if(wParam){drawButton(*reinterpret_cast<DRAWITEMSTRUCT*>(lParam));return TRUE;}break;
-    case WM_TIMER:if(wParam==1)frame();return 0;
+    case WM_ENTERMENULOOP:case WM_ENTERSIZEMOVE:
+      ++modalLoops_;if(xr_)SetTimer(window_,1,1,nullptr);return 0;
+    case WM_EXITMENULOOP:case WM_EXITSIZEMOVE:
+      if(modalLoops_)--modalLoops_;if(!modalLoops_)SetTimer(window_,1,16,nullptr);return 0;
+    case WM_TIMER:if(wParam==1&&(!xr_||!xr_->running()||modalLoops_))frame();return 0;
     case WM_PAINT:paint();return 0;
     case WM_ERASEBKGND:return 1;
     case WM_CTLCOLORSTATIC:{auto dc=reinterpret_cast<HDC>(wParam);auto child=reinterpret_cast<HWND>(lParam);if(child==controls_[PhotoTitle]){SetTextColor(dc,RGB(225,233,239));SetBkColor(dc,RGB(14,17,18));return reinterpret_cast<LRESULT>(photoBrush_);}SetTextColor(dc,child==status_&&shellError_?RGB(166,102,46):RGB(94,112,132));SetBkColor(dc,RGB(255,255,255));return reinterpret_cast<LRESULT>(background_);}
     case WM_CTLCOLOREDIT:case WM_CTLCOLORLISTBOX:{auto dc=reinterpret_cast<HDC>(wParam);SetTextColor(dc,RGB(51,65,85));SetBkColor(dc,RGB(255,255,255));return reinterpret_cast<LRESULT>(background_);}
     case WM_CLOSE:DestroyWindow(window_);return 0;
-    case WM_DESTROY:KillTimer(window_,1);clearWorldGraphics();navigator_.stop();destroyGl();PostQuitMessage(exitCode_);return 0;
+    case WM_DESTROY:KillTimer(window_,1);vrWanted_=false;stopVr();clearWorldGraphics();navigator_.stop();destroyGl();PostQuitMessage(exitCode_);return 0;
   }return DefWindowProcW(window_,message,wParam,lParam);
 }
 LRESULT Desktop::viewMessage(UINT message,WPARAM wParam,LPARAM lParam){
@@ -998,11 +1316,29 @@ int Desktop::run(int show){
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);INITCOMMONCONTROLSEX common{sizeof(common),ICC_STANDARD_CLASSES};InitCommonControlsEx(&common);HINSTANCE instance=GetModuleHandleW(nullptr);WNDCLASSEXW frame{};frame.cbSize=sizeof(frame);frame.hInstance=instance;frame.lpfnWndProc=windowProc;frame.hCursor=LoadCursorW(nullptr,IDC_ARROW);frame.hIcon=LoadIconW(nullptr,IDI_APPLICATION);frame.lpszClassName=L"LINK.NativeShell";frame.style=CS_HREDRAW|CS_VREDRAW;RegisterClassExW(&frame);
   WNDCLASSEXW view{};view.cbSize=sizeof(view);view.hInstance=instance;view.lpfnWndProc=viewProc;view.hCursor=LoadCursorW(nullptr,IDC_CROSS);view.lpszClassName=L"LINK.WorldViewport";view.style=CS_OWNDC|CS_DBLCLKS;RegisterClassExW(&view);
   HWND main=CreateWindowExW(0,frame.lpszClassName,L"LINK Browser — Linked Interactive Network",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1280,820,nullptr,nullptr,instance,this);
-  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);if(!initialAddress.empty())request(initialAddress);else if(!particleSmokePath.empty())request("link://local/particle-life");else if(!afterlightSmokePath.empty())request("link://local/afterlight");else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
-  MSG message{};while(GetMessageW(&message,nullptr,0,0)>0){
-    if(message.message==WM_KEYDOWN&&shortcut(message.wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))continue;
-    if((message.message==WM_KEYDOWN||message.message==WM_KEYUP)&&GetFocus()==viewport_&&walking()&&movementKey(message.wParam)){TranslateMessage(&message);DispatchMessageW(&message);continue;}
+  if(!main)throw std::runtime_error("Native LINK window initialization failed");ShowWindow(main,show);UpdateWindow(main);SetFocus(address_);vrWanted_=initialVr;
+  if(!vrCheckPath.empty()){
+    bool okay=false;std::string error;
+    try{OpenXrSession probe;wglMakeCurrent(glDc_,glContext_);probe.initialize(glDc_,glContext_);vrRuntime_=probe.runtimeName();okay=true;probe.shutdown();}catch(const std::exception& e){error=e.what();}
+    reportVr(vrCheckPath,okay,error,true);exitCode_=okay?0:2;DestroyWindow(main);return exitCode_;
+  }
+  if(!initialAddress.empty())request(initialAddress);else if(!particleSmokePath.empty())request("link://local/particle-life");else if(!afterlightSmokePath.empty())request("link://local/afterlight");else if(!gallerySmokePath.empty())request("link://local/heukryong");else if(!smokePath.empty())request("link://local/room-a");
+  const auto dispatch=[&](MSG& message){
+    if(message.message==WM_KEYDOWN&&shortcut(message.wParam,(GetKeyState(VK_CONTROL)&0x8000)!=0))return;
+    if((message.message==WM_KEYDOWN||message.message==WM_KEYUP)&&GetFocus()==viewport_&&walking()&&movementKey(message.wParam)){TranslateMessage(&message);DispatchMessageW(&message);return;}
     if(!IsDialogMessageW(main,&message)){TranslateMessage(&message);DispatchMessageW(&message);}
+  };
+  MSG message{};
+  for(;;){
+    if(xr_&&xr_->running()){
+      int processed=0;
+      while(processed++<64&&PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){
+        if(message.message==WM_QUIT)return static_cast<int>(message.wParam);dispatch(message);
+      }
+      if(IsWindow(main))this->frame();
+    }else{
+      const auto result=GetMessageW(&message,nullptr,0,0);if(result<=0)break;dispatch(message);
+    }
   }
   return static_cast<int>(message.wParam);
 }
@@ -1015,7 +1351,18 @@ int runDesktop(int argc,wchar_t** argv){
     for(int i=1;i<argc;++i){
       std::wstring arg=argv[i];
       if(arg==L"--worlds"){++i;continue;}
-      if(arg==L"--open"&&i+1<argc)app.initialAddress=utf8(argv[++i]);
+      if(arg==L"--profile"&&i+1<argc){
+        app.profile=utf8(argv[++i]);
+        if(app.profile.empty()||app.profile.size()>64||app.profile.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")!=std::string::npos)throw std::runtime_error("Invalid profile name");
+      }
+      else if(arg==L"--player-name"&&i+1<argc){app.playerName=utf8(argv[++i]);if(app.playerName.empty()||app.playerName.size()>48)throw std::runtime_error("Player name must be 1-48 UTF-8 bytes");}
+      else if(arg==L"--profile-directory"&&i+1<argc)app.profileDirectory=std::filesystem::absolute(argv[++i]);
+      else if(arg==L"--vr")app.initialVr=true;
+      else if(arg==L"--vr-check"&&i+1<argc)app.vrCheckPath=argv[++i];
+      else if(arg==L"--vr-smoke"&&i+1<argc){app.vrSmokePath=argv[++i];app.initialVr=true;}
+      else if(arg==L"--vr-turn"&&i+1<argc){const std::wstring mode=argv[++i];if(mode==L"snap")app.vrOptions.turnMode=VrTurnMode::Snap;else if(mode==L"smooth")app.vrOptions.turnMode=VrTurnMode::Smooth;else throw std::runtime_error("--vr-turn must be snap or smooth");}
+      else if((arg==L"--vr-snap-angle"||arg==L"--vr-turn-speed")&&i+1<argc){const auto text=utf8(argv[++i]);double number=0;const auto parsed=std::from_chars(text.data(),text.data()+text.size(),number);if(parsed.ec!=std::errc{}||parsed.ptr!=text.data()+text.size()||!std::isfinite(number))throw std::runtime_error("VR option needs a finite number");if(arg==L"--vr-snap-angle"){if(number!=30&&number!=45&&number!=90)throw std::runtime_error("--vr-snap-angle must be 30, 45 or 90");app.vrOptions.snapDegrees=number;}else{if(number<=0||number>360)throw std::runtime_error("--vr-turn-speed must be greater than 0 and at most 360");app.vrOptions.smoothDegreesPerSecond=number;}}
+      else if(arg==L"--open"&&i+1<argc)app.initialAddress=utf8(argv[++i]);
       else if(arg==L"--capture"&&i+1<argc)app.capturePath=argv[++i];
       else if(arg==L"--smoke-test"&&i+1<argc)app.smokePath=argv[++i];
       else if(arg==L"--gallery-smoke"&&i+1<argc)app.gallerySmokePath=argv[++i];
@@ -1024,9 +1371,12 @@ int runDesktop(int argc,wchar_t** argv){
       else if(arg==L"--particle-smoke"&&i+1<argc)app.particleSmokePath=argv[++i];
       else if(arg==L"--help"){
         std::cout<<"LINK Browser — Linked Interactive Network\nEvery World. One Link.\n\nLINK [--worlds ABSOLUTE_DIRECTORY] [--open link://local/room-a] [--capture screenshot.bmp] [--smoke-test report.json] [--gallery-smoke report.json] [--shell-smoke report.json] [--afterlight-smoke report.json] [--particle-smoke report.json]\n";
+        std::cout<<"\nVR: --vr [--vr-turn snap|smooth] [--vr-snap-angle 30|45|90] [--vr-turn-speed DEGREES_PER_SECOND]\nDiagnostics: --vr-check report.json | --vr-smoke report.json\nF8 toggles PC VR; F9 recenters.\n";
         return 0;
       }else{std::cerr<<"Unknown or incomplete argument: "<<utf8(arg)<<'\n';return 1;}
     }
+    if(!app.vrCheckPath.empty()&&!app.vrSmokePath.empty())throw std::runtime_error("Choose either --vr-check or --vr-smoke");
+    if(app.initialVr&&app.initialAddress.empty())app.initialAddress="link://local/vr-room";
     return app.run(SW_SHOWNORMAL);
   }catch(const std::exception& error){std::cerr<<"LINK startup failed: "<<error.what()<<'\n';return 1;}
 }

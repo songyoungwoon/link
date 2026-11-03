@@ -205,6 +205,12 @@ scene {
           position: [0.54,-0.03,0.16];
           style: "brass";
         }
+      
+        element box_1 {
+          geometry: {"size":[1,1,1],"type":"box"};
+          name: "box";
+          position: [0,0.5,0];
+        }
       }
     }
   }

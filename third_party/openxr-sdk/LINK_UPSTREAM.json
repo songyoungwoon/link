@@ -1,0 +1,8 @@
+{
+  "component": "Khronos OpenXR-SDK",
+  "tag": "release-1.1.65",
+  "source": "https://codeload.github.com/KhronosGroup/OpenXR-SDK/zip/refs/tags/release-1.1.65",
+  "archiveSHA256": "6271009b5295563eaf290a09e7deefe1a31d04357154e36e4e8ee067be263b45",
+  "files": 417,
+  "purpose": "Pinned official headers and static loader; builds need no SDK download. New headers include Meta PC STAGE pose compatibility fixes."
+}

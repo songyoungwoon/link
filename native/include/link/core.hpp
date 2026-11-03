@@ -49,6 +49,7 @@ struct NodeDefinition {
   Transform transform; Geometry geometry; std::string style; std::vector<std::string> classes;
   Value::Map state,config; std::string script; Location location;
   std::string image,text;
+  bool raycast=true; // False on any ancestor excludes the subtree from selection rays.
 };
 struct ScriptProgram;
 struct Viewpoint { std::string name; Vec3 position,target; };

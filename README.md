@@ -49,6 +49,8 @@ first-world/
 
 The browser reads the world documents at runtime. Editing a world's structure, behavior, or appearance does not require recompiling the browser.
 
+The visual editor **[LINK Architect](docs/architect.md)** and its LINKAuthor CLI live in the independent `link-architect` project, alongside LINK Browser and LINK Server. The shared **[authoring-v1 contract](docs/authoring-v1.md)** and [AI authoring guide](docs/guides/ai-authoring.md) remain documented here; run their tool examples from the Architect project. Existing world syntax and LINK protocol versions are unchanged.
+
 Start with the **[authoring guide](docs/guides/README.md)** and its **[runnable first-world example](docs/guides/examples/first-world/world.link)**. The full [language specification](native/docs/language.md) documents the grammar, APIs, validation, and budgets.
 
 ## Run LINK Browser
@@ -88,6 +90,14 @@ Or choose the repository's demo worlds:
 ```
 
 `--worlds` selects an explicit local root; relative document references resolve inside each world. See [LINK Protocol: local addresses](docs/link-local-v0.1.md). If the checkout moved, the build helper regenerates stale CMake paths; `-Fresh -Test` also requests a clean configuration.
+
+## Shared worlds and RPGs (experimental)
+
+Worlds opting into `shared-state-v1` can receive player/monster snapshots and send interaction intents to a remote LINK server. Combat and rewards are server-owned. See the [shared state and Script bridge](docs/shared-state-v1.md). Use distinct profiles, such as `--profile alice --player-name Alice`, to test multiple characters on one PC.
+
+## Windows PC VR (experimental)
+
+The OpenXR mode renders existing LINK worlds on a Windows PC for a headset connected through Quest Link or Air Link. Build separately with `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-vr.ps1 -Test`, then run [LINK_VR_START.cmd](LINK_VR_START.cmd) to open the small `vr-room` example from `build/vr`. **F8** toggles VR; **F9** recenters. With an up-to-date default build, you can also open `LINK_START.cmd`, enter a world, and press **F8** to start VR. World Standards v0.1 and LINK TCP stay the same. See [VR setup, controls, and diagnostics](docs/vr.md). A user has confirmed existing worlds work on Quest 3 through Air Link. New game performance still requires headset testing; synthetic runtime tests remain separate.
 
 ## Open a world over LAN
 
@@ -158,7 +168,7 @@ The long-term goal is a connected-world ecosystem with interoperable authoring a
 - Versioned world contracts and clearer interoperability requirements.
 - DNS and server discovery, TLS transport, authentication, and interoperable protocol profiles.
 - World permissions, stronger execution isolation, and shared state.
-- Broader native platform support and, later, immersive input and rendering.
+- Broader native platform support and expanded immersive input and rendering.
 
 These are project directions beyond the current local and LAN prototype. An open standard is the vision; v0.1 is the starting point for testing its ideas in a working browser.
 

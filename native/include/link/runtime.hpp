@@ -22,9 +22,18 @@ public:
   std::size_t activeBindings() const;
   const ParticleEngine* particleEngine() const noexcept;
   std::size_t particleCount() const;
+  using ActionSink=std::function<bool(const std::string&,Value::Map)>;
+  void setSharedState(Value::Map snapshot);
+  void setViewerState(Value::Map viewer);
+  void setActionSink(ActionSink sink);
+  std::map<std::string,std::string> takeTextChanges();
+
 private:
   struct Binding; std::shared_ptr<const World> world_; std::vector<RuntimeNode> nodes_;
   std::map<std::string,std::size_t> index_; std::vector<std::unique_ptr<Binding>> bindings_; LogFn log_;
+  std::optional<Value::Map> sharedState_;
+  Value::Map viewer_;ActionSink actionSink_;
+  std::map<std::string,std::string> textChanges_;
   bool started_=false,simulationFailed_=false;
   std::unique_ptr<ParticleEngine> particles_;
   std::size_t phaseSteps_=262144;

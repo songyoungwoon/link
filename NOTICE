@@ -7,3 +7,11 @@ Version 2.0. A copy of that license is provided in LICENSE.
 
 The personal photographs and their display copies are excluded from the
 Apache-licensed work. Their separate terms are provided in ASSET_LICENSE.md.
+
+Bundled third-party components retain their original copyright and license
+notices. The Windows VR build includes Khronos OpenXR-SDK (headers and
+static loader) under Apache 2.0, including contributions by The Khronos Group,
+Valve Corporation, LunarG, and other upstream contributors. Its bundled
+JsonCpp component is available under the Public Domain/MIT terms provided
+by Baptiste Lepilleur and The JsonCpp Authors. See third_party/openxr-sdk
+in source distributions and licenses/openxr beside built executables.

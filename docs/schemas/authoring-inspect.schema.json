@@ -1,0 +1,455 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:link:authoring:v1:inspect",
+  "title": "LINK Author CLI response and authoring inspection",
+  "description": "Complete JSON stdout contract for LINKAuthor inspect/validate/apply. The inner authoring inspection is also available at #/$defs/inspection. A successful static validation does not execute Script or guarantee renderer activation.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "const": true
+        },
+        "command": {
+          "enum": [
+            "inspect",
+            "validate",
+            "apply"
+          ]
+        },
+        "saved": {
+          "type": "boolean"
+        },
+        "inspection": {
+          "$ref": "#/$defs/inspection"
+        }
+      },
+      "required": [
+        "ok",
+        "command",
+        "saved",
+        "inspection"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "const": false
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "file",
+              "line",
+              "column",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "ok",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "geometry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "box"
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "required": [
+            "type",
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "sphere"
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "radius"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "plane"
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "type",
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "cylinder"
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "radiusTop": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "radius",
+            "radiusTop",
+            "height"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "frame"
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "border": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "depth": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "size",
+            "border",
+            "depth"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "particles"
+            },
+            "capacity": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2048
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "cellSize": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "type",
+            "capacity",
+            "radius",
+            "cellSize"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Complete geometry replacement. The C++ loader additionally enforces frame border < min(size)/2 and the particles-v1 world extension and total capacity budget."
+    },
+    "node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "enum": [
+            "object",
+            "component",
+            "element"
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/identifier"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "position": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "rotation": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "scale": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "geometry": {
+              "$ref": "#/$defs/geometry"
+            },
+            "classes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/identifier"
+              },
+              "maxItems": 64,
+              "uniqueItems": true
+            },
+            "style": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "state": {
+              "type": "object"
+            },
+            "config": {
+              "type": "object"
+            },
+            "script": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "position",
+            "rotation",
+            "scale",
+            "visible"
+          ],
+          "additionalProperties": false
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "column": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "file",
+            "line",
+            "column"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "parent",
+        "name",
+        "properties",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "inspection": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "link-authoring-v1"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "address": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "const": "0.1"
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "const": "particles-v1"
+          },
+          "uniqueItems": true
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 500
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "canUndo": {
+          "type": "boolean"
+        },
+        "canRedo": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "profile",
+        "revision",
+        "address",
+        "id",
+        "name",
+        "version",
+        "extensions",
+        "materials",
+        "nodes",
+        "dirty",
+        "canUndo",
+        "canRedo"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

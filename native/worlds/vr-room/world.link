@@ -1,0 +1,12 @@
+world {
+  version: "0.1";
+  id: "vr-room";
+  name: "LINK VR / First Contact";
+  elements: "scene.element";
+  style: "appearance.style";
+  scripts: ["scripts/beacon.script"];
+  entry: {position:[0,1.65,3],target:[0,1.65,0]};
+  environment: {background:"#101B22",grid:false};
+  walk: {min:[-4.3,.1,-3.7],max:[4.3,4,3.6],eyeHeight:1.65,speed:1.6};
+  portals: [{id:"hello_gate",address:"link://local/hello-world",position:[2.9,1.3,-3],size:[1.5,2.6,.6]}];
+}

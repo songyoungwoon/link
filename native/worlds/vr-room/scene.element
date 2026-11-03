@@ -1,0 +1,27 @@
+// A small, stationary reference scene for OpenXR head and controller checks.
+scene {
+  object room {
+    component architecture {
+      element floor { geometry:{type:"box",size:[9,.2,8]};position:[0,-.1,0];style:"floor"; }
+      element back_wall {geometry:{type:"box",size:[9,3.6,.12]};position:[0,1.8,-4];style:"wall";}
+      element left_wall {geometry:{type:"box",size:[.12,3.6,8]};position:[-4.5,1.8,0];style:"wall";}
+      element left_marker {geometry:{type:"box",size:[.04,2.7,.04]};position:[-3.9,1.35,-3.88];style:"accent";}
+      element right_marker {geometry:{type:"box",size:[.04,2.7,.04]};position:[3.9,1.35,-3.88];style:"accent";}
+      element floor_line {geometry:{type:"box",size:[7.6,.008,.035]};position:[0,.006,-2.4];style:"accent";}
+      element title {geometry:{type:"plane",size:[3.8,.65]};position:[0,2.85,-3.9];text:"LINK / VR";style:"label";}
+      element instructions {geometry:{type:"plane",size:[3.8,1.25]};position:[-2.3,1.75,-3.9];text:"FIRST CONTACT\nLeft stick: walk  |  Right stick: turn\nPoint + trigger: change the light\nA / X: recenter  |  B: exit VR";style:"label";}
+      element portal_frame {geometry:{type:"frame",size:[1.8,2.7],border:.065,depth:.1};position:[2.9,1.35,-3];style:"accent";}
+      element portal_sign {geometry:{type:"plane",size:[1.7,.35]};position:[2.9,2.95,-3];text:"HELLO WORLD";style:"label";}
+    }
+  }
+  object beacon {
+    component beacon_control {
+      name: "Point and select the light";
+      state:{active:false};
+      script:"scripts/beacon.script";
+      element pedestal {geometry:{type:"cylinder",radius:.42,radiusTop:.42,height:.65};position:[0,.325,0];style:"pedestal";}
+      element beacon_sphere {geometry:{type:"sphere",radius:.32};position:[0,1.05,0];style:"accent";}
+      element interaction_label {geometry:{type:"plane",size:[1.7,.3]};position:[0,.66,.45];text:"POINT + TRIGGER";style:"label";}
+    }
+  }
+}

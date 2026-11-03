@@ -1,0 +1,9 @@
+on onInteract(ctx, event) {
+  let active = !ctx.getState().active;
+  ctx.setState({active:active});
+  if (active) {
+    ctx.setStyle("beacon_sphere", {color:"#FFD18B",emission:2});
+  } else {
+    ctx.setStyle("beacon_sphere", {color:"#71D9C4",emission:1.2});
+  }
+}
