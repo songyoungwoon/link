@@ -1,0 +1,6 @@
+defaults { color:"#B8C8C9";roughness:.7; }
+material floor {color:"#596C72";roughness:.9;}
+material wall {color:"#243A43";roughness:.8;}
+material pedestal {color:"#9AABAA";roughness:.5;metalness:.15;}
+material accent {color:"#71D9C4";roughness:.4;emission:1.2;}
+material label {color:"#E3F4EF";textBackground:false;emission:.3;}

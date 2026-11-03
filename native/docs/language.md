@@ -84,6 +84,8 @@ address는 절대 LINK 주소 또는 `/hello-world`처럼 현재 authority 기�
 
 진입 판정은 이전 눈 위치에서 새 눈 위치까지의 선분과 상자를 비교하여 가장 먼저 만나는 포탈을 선택합니다. 한 프레임에 얇은 상자를 통과하는 경우도 감지하며, 시작점이 이미 그 포탈 안이면 반복 진입으로 처리하지 않습니다. walk·portals를 선언하지 않은 기존 Room A/B는 변경하지 않습니다.
 
+선택 `raycast:false`는 해당 노드와 자손을 선택 광선에서 제외합니다. 손에 붙는 무기와 HUD가 세계의 클릭·트리거 선택을 가로막지 않도록 사용할 수 있습니다.
+
 공간 최상위는 Object이며 Object 자식은 Component, Component 자식은 Component·Element, Element는 잎입니다. ID는 모든 kind를 통틀어 공간 내에서 유일합니다. 모든 노드는 `name`, `position`, `rotation`, `scale`, `visible`을 선택 필드로 가집니다.
 
 | kind | 전용 필드 |
@@ -309,7 +311,7 @@ KiB는 1,024 bytes입니다. 논리 데이터 크기는 숫자 8 bytes, bool·nu
 
 ## 실험 확장 particles-v1
 
-`world.link`에 `extensions: ["particles-v1"];`를 선언하면 입자 형상과 API를 사용할 수 있습니다. 현재 허용 확장은 이 문자열 하나이며 중복·미지원 확장과 확장 없이 사용한 particles 형상은 준비 단계에서 거절합니다. version은 "0.1"을 유지하고 기존 LINK TCP 전송 프레임은 바꾸지 않습니다. 확장이 없는 기존 문서의 평가 예산은 그대로입니다.
+`world.link`에 `extensions: ["particles-v1"];`를 선언하면 입자 형상과 API를 사용할 수 있습니다. 지원 확장은 `particles-v1`과 별도 [공유 게임 프로파일](../../docs/shared-state-v1.md)의 `shared-state-v1`이며 중복·미지원 확장과 확장 없이 사용한 particles 형상은 준비 단계에서 거절합니다. version은 "0.1"을 유지하고 기존 LINK TCP 전송 프레임은 바꾸지 않습니다. 확장이 없는 기존 문서의 평가 예산은 그대로입니다.
 
 particles Element는 선언 capacity만큼의 입자 데이터를 담는 잎이며 입자는 개별 노드가 아닙니다. 시스템당 capacity 2,048, 공간 전체 선언 capacity 합계 8,192입니다. position·velocity는 해당 Element의 로컬 Vec3이고 각 성분 절댓값 1,000,000 이하입니다. 반지름은 0 초과 1,000 이하, color는 #RRGGBB, 입자 state는 추정 1,024 bytes 이하의 맵이며, 루트 맵·컨테이너·스칼라·null을 포함한 재귀 Value 개수 최대 64, 루트 깊이 0 기준 최대 깊이 16을 적용합니다. 부모 transform·visible을 렌더링에 적용합니다. 현재 렌더러는 입자 집합을 카메라를 향한 원판으로 그립니다. opacity·emission 광륜·wireframe을 시스템 Style에서 적용하고, 조명을 받지 않는 원판에는 roughness·metalness·textBackground를 적용하지 않습니다. wireframe에서는 광륜을 생략합니다. 개별 입자의 메시·노드 클릭·물리 충돌은 제공하지 않습니다. 입자 집합 클릭은 시스템 Element의 targetId로 기존 소유 Script에 전달합니다.
 
@@ -329,3 +331,37 @@ systemId는 particles Element의 문자열 ID입니다. 입자 ID는 Runtime 전
 각 생명주기 단계 시작에 읽기 스냅샷을 고정하고 모든 콜백이 끝난 뒤 예약 변경을 반영합니다. 생성 입자는 다음 단계부터 조회되며 삭제 예약한 입자는 이번 스냅샷에 남습니다. particleCount만 예약 개수를 포함합니다. onUpdate에서는 변경 반영 뒤 position += velocity × deltaSeconds, age += deltaSeconds로 자동 적분합니다. 노드 state·transform의 기존 즉시 변경 규칙은 유지합니다. Script 오류 전에 검증된 예약 변경은 반영합니다. 적분 결과의 좌표 범위 오류는 해당 입자 단계를 중단하고 reload까지 입자 API를 중지합니다.
 
 확장 공간의 콜백은 65,536 평가 단계, 공간 전체 한 단계는 262,144 평가 단계입니다. 한 단계 생성 256회, 생성·변경·삭제 합계 4,096회, 이웃 후보 검사 100,000회를 제한합니다. 파일·노드·store·지역 값 예산도 계속 적용합니다. 입자 계산과 난수 상태는 방문자별이며 reload 때 초기화합니다. 프레임 간격과 입력이 다르면 결과도 달라질 수 있으며 서버 공유 상태·과학적 정확성·생물학적 생명·완전한 프로세스 격리를 보장하지 않습니다.
+
+## Authoring tooling profile: link-authoring-v1
+
+기존 World Standards v0.1의 문법과 실행 의미는 유지합니다. AI와 시각적 편집기는
+[Authoring v1](../../docs/authoring-v1.md)의 객체 조회, revision 확인, 검증된 부분 수정 계약을
+공유합니다. 이 제작 계약의 버전은 월드 문서의 `version: "0.1"`과 별개입니다.
+`LINKAuthor`와 LINK Architect는 같은 v0.1 로더를 사용하며, 새 제작 기능을 사용하기 위해
+기존 월드를 변환할 필요가 없습니다. 미지원 월드 문법이나 실행 API를 임의로 생성하지 마세요.
+
+
+## v0.1 실행 순서와 재현 규칙
+
+이 절은 기존 참조 구현의 동작을 명시하며 기존 월드의 실행 방식을 변경하지 않습니다.
+
+- scene의 노드 순서는 선언 순서의 깊이 우선 전위 순회입니다. Script 바인딩은 이 순서로
+  생성되며 `onStart`와 각 `onUpdate`는 활성 바인딩 순서로 호출됩니다. 종료 시 `onDestroy`는
+  바인딩의 역순으로 한 번씩 시도합니다. 동일 Script 파일을 사용해도 저장소는 바인딩별입니다.
+- 일반 노드의 상태·변환·Style 변경은 API 호출 시 반영됩니다. 따라서 뒤의 바인딩은 앞의
+  바인딩이 변경한 값을 읽을 수 있습니다. `particles-v1` 입자의 읽기 스냅샷과 단계 종료 시
+  반영 규칙은 별개이며 앞 절을 따릅니다. 맵의 순회 순서를 장면 바인딩 순서로 사용하지 않습니다.
+- `ctx.random()`은 `particles-v1` Runtime 전체가 공유하는 32-bit unsigned xorshift32 상태입니다.
+  새 Runtime의 시드는 `0x4C494E4B`이고, 매 호출마다 순서대로 `s ^= s << 13`, `s ^= s >> 17`,
+  `s ^= s << 5`를 적용합니다. 각 결과는 unsigned 32-bit로 제한하며 반환값은 `s / 4294967296`입니다.
+  바인딩마다 별도 시드가 있는 것이 아니고 reload와 새 미리보기는 새 Runtime으로 시작합니다.
+- 평가 단계는 각 실행한 문장 하나, 평가한 식 하나마다 1씩 소비합니다. `ctx` API 호출은
+  Call 식·평가한 인수의 비용에 더해 API 디스패치 전 1을 소비합니다. for-of는 반복마다 1,
+  `range(n)`은 생성한 원소마다 1을 추가 소비합니다. 단락 평가로 실행하지 않은 식과 선택하지
+  않은 if 분기는 소비하지 않습니다. 단계 한도에 도달한 뒤 다음 단계를 시도하면 오류입니다.
+- 같은 시드만으로 다른 프레임 간격·입력 순서의 시뮬레이션이 같아지는 것은 아닙니다.
+  플랫폼별 수학 함수·부동소수점 결과의 bit 단위 동일성도 이 프로필에서 보장하지 않습니다.
+
+## 실험 공유 게임 프로파일 shared-state-v1
+
+`extensions:["shared-state-v1"]`은 첫 협동 RPG의 원격 상태 연결을 허용합니다. `ctx.getSharedState()`·`ctx.sendAction(kind,payload)`·`ctx.getViewer()`·`ctx.setText(id,text)`와 `str(value)`를 사용할 수 있습니다. 이 API와 프레임·권한·자원 한계는 [공유 상태 연결 규격](../../docs/shared-state-v1.md)에 설명합니다. 기존 문서와 Script 생명주기는 유지하며, 이 프로파일은 실험용 게임 스키마입니다.

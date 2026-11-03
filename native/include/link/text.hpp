@@ -13,6 +13,7 @@ public:
   Token expectKind(TokenKind,const std::string& description);
   Value value(std::size_t depth=0);
   bool done() const;
+  std::size_t position() const noexcept {return index_;}
 private: std::vector<Token> tokens_; std::size_t index_=0;
 };
 } // namespace linkworld

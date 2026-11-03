@@ -49,6 +49,8 @@ first-world/
 
 브라우저는 실행 중 세계 문서를 읽습니다. 세계의 구조·동작·외형을 편집할 때 브라우저를 재컴파일하지 않아도 됩니다.
 
+시각적 제작 도구 **[LINK Architect](docs/architect.md)**와 LINKAuthor CLI는 Browser·Server와 나란히 두는 독립 `link-architect` 프로젝트에서 제공합니다. 공통 **[authoring-v1 계약](docs/authoring-v1.md)**과 [AI 제작 가이드](docs/guides/ai-authoring.md)는 이곳에도 유지하며, 도구 예제는 Architect 프로젝트 루트에서 실행합니다. 기존 제작 문법과 LINK 프로토콜 버전은 바꾸지 않습니다.
+
 **[제작 가이드](docs/guides/README.md)**와 **[실행 가능한 first-world 예제](docs/guides/examples/first-world/world.link)**로 시작하세요. 전체 문법·API·검증·예산은 [언어 명세](native/docs/language.md)에 기록합니다.
 
 ## LINK Browser 실행
@@ -88,6 +90,14 @@ ctest --preset release
 ```
 
 `--worlds`는 명시적인 로컬 루트를 선택하고 각 문서의 상대 참조는 해당 공간 내부에서 해석합니다. [LINK Protocol 로컬 주소 명세](docs/link-local-v0.1.md)를 참고하세요. 저장소 위치가 바뀌면 빌드 도우미가 이전 CMake 경로를 다시 구성하며, `-Fresh -Test`로 새 구성을 요청할 수도 있습니다.
+
+## 공유 세계와 RPG (실험적)
+
+`shared-state-v1` 세계는 원격 LINK 서버의 플레이어·몬스터 상태를 받아 Script와 화면에 연결합니다. 행동은 서버로 전달하고 체력·보상은 서버가 판정합니다. [공유 상태·Script 연결 규격](docs/shared-state-v1.md)을 참고하세요. 같은 PC에서 여러 캐릭터를 시험할 때에는 `--profile alice --player-name Alice`처럼 다른 프로필을 사용합니다.
+
+## Windows PC VR (실험적)
+
+OpenXR 모드로 Windows PC에서 기존 LINK 세계를 렌더링하고 Quest Link·Air Link로 연결한 헤드셋에서 봅니다. `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-vr.ps1 -Test`로 별도 빌드한 뒤 [LINK_VR_START.cmd](LINK_VR_START.cmd)로 `build/vr`의 작은 `vr-room` 예제를 엽니다. **F8**로 VR을 켜고 끄며 **F9**로 시점을 다시 맞춥니다. 최신 기본 빌드의 일반 `LINK_START.cmd`에서도 월드를 연 뒤 **F8**로 VR을 시작할 수 있습니다. World Standards v0.1과 LINK TCP는 그대로 유지합니다. [VR 설정·조작·진단 안내](docs/vr.md)를 참고하세요. Quest 3와 Air Link에서 기존 공간의 VR 사용은 사용자 실기기 확인을 마쳤으며, 새로운 게임의 실기기 성능은 별도로 확인합니다. 합성 런타임 검사는 실기기 검증과 구분합니다.
 
 ## LAN으로 다른 컴퓨터의 세계 열기
 
@@ -158,7 +168,7 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 - 버전별 세계 계약과 상호운용성 요구 구체화.
 - DNS·서버 발견, TLS 전송, 인증, 상호운용 가능한 프로토콜 프로파일.
 - 공간 권한·강화된 실행 격리·공유 상태.
-- 다른 네이티브 플랫폼과 이후 몰입형 입력·렌더링.
+- 다른 네이티브 플랫폼과 몰입형 입력·렌더링의 확장.
 
 이는 현재 로컬·LAN 개발본 이후의 프로젝트 방향입니다. 공개 표준은 비전이며 v0.1은 그 아이디어를 실제 브라우저에서 시험하는 출발점입니다.
 

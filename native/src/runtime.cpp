@@ -27,6 +27,9 @@ struct Runtime::Binding {
   Value context; bool active=true,destroyed=false;
 };
 Runtime::Runtime(std::shared_ptr<const World> world,LogFn log):world_(std::move(world)),log_(std::move(log)) {
+  viewer_=Value::Map{{"position",vecValue({0,1.65,0})},{"rotation",vecValue({0,0,0})},{"forward",vecValue({0,0,-1})},
+    {"weaponPosition",vecValue({.28,1.35,-.55})},{"weaponRotation",vecValue({0,0,0})}};
+
   if(std::find(world_->extensions.begin(),world_->extensions.end(),"particles-v1")!=world_->extensions.end()) particles_=std::make_unique<ParticleEngine>(*world_);
   for(const auto& definition:world_->nodes) {
     if(index_.contains(definition.id))throw Error(definition.location,"Duplicate runtime ID: "+definition.id);
@@ -104,6 +107,10 @@ std::size_t Runtime::particleCount() const {
   for(std::size_t i=0;i<nodes_.size();++i)total+=particles_->live(i).size();
   return total;
 }
+void Runtime::setSharedState(Value::Map snapshot){validateState(snapshot);sharedState_=std::move(snapshot);}
+void Runtime::setViewerState(Value::Map viewer){validateState(viewer);viewer_=std::move(viewer);}
+void Runtime::setActionSink(ActionSink sink){actionSink_=std::move(sink);}
+std::map<std::string,std::string> Runtime::takeTextChanges(){auto result=std::move(textChanges_);textChanges_.clear();return result;}
 void Runtime::beginPhase() {
   phaseSteps_=262144;
   if(particles_&&!simulationFailed_) {
@@ -172,6 +179,24 @@ Value Runtime::api(std::size_t bindingIndex,const std::string& method,const std:
       if(limit<1||limit>64||std::floor(limit)!=limit)throw std::runtime_error("Neighbor limit must be an integer between 1 and 64");
       return numericIds(particles_->neighbors(args[0].string(),particleId(1),args[2].number(),static_cast<std::size_t>(limit)));
     }
+  }
+  if(method=="getSharedState"){
+    countArgs(args,0,0);return sharedState_?Value(*sharedState_):Value();
+  }
+  if(method=="getViewer"){countArgs(args,0,0);return viewer_;}
+  if(method=="sendAction"){
+    countArgs(args,2,2);
+    if(std::find(world_->extensions.begin(),world_->extensions.end(),"shared-state-v1")==world_->extensions.end())throw std::runtime_error("sendAction requires shared-state-v1");
+    const auto& kind=args[0].string();const auto& payload=args[1].map();
+    if(kind.empty()||kind.size()>64||Value(payload).bytes()>4096)throw std::runtime_error("Shared action exceeds its budget");
+    return actionSink_?actionSink_(kind,payload):false;
+  }
+  if(method=="setText"){
+    countArgs(args,2,2);auto& node=find(args[0].string());const auto& text=args[1].string();
+    if(node.definition.kind!=Kind::Element||node.definition.geometry.type!=Geometry::Type::Plane||node.definition.text.empty()||!node.definition.image.empty())throw std::runtime_error("setText requires an existing text plane");
+    if(text.size()>Limits::textBytes||text.find('\0')!=std::string::npos)throw std::runtime_error("Text byte budget exceeded or embedded NUL");
+    const std::string content=text.empty()?" ":text;
+    if(node.definition.text!=content){node.definition.text=content;textChanges_.insert_or_assign(node.definition.id,content);}return {};
   }
   if(method=="find"){countArgs(args,1,1);return find(args[0].string()).definition.id;}
   if(method=="getState"){countArgs(args,0,1);return find(target(0)).state;}

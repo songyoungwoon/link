@@ -34,9 +34,9 @@ const std::map<std::string,std::vector<std::string>> hookParameters={
   {"onInteract",{"ctx","event"}}, {"onDestroy",{"ctx"}}
 };
 const std::set<std::string> builtinNames={"min","max","abs","clamp","mix","len","range","sqrt","sin","cos",
-  "vadd","vsub","vmul","dot","normalize","length"};
+  "vadd","vsub","vmul","dot","normalize","length","str"};
 const std::set<std::string> apiNames={"getState","setState","getTransform","setTransform","find","setStyle","clearStyle","log",
-  "spawnParticle","removeParticle","setParticle","getParticle","particleIds","neighbors","particleCount","random"};
+  "spawnParticle","removeParticle","setParticle","getParticle","particleIds","neighbors","particleCount","random","getSharedState","sendAction","getViewer","setText"};
 constexpr std::size_t maxForEachItems=2048;
 bool reserved(const std::string& name) {
   return name=="ctx" || name=="deltaSeconds" || name=="event" || name=="true" || name=="false" || name=="null" ||
@@ -424,6 +424,10 @@ struct ScriptInstance::Impl {
         const std::size_t arity=(name=="clamp" || name=="mix")?3:
           (name=="min" || name=="max" || name=="vadd" || name=="vsub" || name=="vmul" || name=="dot")?2:1;
         if(arguments.size()!=arity) throw Error(expression.location,"wrong argument count for builtin '"+name+"'");
+        if(name=="str") {
+          const auto result=std::holds_alternative<std::string>(arguments[0].data)?arguments[0].string():arguments[0].display();
+          if(result.size()>Limits::stringBytes)throw Error(expression.location,"String byte budget exceeded");return result;
+        }
         if(name=="len") {
           if(const auto* array=std::get_if<Value::Array>(&arguments[0].data)) return static_cast<double>(array->size());
           if(const auto* text=std::get_if<std::string>(&arguments[0].data)) return static_cast<double>(text->size());

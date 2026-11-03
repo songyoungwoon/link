@@ -174,3 +174,7 @@ Script는 이 전용 문법의 AST 인터프리터입니다. JavaScript나 Lua�
 기본 콜백의 문장·식 평가는 최대 4,096단계, 호출 깊이는 16입니다. `particles-v1` 확장 공간은 콜백별 65,536단계와 공간 전체 단계당 262,144단계를 적용합니다. 바인딩의 store와 현재 콜백 값·인수 합계는 추정 64KiB, 노드 state와 config는 각각 추정 64KiB입니다. Script 파일은 최대 128KiB, 공간당 등록 파일은 최대 16개입니다. 문자열·맵 키는 각각 최대 8,192 UTF-8 bytes입니다. 자세한 예산 계산과 문법은 [제작 언어 명세](../../native/docs/language.md)를 참고합니다.
 
 첫 수정으로 config의 `speed:45`를 `speed:90`으로 바꿔 봅니다. 다음에는 `activeColor`를 바꾸고 클릭을 두 번 해 봅니다. 매번 저장 후 새로 고침하여 초기 상태부터 확인하면 설정·상태·외형의 관계를 익히기 쉽습니다.
+
+## 공유 게임 상태와 동적 안내문
+
+실험적 `shared-state-v1` 세계에서는 `ctx.getSharedState()`로 서버 상태를 읽고 `ctx.sendAction("attack",{target:"slime_0"})`처럼 행동 의도를 보냅니다. `ctx.getViewer()`는 로컬 머리·무기 위치를, `ctx.setText(id,text)`는 기존 text plane의 변경을 지원합니다. 숫자는 `str(value)`로 문자열로 바꿉니다. 체력과 보상은 서버가 결정합니다. [프로파일과 전체 제한](../shared-state-v1.md)을 확인하세요.

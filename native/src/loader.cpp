@@ -181,12 +181,13 @@ Geometry geometry(const Field& field) {
   else throw Error(field.location,"unsupported geometry type '"+type+"'");return result;
 }
 void applyNodeFields(NodeDefinition& node,const Fields& fields) {
-  if(node.kind==Kind::Element)allowed(fields,{"name","position","rotation","scale","visible","geometry","style","classes","image","text"});
-  else allowed(fields,{"name","position","rotation","scale","visible","state","script","config"});
+  if(node.kind==Kind::Element)allowed(fields,{"name","position","rotation","scale","visible","geometry","style","classes","image","text","raycast"});
+  else allowed(fields,{"name","position","rotation","scale","visible","state","script","config","raycast"});
   node.name=node.id;
   for(const auto& [name,field]:fields) {
     if(name=="name")node.name=text(field,name);else if(name=="position")node.transform.position=valueVec3(field.value,field.location);else if(name=="rotation")node.transform.rotation=valueVec3(field.value,field.location);else if(name=="scale")node.transform.scale=valueVec3(field.value,field.location);
     else if(name=="visible"){if(!std::holds_alternative<bool>(field.value.data))throw Error(field.location,"visible must be bool");node.transform.visible=field.value.boolean();}
+    else if(name=="raycast"){node.raycast=field.value.boolean();}
     else if(name=="state")node.state=dataMap(field,name);else if(name=="config")node.config=dataMap(field,name);else if(name=="script")node.script=text(field,name);
     else if(name=="geometry")node.geometry=geometry(field);else if(name=="classes")node.classes=strings(field,name,64,true);else if(name=="style"){node.style=text(field,name);if(!identifier(node.style))throw Error(field.location,"style must name a material identifier");}
     else if(name=="image")node.image=text(field,name);
@@ -254,7 +255,8 @@ std::string resolvePortalAddress(const std::string& address,const std::string& c
   else parseRemoteLink(result);
   return result;
 }
-std::shared_ptr<const World> loadWorld(const std::string& address,const std::filesystem::path& worldsRoot,std::stop_token stop) {
+static std::shared_ptr<const World> loadWorldImpl(const std::string& address,const std::filesystem::path& worldsRoot,std::stop_token stop,const std::string* elementOverride) {
+  if(elementOverride&&!address.starts_with("link://local/"))throw Error({address,1,1},"authoring overlays require a local LINK world");
   cancelled(stop,address);auto result=std::make_shared<World>();result->address=address;
   std::shared_ptr<RemoteSnapshot> snapshot;
   if(address.starts_with("link://local/"))result->directory=resolveLink(address,worldsRoot);
@@ -265,7 +267,7 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
   allowed(fields,{"version","id","name","elements","style","scripts","entry","views","environment","walk","portals","extensions"});const auto version=text(required(fields,"version",keyword.location),"version");if(version!="0.1")throw Error(fields.at("version").location,"unsupported version '"+version+"'");
   if(const auto found=fields.find("extensions");found!=fields.end()){
     result->extensions=strings(found->second,"extensions",16);
-    for(const auto& extension:result->extensions)if(extension!="particles-v1")throw Error(found->second.location,"unsupported world extension '"+extension+"'");
+    for(const auto& extension:result->extensions)if(extension!="particles-v1"&&extension!="shared-state-v1")throw Error(found->second.location,"unsupported world extension '"+extension+"'");
   }
   result->id=text(required(fields,"id",keyword.location),"id");result->name=text(required(fields,"name",keyword.location),"name");
   const auto elements=text(required(fields,"elements",keyword.location),"elements");const auto style=text(required(fields,"style",keyword.location),"style");const auto scripts=strings(required(fields,"scripts",keyword.location),"scripts",Limits::scripts);
@@ -318,7 +320,7 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
   }
   const auto elementsFile=resource(elements,Limits::documentBytes);const auto styleFile=resource(style,Limits::documentBytes);std::vector<std::filesystem::path> scriptFiles;
   for(const auto& script:scripts){cancelled(stop,address);const auto file=resource(script,Limits::scriptBytes);for(const auto& prior:scriptFiles)if(sameComponent(file,prior))throw Error(fields.at("scripts").location,"duplicate resolved Script resource");scriptFiles.push_back(file);}
-  const auto elementSource=read(elementsFile,Limits::documentBytes,stop,label(elements,elementsFile));parseScene(*result,elementSource,label(elements,elementsFile),stop);
+  const auto elementSource=elementOverride?*elementOverride:read(elementsFile,Limits::documentBytes,stop,label(elements,elementsFile));parseScene(*result,elementSource,label(elements,elementsFile),stop);
   const auto styleSource=read(styleFile,Limits::documentBytes,stop,label(style,styleFile));parseStyles(*result,styleSource,label(style,styleFile),stop);
   const std::set<std::string> declared(scripts.begin(),scripts.end());
   std::size_t particleCapacity=0;
@@ -343,4 +345,6 @@ std::shared_ptr<const World> loadWorld(const std::string& address,const std::fil
   for(std::size_t i=0;i<scripts.size();++i){const auto source=read(scriptFiles[i],Limits::scriptBytes,stop,label(scripts[i],scriptFiles[i]));cancelled(stop,address);result->programs.emplace(scripts[i],parseScript(source,label(scripts[i],scriptFiles[i])));cancelled(stop,address);}
   cancelled(stop,address);if(snapshot)snapshot->session.close();return result;
 }
+std::shared_ptr<const World> loadWorld(const std::string& address,const std::filesystem::path& worldsRoot,std::stop_token stop){return loadWorldImpl(address,worldsRoot,stop,nullptr);}
+std::shared_ptr<const World> loadWorldElementOverride(const std::string& address,const std::filesystem::path& worldsRoot,const std::string& elements,std::stop_token stop){return loadWorldImpl(address,worldsRoot,stop,&elements);}
 } // namespace linkworld
