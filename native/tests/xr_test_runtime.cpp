@@ -38,11 +38,14 @@ struct Action {std::string name;XrActionType type;};
 struct Space {XrReferenceSpaceType type=XR_REFERENCE_SPACE_TYPE_LOCAL;int hand=-1;};
 struct Chain {std::array<GLuint,2> images{};unsigned width=0,height=0,index=0,number=0;int phase=0;};
 struct State {
-  bool session=false,actionSet=false,running=false,focused=false,focusAnnounced=false,visibleOnly=false;int framePhase=0;
+  bool session=false,actionSet=false,running=false,focused=false,focusAnnounced=false,visibleOnly=false,untrackedControllers=false,rejectBindings=false;int framePhase=0;
   unsigned frames=0,waits=0,begins=0,ends=0,submitted=0,acquired=0,imageWaits=0,released=0,haptics=0,errors=0;
   unsigned trackedLossSamples=0,heldLossSamples=0,neutralSamples=0;
   unsigned unfocusedFrames=0,focusedFrames=0,focusedSyncs=0,unfocusedInputCalls=0,focusHeldSamples=0,focusNeutralSamples=0;
+  unsigned menuActionQueries=0,menuFocusHeldSamples=0,menuHeldAfterLossSamples=0,menuNeutralSamples=0;
+  unsigned menuInactiveSamples=0,menuHeldAfterInactiveSamples=0,menuTouchBindings=0,menuIndexBindings=0;
   unsigned createdChains=0,destroyedChains=0,createdSpaces=0,destroyedSpaces=0;
+  unsigned validUntrackedPoseSamples=0,inactivePoseSamples=0,moveStickSamples=0,turnStickSamples=0,profileQueries=0,rejectedBindingSuggestions=0;
   std::array<std::uint64_t,2> eyeHash{};std::array<bool,2> eyeWritten{};std::string firstError;
   std::deque<XrSessionState> events;std::vector<Chain*> chains;std::vector<Space*> spaces;std::vector<Action*> actions;
   std::map<std::string,XrPath> paths;
@@ -56,6 +59,8 @@ XrResult failure(const char* message,XrResult result=XR_ERROR_CALL_ORDER_INVALID
 XrResult enumeration(std::uint32_t capacity,std::uint32_t* count,std::uint32_t expected){if(!count)return XR_ERROR_VALIDATION_FAILURE;*count=expected;return capacity&&capacity<expected?XR_ERROR_SIZE_INSUFFICIENT:XR_SUCCESS;}
 bool lost(){return state->frames>=40&&state->frames<=45;}
 bool held(){const auto f=state->frames;return (f>=1&&f<=14)||(f>=20&&f<=35)||(f>=40&&f<=55)||(f>=66&&f<=75);}
+bool menuHeld(){const auto f=state->frames;return f<=14||(f>=20&&f<=55)||(f>=66&&f<=75)||(f>=80&&f<=89);}
+std::string pathName(XrPath value){for(const auto& [name,path]:state->paths)if(path==value)return name;return {};}
 int hand(XrPath path){auto found=state->paths.find("/user/hand/right");return found!=state->paths.end()&&found->second==path?1:0;}
 void report(){
   wchar_t path[32768]{};const auto length=GetEnvironmentVariableW(L"LINK_XR_TEST_REPORT",path,32768);if(!length||length>=32768)return;
@@ -65,8 +70,13 @@ void report(){
   out<<"  \"waitFrames\": "<<state->waits<<", \"beginFrames\": "<<state->begins<<", \"endFrames\": "<<state->ends<<",\n";
   out<<"  \"submittedFrames\": "<<state->submitted<<", \"acquiredImages\": "<<state->acquired<<", \"waitedImages\": "<<state->imageWaits<<", \"releasedImages\": "<<state->released<<",\n";
   out<<"  \"visibleOnly\": "<<(state->visibleOnly?"true":"false")<<",\n";
+  out<<"  \"untrackedControllers\": "<<(state->untrackedControllers?"true":"false")<<", \"validUntrackedPoseSamples\": "<<state->validUntrackedPoseSamples<<", \"inactivePoseSamples\": "<<state->inactivePoseSamples<<",\n";
+  out<<"  \"rejectBindings\": "<<(state->rejectBindings?"true":"false")<<", \"rejectedBindingSuggestions\": "<<state->rejectedBindingSuggestions<<",\n";
+  out<<"  \"moveStickSamples\": "<<state->moveStickSamples<<", \"turnStickSamples\": "<<state->turnStickSamples<<", \"profileQueries\": "<<state->profileQueries<<",\n";
   out<<"  \"unfocusedFrames\": "<<state->unfocusedFrames<<", \"focusedFrames\": "<<state->focusedFrames<<", \"focusedSyncs\": "<<state->focusedSyncs<<", \"unfocusedInputCalls\": "<<state->unfocusedInputCalls<<", \"focusHeldSamples\": "<<state->focusHeldSamples<<", \"focusNeutralSamples\": "<<state->focusNeutralSamples<<",\n";
   out<<"  \"haptics\": "<<state->haptics<<", \"trackingLossSamples\": "<<state->trackedLossSamples<<", \"heldAfterLossSamples\": "<<state->heldLossSamples<<", \"neutralSamples\": "<<state->neutralSamples<<",\n";
+  out<<"  \"menuActionQueries\": "<<state->menuActionQueries<<", \"menuFocusHeldSamples\": "<<state->menuFocusHeldSamples<<", \"menuHeldAfterLossSamples\": "<<state->menuHeldAfterLossSamples<<", \"menuNeutralSamples\": "<<state->menuNeutralSamples<<",\n";
+  out<<"  \"menuInactiveSamples\": "<<state->menuInactiveSamples<<", \"menuHeldAfterInactiveSamples\": "<<state->menuHeldAfterInactiveSamples<<", \"menuTouchBindings\": "<<state->menuTouchBindings<<", \"menuIndexBindings\": "<<state->menuIndexBindings<<",\n";
   out<<"  \"createdSwapchains\": "<<state->createdChains<<", \"destroyedSwapchains\": "<<state->destroyedChains<<", \"createdSpaces\": "<<state->createdSpaces<<", \"destroyedSpaces\": "<<state->destroyedSpaces<<",\n";
   out<<"  \"leftEyeHash\": \""<<state->eyeHash[0]<<"\", \"rightEyeHash\": \""<<state->eyeHash[1]<<"\",\n";
   out<<"  \"eyeTexturesWritten\": "<<(state->eyeWritten[0]&&state->eyeWritten[1]?"true":"false")<<",\n";
@@ -77,7 +87,7 @@ RT(EnumerateInstanceExtensionProperties,const char* layer,uint32_t cap,uint32_t*
   if(layer)return XR_ERROR_API_LAYER_NOT_PRESENT;auto result=enumeration(cap,count,1);if(XR_FAILED(result)||!cap)return result;if(!values)return XR_ERROR_VALIDATION_FAILURE;
   values[0].type=XR_TYPE_EXTENSION_PROPERTIES;values[0].next=nullptr;std::strcpy(values[0].extensionName,XR_KHR_OPENGL_ENABLE_EXTENSION_NAME);values[0].extensionVersion=XR_KHR_opengl_enable_SPEC_VERSION;return XR_SUCCESS;
 }
-RT(CreateInstance,const XrInstanceCreateInfo* info,XrInstance* value){if(!info||!value||state)return XR_ERROR_INITIALIZATION_FAILED;state=new State;wchar_t visibleOnly[2]{};state->visibleOnly=GetEnvironmentVariableW(L"LINK_XR_TEST_VISIBLE_ONLY",visibleOnly,2)==1&&visibleOnly[0]==L'1';*value=instance();return XR_SUCCESS;}
+RT(CreateInstance,const XrInstanceCreateInfo* info,XrInstance* value){if(!info||!value||state)return XR_ERROR_INITIALIZATION_FAILED;state=new State;wchar_t visibleOnly[2]{};state->visibleOnly=GetEnvironmentVariableW(L"LINK_XR_TEST_VISIBLE_ONLY",visibleOnly,2)==1&&visibleOnly[0]==L'1';wchar_t untrackedControllers[2]{};state->untrackedControllers=GetEnvironmentVariableW(L"LINK_XR_TEST_UNTRACKED_CONTROLLERS",untrackedControllers,2)==1&&untrackedControllers[0]==L'1';wchar_t rejectBindings[2]{};state->rejectBindings=GetEnvironmentVariableW(L"LINK_XR_TEST_REJECT_BINDINGS",rejectBindings,2)==1&&rejectBindings[0]==L'1';*value=instance();return XR_SUCCESS;}
 RT(DestroyInstance,XrInstance){if(!state)return XR_ERROR_HANDLE_INVALID;report();for(auto p:state->chains){glDeleteTextures(2,p->images.data());delete p;}for(auto p:state->spaces)delete p;for(auto p:state->actions)delete p;delete state;state=nullptr;return XR_SUCCESS;}
 RT(GetInstanceProperties,XrInstance,XrInstanceProperties* value){value->runtimeVersion=XR_MAKE_VERSION(1,0,0);std::strcpy(value->runtimeName,runtimeName);return XR_SUCCESS;}
 RT(ResultToString,XrInstance,XrResult result,char text[XR_MAX_RESULT_STRING_SIZE]){std::snprintf(text,XR_MAX_RESULT_STRING_SIZE,"LINK_SYNTHETIC_RESULT_%d",static_cast<int>(result));return XR_SUCCESS;}
@@ -100,7 +110,7 @@ RT(CreateReferenceSpace,XrSession,const XrReferenceSpaceCreateInfo* info,XrSpace
 RT(GetReferenceSpaceBoundsRect,XrSession,XrReferenceSpaceType,XrExtent2Df* value){*value={4,4};return XR_SUCCESS;}
 RT(CreateActionSpace,XrSession,const XrActionSpaceCreateInfo* info,XrSpace* value){auto space=new Space;space->hand=hand(info->subactionPath);state->spaces.push_back(space);++state->createdSpaces;*value=reinterpret_cast<XrSpace>(space);return XR_SUCCESS;}
 RT(DestroySpace,XrSpace value){auto p=reinterpret_cast<Space*>(value);auto it=std::find(state->spaces.begin(),state->spaces.end(),p);if(it==state->spaces.end())return XR_ERROR_HANDLE_INVALID;state->spaces.erase(it);delete p;++state->destroyedSpaces;return XR_SUCCESS;}
-RT(LocateSpace,XrSpace value,XrSpace,XrTime time,XrSpaceLocation* location){if(time!=displayTime())return failure("LocateSpace wrong predicted display time");auto space=reinterpret_cast<Space*>(value);location->locationFlags=tracked;if(space->hand<0)location->pose=pose(.005f*std::sin(state->frames*.03f),1.65f,0);else{location->pose=pose(space->hand?0.f:-.25f,1.5f,-.25f);if(lost())location->locationFlags=0;}return XR_SUCCESS;}
+RT(LocateSpace,XrSpace value,XrSpace,XrTime time,XrSpaceLocation* location){if(time!=displayTime())return failure("LocateSpace wrong predicted display time");auto space=reinterpret_cast<Space*>(value);location->locationFlags=tracked;if(space->hand<0)location->pose=pose(.005f*std::sin(state->frames*.03f),1.65f,0);else{location->pose=pose(space->hand?0.f:-.25f,1.5f,-.25f);if(state->untrackedControllers)location->locationFlags=XR_SPACE_LOCATION_POSITION_VALID_BIT|XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;else if(lost())location->locationFlags=0;}return XR_SUCCESS;}
 RT(LocateViews,XrSession,const XrViewLocateInfo* info,XrViewState* viewState,uint32_t cap,uint32_t* count,XrView* views){if(info->displayTime!=displayTime())return failure("LocateViews wrong predicted display time");auto r=enumeration(cap,count,2);if(XR_FAILED(r)||!cap)return r;viewState->viewStateFlags=XR_VIEW_STATE_POSITION_VALID_BIT|XR_VIEW_STATE_ORIENTATION_VALID_BIT|XR_VIEW_STATE_POSITION_TRACKED_BIT|XR_VIEW_STATE_ORIENTATION_TRACKED_BIT;for(unsigned i=0;i<2;++i){views[i].pose=pose((i?.032f:-.032f)+.005f*std::sin(state->frames*.03f),1.65f,0);views[i].fov={-.70f,.70f,.70f,-.70f};}return XR_SUCCESS;}
 RT(EnumerateSwapchainFormats,XrSession,uint32_t cap,uint32_t* count,int64_t* values){auto r=enumeration(cap,count,1);if(XR_SUCCEEDED(r)&&cap)values[0]=GL_RGBA8;return r;}
 RT(CreateSwapchain,XrSession,const XrSwapchainCreateInfo* info,XrSwapchain* value){if(info->format!=GL_RGBA8||info->sampleCount!=1||info->arraySize!=1||info->faceCount!=1||info->mipCount!=1)return XR_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED;auto chain=new Chain;chain->width=info->width;chain->height=info->height;chain->number=state->createdChains++;GLint old=0;glGetIntegerv(GL_TEXTURE_BINDING_2D,&old);glGenTextures(2,chain->images.data());const std::vector<unsigned char> initial(static_cast<std::size_t>(info->width)*info->height*4,0);for(auto texture:chain->images){glBindTexture(GL_TEXTURE_2D,texture);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,info->width,info->height,0,GL_RGBA,GL_UNSIGNED_BYTE,initial.data());}glBindTexture(GL_TEXTURE_2D,old);if(glGetError()!=GL_NO_ERROR){glDeleteTextures(2,chain->images.data());delete chain;return failure("CreateSwapchain OpenGL allocation",XR_ERROR_RUNTIME_FAILURE);}state->chains.push_back(chain);*value=reinterpret_cast<XrSwapchain>(chain);return XR_SUCCESS;}
@@ -118,14 +128,44 @@ RT(CreateActionSet,XrInstance,const XrActionSetCreateInfo*,XrActionSet* value){s
 RT(DestroyActionSet,XrActionSet){for(auto p:state->actions)delete p;state->actions.clear();state->actionSet=false;return XR_SUCCESS;}
 RT(CreateAction,XrActionSet,const XrActionCreateInfo* info,XrAction* value){auto p=new Action{info->actionName,info->actionType};state->actions.push_back(p);*value=reinterpret_cast<XrAction>(p);return XR_SUCCESS;}
 RT(DestroyAction,XrAction value){auto p=reinterpret_cast<Action*>(value);auto it=std::find(state->actions.begin(),state->actions.end(),p);if(it==state->actions.end())return XR_ERROR_HANDLE_INVALID;state->actions.erase(it);delete p;return XR_SUCCESS;}
-RT(SuggestInteractionProfileBindings,XrInstance,const XrInteractionProfileSuggestedBinding*){return XR_SUCCESS;}
+RT(SuggestInteractionProfileBindings,XrInstance,const XrInteractionProfileSuggestedBinding* info){
+  if(state->rejectBindings){++state->rejectedBindingSuggestions;return XR_ERROR_PATH_UNSUPPORTED;}
+  const auto profile=pathName(info->interactionProfile);
+  for(std::uint32_t index=0;index<info->countSuggestedBindings;++index){const auto& binding=info->suggestedBindings[index];const auto* action=reinterpret_cast<Action*>(binding.action);if(action->name!="menu_action")continue;
+    const auto path=pathName(binding.binding);
+    if(profile=="/interaction_profiles/oculus/touch_controller"){
+      if(path!="/user/hand/left/input/y/click")return failure("World menu must bind Touch left Y",XR_ERROR_PATH_UNSUPPORTED);++state->menuTouchBindings;
+    }else if(profile=="/interaction_profiles/valve/index_controller"){
+      if(path!="/user/hand/left/input/b/click")return failure("World menu must bind Index left B",XR_ERROR_PATH_UNSUPPORTED);++state->menuIndexBindings;
+    }else return failure("World menu must not invent a simple-controller input",XR_ERROR_PATH_UNSUPPORTED);
+  }
+  return XR_SUCCESS;
+}
 RT(AttachSessionActionSets,XrSession,const XrSessionActionSetsAttachInfo*){return XR_SUCCESS;}
-RT(GetCurrentInteractionProfile,XrSession,XrPath,XrInteractionProfileState* value){return rtStringToPath(instance(),"/interaction_profiles/oculus/touch_controller",&value->interactionProfile);}
+RT(GetCurrentInteractionProfile,XrSession,XrPath,XrInteractionProfileState* value){++state->profileQueries;return rtStringToPath(instance(),"/interaction_profiles/oculus/touch_controller",&value->interactionProfile);}
 RT(SyncActions,XrSession,const XrActionsSyncInfo*){if(!state->focused){++state->unfocusedInputCalls;return failure("SyncActions while unfocused",XR_SESSION_NOT_FOCUSED);}++state->focusedSyncs;if(state->framePhase!=2)return failure("SyncActions outside begun frame");return XR_SUCCESS;}
-RT(GetActionStatePose,XrSession,const XrActionStateGetInfo*,XrActionStatePose* value){if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}value->isActive=XR_TRUE;if(lost())++state->trackedLossSamples;return XR_SUCCESS;}
+RT(GetActionStatePose,XrSession,const XrActionStateGetInfo*,XrActionStatePose* value){if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}value->isActive=state->untrackedControllers&&state->frames>=60?XR_FALSE:XR_TRUE;if(state->untrackedControllers){if(value->isActive)++state->validUntrackedPoseSamples;else ++state->inactivePoseSamples;}else if(lost())++state->trackedLossSamples;return XR_SUCCESS;}
 RT(GetActionStateFloat,XrSession,const XrActionStateGetInfo* info,XrActionStateFloat* value){if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}value->isActive=XR_TRUE;value->currentState=hand(info->subactionPath)&&held()?1.f:0.f;value->changedSinceLastSync=XR_TRUE;value->lastChangeTime=displayTime();if(hand(info->subactionPath)){if(state->frames>=13&&state->frames<=14)++state->focusHeldSamples;if(state->frames>=15&&state->frames<=19)++state->focusNeutralSamples;if(state->frames>=46&&state->frames<=55)++state->heldLossSamples;if(state->frames>=56&&state->frames<=65)++state->neutralSamples;}return XR_SUCCESS;}
-RT(GetActionStateBoolean,XrSession,const XrActionStateGetInfo*,XrActionStateBoolean* value){if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}value->isActive=XR_TRUE;value->currentState=XR_FALSE;value->changedSinceLastSync=XR_FALSE;value->lastChangeTime=displayTime();return XR_SUCCESS;}
-RT(GetActionStateVector2f,XrSession,const XrActionStateGetInfo*,XrActionStateVector2f* value){if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}value->isActive=XR_TRUE;value->currentState={0,0};value->changedSinceLastSync=XR_FALSE;value->lastChangeTime=displayTime();return XR_SUCCESS;}
+RT(GetActionStateBoolean,XrSession,const XrActionStateGetInfo* info,XrActionStateBoolean* value){
+  if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}
+  value->isActive=XR_TRUE;value->currentState=XR_FALSE;value->changedSinceLastSync=XR_FALSE;value->lastChangeTime=displayTime();
+  const auto* action=reinterpret_cast<Action*>(info->action);
+  if(action->name=="menu_action"){
+    const bool left=hand(info->subactionPath)==0;const auto f=state->frames;
+    value->isActive=left&&!(f>=80&&f<=82)?XR_TRUE:XR_FALSE;value->currentState=left&&menuHeld()?XR_TRUE:XR_FALSE;value->changedSinceLastSync=XR_TRUE;
+    if(left){++state->menuActionQueries;if(f>=13&&f<=14)++state->menuFocusHeldSamples;if(f>=46&&f<=55)++state->menuHeldAfterLossSamples;if(f>=56&&f<=65)++state->menuNeutralSamples;if(f>=80&&f<=82)++state->menuInactiveSamples;if(f>=83&&f<=89)++state->menuHeldAfterInactiveSamples;}
+  }
+  return XR_SUCCESS;
+}
+RT(GetActionStateVector2f,XrSession,const XrActionStateGetInfo* info,XrActionStateVector2f* value){
+  if(!state->focused){++state->unfocusedInputCalls;return failure("Action state queried while unfocused",XR_SESSION_NOT_FOCUSED);}
+  value->isActive=XR_TRUE;value->currentState={0,0};value->changedSinceLastSync=XR_TRUE;value->lastChangeTime=displayTime();
+  // Move only after both trigger raycast checks. A neutral right stick arms the
+  // snap turn before frame95; controller poses may be inactive in this period.
+  if(hand(info->subactionPath)==0&&state->frames>=90){value->currentState={.2f,.75f};++state->moveStickSamples;}
+  if(hand(info->subactionPath)==1&&state->frames>=95&&state->frames<=100){value->currentState={.85f,0};++state->turnStickSamples;}
+  return XR_SUCCESS;
+}
 RT(ApplyHapticFeedback,XrSession,const XrHapticActionInfo*,const XrHapticBaseHeader*){if(!state->focused){++state->unfocusedInputCalls;return failure("Haptics while unfocused",XR_SESSION_NOT_FOCUSED);}++state->haptics;return XR_SUCCESS;}
 RT(StopHapticFeedback,XrSession,const XrHapticActionInfo*){return XR_SUCCESS;}
 RT(GetInstanceProcAddr,XrInstance,const char* name,PFN_xrVoidFunction* value){

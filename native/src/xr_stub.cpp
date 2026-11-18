@@ -12,6 +12,8 @@ bool OpenXrSession::focused() const noexcept{return false;}
 const char* OpenXrSession::sessionStateName() const noexcept{return "DISABLED";}
 bool OpenXrSession::exitRequested() const noexcept{return false;}
 const std::string& OpenXrSession::runtimeName() const noexcept{static const std::string name;return name;}
+const std::array<std::string,2>& OpenXrSession::interactionProfiles() const noexcept{static const std::array<std::string,2> profiles;return profiles;}
+const std::string& OpenXrSession::bindingStatus() const noexcept{static const std::string status="OpenXR disabled";return status;}
 OpenXrSession::Frame OpenXrSession::beginFrame(){return {};}
 void OpenXrSession::bindEye(std::size_t){}
 void OpenXrSession::mirror(int,int){}

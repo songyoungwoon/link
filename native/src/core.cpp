@@ -39,9 +39,11 @@ double scalar(const Value& value,const std::string& name,Location where) {
 }
 void apply(Material& material,const StylePatch& properties) {
   for(const auto& [name,value]:properties) {
-    if(name=="color")material.color=value.string();else if(name=="roughness")material.roughness=value.number();
-    else if(name=="metalness")material.metalness=value.number();else if(name=="opacity")material.opacity=value.number();
+    if(name=="color")material.color=value.string();else if(name=="roughness"){material.roughness=value.number();material.authoredRoughness=true;}
+    else if(name=="metalness"){material.metalness=value.number();material.authoredMetalness=true;}else if(name=="opacity")material.opacity=value.number();
     else if(name=="emission")material.emission=value.number();
+    else if(name=="shading")material.shading=value.string();
+    else if(name=="outline")material.outline=value.number();
     else if(name=="wireframe")material.wireframe=value.boolean();
     else if(name=="textBackground")material.textBackground=value.boolean();
   }
@@ -72,7 +74,9 @@ void validateStyle(const StylePatch& properties,Location where) {
       if(!std::holds_alternative<std::string>(value.data))throw Error(where,"color must be #RRGGBB");
       const auto& color=value.string();
       if(color.size()!=7 || color[0]!='#' || !std::all_of(color.begin()+1,color.end(),[](unsigned char c){return(c>='0'&&c<='9')||(c>='a'&&c<='f')||(c>='A'&&c<='F');}))throw Error(where,"color must be #RRGGBB");
-    } else if(name=="roughness"||name=="metalness"||name=="opacity") {scalar(value,name,where);}
+    } else if(name=="shading"){if(!std::holds_alternative<std::string>(value.data)||(value.string()!="pbr"&&value.string()!="toon"))throw Error(where,"shading must be pbr or toon");}
+    else if(name=="outline"){if(!std::holds_alternative<double>(value.data)||value.number()<0||value.number()>.04)throw Error(where,"outline must be between 0 and 0.04 metres");}
+    else if(name=="roughness"||name=="metalness"||name=="opacity") {scalar(value,name,where);}
     else if(name=="emission") {if(!std::holds_alternative<double>(value.data))throw Error(where,"emission must be a number");const auto intensity=value.number();if(intensity<0||intensity>4)throw Error(where,"emission must be finite and between 0 and 4");}
     else if(name=="wireframe"||name=="textBackground") {if(!std::holds_alternative<bool>(value.data))throw Error(where,name+" must be bool");}
     else throw Error(where,"unsupported Style property '"+name+"'");

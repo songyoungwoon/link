@@ -1,0 +1,5 @@
+# Preserve pinned upstream source and license bytes across platforms.
+third_party/cgltf/cgltf.h -text -whitespace
+third_party/cgltf/LICENSE -text
+third_party/stb_image/stb_image.h -text
+third_party/stb_image/LICENSE -text

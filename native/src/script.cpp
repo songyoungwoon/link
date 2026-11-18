@@ -31,12 +31,12 @@ struct Hook {
 };
 const std::map<std::string,std::vector<std::string>> hookParameters={
   {"onStart",{"ctx"}}, {"onUpdate",{"ctx","deltaSeconds"}},
-  {"onInteract",{"ctx","event"}}, {"onDestroy",{"ctx"}}
+  {"onInteract",{"ctx","event"}}, {"onInput",{"ctx","event"}}, {"onDestroy",{"ctx"}}
 };
 const std::set<std::string> builtinNames={"min","max","abs","clamp","mix","len","range","sqrt","sin","cos",
   "vadd","vsub","vmul","dot","normalize","length","str"};
 const std::set<std::string> apiNames={"getState","setState","getTransform","setTransform","find","setStyle","clearStyle","log",
-  "spawnParticle","removeParticle","setParticle","getParticle","particleIds","neighbors","particleCount","random","getSharedState","sendAction","getViewer","setText"};
+  "spawnParticle","removeParticle","setParticle","getParticle","particleIds","neighbors","particleCount","random","getSharedState","sendAction","getViewer","setText","playAnimation","stopAnimation"};
 constexpr std::size_t maxForEachItems=2048;
 bool reserved(const std::string& name) {
   return name=="ctx" || name=="deltaSeconds" || name=="event" || name=="true" || name=="false" || name=="null" ||
@@ -513,6 +513,7 @@ ScriptInstance::ScriptInstance(std::shared_ptr<const ScriptProgram> program,Api 
 }
 ScriptInstance::~ScriptInstance()=default;
 const Value::Map& ScriptInstance::storage() const { return impl_->persistent; }
+bool ScriptInstance::hasHook(const std::string& hook) const { return impl_->program->hooks.contains(hook); }
 void ScriptInstance::invoke(const std::string& hook,const std::vector<Value>& arguments,std::size_t* sharedRemaining,std::size_t maxSteps) {
   const auto found=impl_->program->hooks.find(hook); if(found==impl_->program->hooks.end()) return;
   if(impl_->invoking) throw Error(found->second.location,"recursive Script invocation is not supported");

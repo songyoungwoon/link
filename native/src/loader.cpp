@@ -1,4 +1,7 @@
 #include "link/loader.hpp"
+#include "link/model.hpp"
+#include "link/lighting.hpp"
+#include "link/environment.hpp"
 #include "link/remote.hpp"
 #include "link/script.hpp"
 #include "link/text.hpp"
@@ -170,6 +173,12 @@ Geometry geometry(const Field& field) {
     result.radius=positive(mapRequired(values,"radius",field.location),field.location,"particle radius");
     result.cellSize=positive(mapRequired(values,"cellSize",field.location),field.location,"particle cellSize");
   }
+  else if(type=="model"){
+    mapKeys(values,{"type","source"},field.location);result.type=Geometry::Type::Model;
+    result.model=text(Field{mapRequired(values,"source",field.location),field.location},"model source");
+    auto extension=pathText(resourcePath(result.model).extension());std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+    if(extension!=".glb")throw Error(field.location,"models-v1 requires a self-contained .glb resource");
+  }
   else if(type=="frame"){
     mapKeys(values,{"type","size","border","depth"},field.location);result.type=Geometry::Type::Frame;
     const auto& size=mapRequired(values,"size",field.location);if(!std::holds_alternative<Value::Array>(size.data)||size.array().size()!=2)throw Error(field.location,"frame size requires two numbers");
@@ -267,8 +276,9 @@ static std::shared_ptr<const World> loadWorldImpl(const std::string& address,con
   allowed(fields,{"version","id","name","elements","style","scripts","entry","views","environment","walk","portals","extensions"});const auto version=text(required(fields,"version",keyword.location),"version");if(version!="0.1")throw Error(fields.at("version").location,"unsupported version '"+version+"'");
   if(const auto found=fields.find("extensions");found!=fields.end()){
     result->extensions=strings(found->second,"extensions",16);
-    for(const auto& extension:result->extensions)if(extension!="particles-v1"&&extension!="shared-state-v1")throw Error(found->second.location,"unsupported world extension '"+extension+"'");
+    for(const auto& extension:result->extensions)if(extension!="particles-v1"&&extension!="shared-state-v1"&&extension!="input-v1"&&extension!="models-v1"&&extension!="lighting-v1"&&extension!="npc-travel-v1")throw Error(found->second.location,"unsupported world extension '"+extension+"'");
   }
+  if(std::find(result->extensions.begin(),result->extensions.end(),"npc-travel-v1")!=result->extensions.end()&&std::find(result->extensions.begin(),result->extensions.end(),"shared-state-v1")!=result->extensions.end())throw Error(keyword.location,"npc-travel-v1 and shared-state-v1 use different session profiles; declare only one");
   result->id=text(required(fields,"id",keyword.location),"id");result->name=text(required(fields,"name",keyword.location),"name");
   const auto elements=text(required(fields,"elements",keyword.location),"elements");const auto style=text(required(fields,"style",keyword.location),"style");const auto scripts=strings(required(fields,"scripts",keyword.location),"scripts",Limits::scripts);
   const auto& entryField=required(fields,"entry",keyword.location);const auto& entry=dataMap(entryField,"entry");mapKeys(entry,{"position","target"},entryField.location);result->eye=valueVec3(mapRequired(entry,"position",entryField.location),entryField.location);result->target=valueVec3(mapRequired(entry,"target",entryField.location),entryField.location);
@@ -300,9 +310,19 @@ static std::shared_ptr<const World> loadWorldImpl(const std::string& address,con
     }
   }
   if(const auto environment=fields.find("environment");environment!=fields.end()){
-    const auto& field=environment->second;const auto& settings=dataMap(field,"environment");mapKeys(settings,{"background","grid","fog"},field.location);
+    const auto& field=environment->second;const auto& settings=dataMap(field,"environment");mapKeys(settings,{"background","grid","fog","lighting"},field.location);
     if(const auto background=settings.find("background");background!=settings.end()){validateStyle({{"color",background->second}},field.location);result->background=background->second.string();}
     if(const auto grid=settings.find("grid");grid!=settings.end()){if(!std::holds_alternative<bool>(grid->second.data))throw Error(field.location,"environment grid must be bool");result->grid=grid->second.boolean();}
+    if(const auto lighting=settings.find("lighting");lighting!=settings.end()){
+      if(std::find(result->extensions.begin(),result->extensions.end(),"lighting-v1")==result->extensions.end())throw Error(field.location,"environment.lighting requires the lighting-v1 world extension");
+      result->lighting=parseLightingSettings(lighting->second,field.location);
+      if(!result->lighting->environmentMap.empty()){
+        result->lighting->environmentFile=resource(result->lighting->environmentMap,8*1024*1024);
+        cancelled(stop,address);
+        result->lighting->environment=std::make_shared<EnvironmentLighting>(loadEnvironmentLighting(result->lighting->environmentFile));
+        cancelled(stop,address);
+      }
+    }
     if(const auto fog=settings.find("fog");fog!=settings.end()){
       const Field fogField{fog->second,field.location};const auto& options=dataMap(fogField,"environment fog");mapKeys(options,{"color","start","end"},field.location);FogSettings value;value.color=result->background;
       if(const auto color=options.find("color");color!=options.end()){validateStyle({{"color",color->second}},field.location);value.color=color->second.string();}
@@ -325,8 +345,26 @@ static std::shared_ptr<const World> loadWorldImpl(const std::string& address,con
   const std::set<std::string> declared(scripts.begin(),scripts.end());
   std::size_t particleCapacity=0;
   const bool particlesEnabled=std::find(result->extensions.begin(),result->extensions.end(),"particles-v1")!=result->extensions.end();
-  for(const auto& node:result->nodes){
+  const bool modelsEnabled=std::find(result->extensions.begin(),result->extensions.end(),"models-v1")!=result->extensions.end();
+  std::size_t modelVertices=0,modelTriangles=0,instanceVertices=0,instanceTriangles=0;
+  for(auto& node:result->nodes){
     cancelled(stop,address);
+    if(node.kind==Kind::Element&&node.geometry.type==Geometry::Type::Model){
+      if(!modelsEnabled)throw Error(node.location,"model geometry requires the models-v1 world extension");
+      auto found=result->models.find(node.geometry.model);
+      if(found==result->models.end()){
+        if(result->models.size()>=16)throw Error(node.location,"world model asset count budget exceeded (maximum 16)");
+        const auto file=resource(node.geometry.model,16*1024*1024);
+        auto asset=loadModelGlb(file);
+        modelVertices+=asset->vertices;modelTriangles+=asset->triangles;
+        if(modelVertices>200000||modelTriangles>200000)throw Error(node.location,"world model geometry budget exceeded (maximum 200000 vertices or triangles)");
+        found=result->models.emplace(node.geometry.model,std::move(asset)).first;
+      }
+      const auto& asset=*found->second;instanceVertices+=asset.drawVertices;instanceTriangles+=asset.drawTriangles;
+      if(instanceVertices>300000||instanceTriangles>300000)throw Error(node.location,"instanced world model geometry budget exceeded (maximum 300000 vertices or triangles)");
+      node.geometry.modelMin=asset.minimum;node.geometry.modelMax=asset.maximum;
+      for(std::size_t axis=0;axis<3;++axis)node.geometry.size[axis]=asset.maximum[axis]-asset.minimum[axis];
+    }
     if(node.kind==Kind::Element&&node.geometry.type==Geometry::Type::Particles){
       if(!particlesEnabled)throw Error(node.location,"particles geometry requires the particles-v1 world extension");
       if(node.geometry.capacity>Limits::worldParticles-particleCapacity)throw Error(node.location,"world particle capacity budget exceeded (maximum 8192)");

@@ -30,19 +30,25 @@ Value::Map waitSnapshot(SharedSession& session,Clock::time_point deadline){while
 int run(const std::vector<std::string>& arguments){
   try{
     std::string root,address;
-    for(std::size_t index=1;index<arguments.size();++index){if(arguments[index]=="--worlds"&&index+1<arguments.size())root=arguments[++index];else if(arguments[index]=="--address"&&index+1<arguments.size())address=arguments[++index];else throw std::runtime_error("Usage: shared_world_probe --worlds ROOT --address link://IPv4:port/sao");}
+    for(std::size_t index=1;index<arguments.size();++index){if(arguments[index]=="--worlds"&&index+1<arguments.size())root=arguments[++index];else if(arguments[index]=="--address"&&index+1<arguments.size())address=arguments[++index];else throw std::runtime_error("Usage: shared_world_probe --worlds ROOT --address link://IPv4:port/link-game");}
     check(!root.empty()&&!address.empty(),"Both world root and shared address are required");
-    auto world=loadWorld("link://local/sao",utf8Path(root));check(world->nodes.size()<=Limits::nodes,"Authored world exceeds the existing node budget");
+    auto world=loadWorld("link://local/link-game",utf8Path(root));check(world->nodes.size()<=Limits::nodes,"Authored world exceeds the existing node budget");
     check(std::find(world->extensions.begin(),world->extensions.end(),"shared-state-v1")!=world->extensions.end(),"Authored RPG must declare shared-state-v1");
     std::vector<std::string> errors;Runtime runtime(world,[&](bool error,const std::string& message){if(error)errors.push_back(message);});
-    std::size_t expectedBindings=0;std::map<int,std::string> monsters,players;std::map<std::string,std::string> interactions;
-    for(const auto& node:world->nodes){if(!node.script.empty())++expectedBindings;if(node.script=="scripts/monster.script")monsters.emplace(static_cast<int>(node.config.at("index").number()),node.id);if(node.script=="scripts/player.script")players.emplace(static_cast<int>(node.config.at("slot").number()),node.id);if(node.script=="scripts/interaction.script")interactions.emplace(node.config.at("target").string(),node.id);}
-    check(monsters.size()==8&&players.size()==8,"Actual scene must provide eight monster and eight player bindings");
+    std::size_t expectedBindings=0;std::map<int,std::string> monsters,players;std::map<std::string,std::string> interactions,gatherings;
+    for(const auto& node:world->nodes){if(!node.script.empty())++expectedBindings;if(node.script=="scripts/monster.script")monsters.emplace(static_cast<int>(node.config.at("index").number()),node.id);if(node.script=="scripts/player.script")players.emplace(static_cast<int>(node.config.at("slot").number()),node.id);if(node.script=="scripts/interaction.script")interactions.emplace(node.config.at("target").string(),node.id);if(node.script=="scripts/gather.script")gatherings.emplace(node.config.at("target").string(),node.id);}
+    check(monsters.size()==12&&players.size()==8&&gatherings.size()==16,"Expanded scene must provide twelve monsters, eight players and sixteen gatherable plants");
+    check(world->walk&&world->walk->min[0]<=-120&&world->walk->max[2]>=110,"Expanded walk bounds are missing");
     runtime.setViewerState(viewer(world->eye));runtime.start();runtime.update(.02);
     check(runtime.activeBindings()==expectedBindings&&errors.empty(),"Authored bindings failed without a shared snapshot");
     for(const auto& [_,id]:monsters)check(!runtime.find(id).transform.visible,"Disconnected monster must be hidden");
     for(const auto& [_,id]:players)check(!runtime.find(id).transform.visible,"Disconnected avatar must be hidden");
     check(!runtime.find("weapon_control").transform.visible,"Disconnected held weapon must be hidden");
+    check(!runtime.find("status_panel").transform.visible,"Status panel must start closed");
+    check(runtime.input("menu","keyboard"),"Authored HUD must accept semantic keyboard input");runtime.update(.02);
+    check(runtime.find("status_panel").transform.visible&&runtime.find("journey_hud").state.at("statusOpen").boolean(),"Keyboard input must open the status panel before connecting");
+    check(runtime.input("menu","controller"),"Authored HUD must accept semantic controller input");runtime.update(.02);
+    check(!runtime.find("status_panel").transform.visible,"Second semantic input must close the panel");
     const auto connecting=runtime.find("journey_status").definition.text;runtime.takeTextChanges();
     SharedSession first(address,"","World Probe One"),second(address,"","World Probe Two");
     auto state=waitSnapshot(first,Clock::now()+std::chrono::seconds(5));waitSnapshot(second,Clock::now()+std::chrono::seconds(5));
@@ -58,6 +64,18 @@ int run(const std::vector<std::string>& arguments){
     }
     check(snapshots>=5&&maximumPlayers==2,"Two real shared connections must populate the authored world");
     check(first.error().empty()&&second.error().empty(),"Shared connection failed during authored-world updates");
+    check(state.at("resources").array().size()==16&&state.at("inventory").array().empty(),"New players must receive the full resource state and an empty personal inventory");
+    const auto plantId=state.at("resources").array().front().map().at("id").string();const auto plantPosition=valueVec3(state.at("resources").array().front().map().at("position"));
+    auto stroll=valueVec3(state.at("self").map().at("position"));auto destination=plantPosition;destination[0]-=2;destination[1]=1.65;
+    for(int step=0;step<80;++step){const double dx=destination[0]-stroll[0],dz=destination[2]-stroll[2],length=std::hypot(dx,dz);if(length<.01)break;const auto stride=std::min(.14,length);stroll[0]+=dx/length*stride;stroll[2]+=dz/length*stride;first.updatePose(stroll,0);std::this_thread::sleep_for(std::chrono::milliseconds(50));if(auto fresh=first.poll())state=std::move(*fresh);}
+    check(first.sendAction("gather",Value::Map{{"target",plantId}}),"Native transport must queue gather intent");
+    const auto gatherDeadline=Clock::now()+std::chrono::seconds(2);bool gained=false;
+    while(Clock::now()<gatherDeadline){if(auto fresh=first.poll()){state=std::move(*fresh);if(!state.at("inventory").array().empty()){gained=true;break;}}check(first.error().empty(),"Native gather connection failed");std::this_thread::sleep_for(std::chrono::milliseconds(10));}
+    check(gained&&state.at("inventory").array().front().map().at("item").string()=="moonleaf"&&state.at("inventory").array().front().map().at("count").number()==1,"Walking to a real plant must award one server-owned inventory item");
+    auto peer=waitSnapshot(second,Clock::now()+std::chrono::seconds(2));const auto peerDeadline=Clock::now()+std::chrono::seconds(2);
+    while(peer.at("resources").array().front().map().at("active").boolean()&&Clock::now()<peerDeadline){if(auto fresh=second.poll())peer=std::move(*fresh);std::this_thread::sleep_for(std::chrono::milliseconds(10));}
+    check(peer.at("inventory").array().empty()&&!peer.at("resources").array().front().map().at("active").boolean(),"Gathering must be globally depleted but inventory must remain private");
+    runtime.setSharedState(state);runtime.update(.02);check(!runtime.find(gatherings.at(plantId)).transform.visible,"Gathered plant must disappear in the authored scene");
     const auto& self=state.at("self").map();const auto selfId=self.at("id").string();int otherSlot=-1;
     for(const auto& item:state.at("players").array()){
       const auto& player=item.map();const auto slot=static_cast<int>(player.at("slot").number());const bool expected=player.at("active").boolean()&&player.at("id").string()!=selfId;
@@ -75,16 +93,32 @@ int run(const std::vector<std::string>& arguments){
     check(close(runtime.find("weapon_control").transform.position,valueVec3(view.at("weaponPosition"))),"Held weapon must follow the complete viewer hand pose");
     check(changedText.contains("journey_status")&&changedText.contains("journey_notice")&&runtime.find("journey_status").definition.text!=connecting,"Shared HUD must replace the connecting text");
     check(runtime.find("journey_status").definition.text.find("HP ")!=std::string::npos,"Actual HUD must expose authoritative health");
+    runtime.input("menu","keyboard");runtime.update(.02);
+    check(runtime.find("status_panel").transform.visible,"Connected status panel must open");
+    check(runtime.find("status_identity").definition.text.find(self.at("name").string())!=std::string::npos,"Status panel must show the authoritative personal name");
+    check(runtime.find("status_vitals").definition.text.find("HP ")!=std::string::npos&&runtime.find("status_vitals").definition.text.find("XP ")!=std::string::npos,"Status panel must show HP and XP");
+    auto panelPosition=viewPosition;panelPosition[2]-=2.35;panelPosition[1]-=.05;
+    check(close(runtime.find("status_panel").transform.position,panelPosition),"Status panel must follow the locally tracked viewer");
+    check(!runtime.find("status_panel").definition.raycast,"Status panel must not block world selection");
+    check(runtime.find("status_inventory").definition.text.find("달빛잎 1")!=std::string::npos,"Status inventory must display the item collected through the real server");
+    Runtime otherRuntime(world);otherRuntime.setSharedState(state);otherRuntime.setViewerState(view);otherRuntime.start();otherRuntime.update(.02);
+    check(!otherRuntime.find("status_panel").transform.visible,"Another local world instance must keep an independent closed panel");
     // Presentation-only mutations below are never sent back to the real server.
     auto display=state;const auto selfSlot=static_cast<std::size_t>(self.at("slot").number());
     auto setSelf=[&](const char* key,Value value){display.at("self").map()[key]=value;display.at("players").array();auto& list=std::get<Value::Array>(display.at("players").data);list.at(selfSlot).map()[key]=std::move(value);};
     for(const auto& [weapon,color]:std::array<std::pair<const char*,const char*>,3>{{{"starter","#C9D8DA"},{"iron","#91B4B7"},{"star","#A2EDDF"}}}){
       setSelf("weapon",weapon);runtime.setSharedState(display);runtime.update(.02);
       check(runtime.material(nodeIndex(runtime,"held_blade")).color==color,"Held blade material must follow all three weapon states");
-      check(runtime.find("journey_status").definition.text.find(weapon)!=std::string::npos,"HUD must follow the current weapon state");
+      const auto weaponLabel=std::string(weapon)=="starter"?"여행자의 검":std::string(weapon)=="iron"?"철검":"별검";check(runtime.find("status_equipment").definition.text.find(weaponLabel)!=std::string::npos,"Status panel must follow the current weapon state");
     }
-    setSelf("gold",142);setSelf("quest",2);runtime.setSharedState(display);runtime.update(.02);
-    check(runtime.find("journey_status").definition.text.find("G 142")!=std::string::npos&&runtime.find("journey_notice").definition.text.find("THE FIRST MEADOW")!=std::string::npos,"HUD must follow gold and completed quest state");
+    runtime.input("menu","controller");runtime.update(.02);runtime.takeTextChanges();
+    check(!runtime.find("status_panel").transform.visible,"Controller input must close the connected panel");
+    setSelf("gold",142);setSelf("quest",2);display["inventory"]=Value::Array{Value::Map{{"item","moonleaf"},{"count",3}},Value::Map{{"item","sunbloom"},{"count",4}},Value::Map{{"item","wildberry"},{"count",5}},Value::Map{{"item","slime_gel"},{"count",6}},Value::Map{{"item","wolf_fang"},{"count",7}},Value::Map{{"item","ancient_shard"},{"count",8}}};runtime.setSharedState(display);runtime.update(.02);
+    const auto hiddenChanges=runtime.takeTextChanges();for(const auto& [id,_]:hiddenChanges)check(!id.starts_with("status_"),"Hidden status panel must not regenerate detailed text");
+    runtime.input("menu","keyboard");runtime.update(.02);
+    check(runtime.find("status_equipment").definition.text.find("142")!=std::string::npos&&runtime.find("status_quest").definition.text.find("THE FIRST MEADOW")!=std::string::npos&&runtime.find("journey_notice").definition.text.find("THE FIRST MEADOW")!=std::string::npos,"Reopened status panel must refresh gold and completed quest state");
+    for(const auto* label:{"달빛잎 3","햇살꽃 4","산딸기 5","슬라임 젤 6","늑대 송곳니 7","고대 조각 8"})check(runtime.find("status_inventory").definition.text.find(label)!=std::string::npos,"Inventory must render all six authored material stacks");
+    runtime.input("menu","keyboard");runtime.update(.02);
     auto& playerList=std::get<Value::Array>(display.at("players").data);auto& other=playerList.at(static_cast<std::size_t>(otherSlot)).map();
     runtime.setViewerState(viewer(valueVec3(other.at("position"))));runtime.update(.02);check(!runtime.find(players.at(otherSlot)).transform.visible,"Near-viewer avatar must hide instead of obscuring the camera");
     runtime.setViewerState(view);runtime.update(.02);check(runtime.find(players.at(otherSlot)).transform.visible,"Moving the viewer away must restore the other avatar");
@@ -94,6 +128,7 @@ int run(const std::vector<std::string>& arguments){
       runtime.interact(selectable(runtime,found->second));check(actions.size()==before+1&&actions.back().first==kind&&actions.back().second.size()==1&&actions.back().second.at("target").string()==target,"Authored interaction must emit exactly the contracted kind and target");
     }
     runtime.interact(selectable(runtime,"slime_0"));check(actions.size()==6&&actions.back().first=="attack"&&actions.back().second.size()==1&&actions.back().second.at("target").string()=="slime_0","Monster interaction must emit one attack intent");
+    for(const auto& [target,id]:gatherings){const auto before=actions.size();runtime.interact(selectable(runtime,id));check(actions.size()==before+1&&actions.back().first=="gather"&&actions.back().second.size()==1&&actions.back().second.at("target").string()==target,"Every gatherable plant must send the declared gather target");}
     const auto weaponBefore=runtime.find("weapon_control").transform.rotation;runtime.update(.02);runtime.update(.05);check(runtime.find("weapon_control").transform.rotation!=weaponBefore,"A monster click must animate the held weapon swing");
     // Attack counters and movement are presentation inputs; this checks joints,
     // while server-side combat tests own damage/cooldown/reward validation.
@@ -107,7 +142,7 @@ int run(const std::vector<std::string>& arguments){
     setSelf("hp",0);runtime.setSharedState(display);runtime.update(.02);check(!runtime.find("weapon_control").transform.visible,"Dead local player must not keep a visible held weapon");
     check(errors.empty()&&runtime.activeBindings()==expectedBindings,"All authored bindings must remain active after the complete integration flow");
     first.stop();second.stop();
-    std::cout<<Value(Value::Map{{"passed",true},{"nodes",static_cast<double>(world->nodes.size())},{"bindings",static_cast<double>(expectedBindings)},{"bindingErrors",static_cast<double>(errors.size())},{"networkSnapshots",snapshots},{"activePlayers",maximumPlayers},{"snapshotNullStart",true},{"selfAndInactiveHidden",true},{"otherAndNearVisibility",true},{"monstersAndHealth",true},{"allWeaponStyles",true},{"viewerWeaponPose",true},{"hudText",true},{"actionContracts",static_cast<double>(actions.size())},{"jointAnimations",true}}).display()<<'\n';return 0;
+    std::cout<<Value(Value::Map{{"passed",true},{"nodes",static_cast<double>(world->nodes.size())},{"bindings",static_cast<double>(expectedBindings)},{"bindingErrors",static_cast<double>(errors.size())},{"networkSnapshots",snapshots},{"activePlayers",maximumPlayers},{"snapshotNullStart",true},{"selfAndInactiveHidden",true},{"otherAndNearVisibility",true},{"monstersAndHealth",true},{"allWeaponStyles",true},{"viewerWeaponPose",true},{"hudText",true},{"statusToggle",true},{"statusPersonalState",true},{"hiddenStatusTextIdle",true},{"gatherContracts",static_cast<double>(gatherings.size())},{"nativeGatherAndPrivateInventory",true},{"inventoryText",true},{"actionContracts",static_cast<double>(actions.size())},{"jointAnimations",true}}).display()<<'\n';return 0;
   }catch(const std::exception& error){std::cerr<<"Shared world probe failed: "<<error.what()<<'\n';return 2;}
 }
 }

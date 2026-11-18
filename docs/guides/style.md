@@ -141,3 +141,11 @@ class interactive { wireframe: true; }
 같은 class 선언을 반복해도 되므로 기존 roughness .35를 유지하며 wireframe만 켭니다. 시험을 마치면 추가한 규칙을 지우고 새로 고침합니다.
 
 알 수 없는 material을 `style`로 참조하면 공간을 열기 전에 실패합니다. 문서 로드 후 기대와 다른 색이 보인다면 먼저 id 규칙과 활성 Script override를 확인합니다. 전체 우선순위를 다시 보려면 [제작 언어 명세의 Style 계약](../../native/docs/language.md#style)을 참고합니다.
+
+## 모델의 셀 셰이딩과 PBR 재질
+
+`models-v1` 모델은 `shading: "toon"; outline: .012;`로 셀 명암·외곽선을, `shading: "pbr";`로 PBR을 선택합니다. GLB의 색을 그대로 표시하려면 `color: "#FFFFFF";`를 사용합니다. GLB 안의 기본색·노멀·거칠기/금속성·AO·발광 텍스처를 함께 사용할 수 있습니다.
+
+GLB의 원래 거칠기·금속성 인자를 보존하려면 `roughness`·`metalness`를 생략하세요. 공통 `defaults`에 적은 값도 원래 인자를 덮어씁니다. [모델 재질과 지원 범위](../models-v1.md)를 참고하세요.
+
+[lighting-v1](../lighting-v1.md)을 선택하면 모델에 HDR 환경 조명, 방향광 그림자, 최대 4개 점광원과 ACES 노출을 적용합니다. 조명 값은 `world.environment.lighting`에서 설정하며 Style 속성에 `sunIntensity`나 `environmentMap`을 넣지 않습니다. 확장을 사용하지 않는 기존 세계와 기본 형상의 조명은 유지합니다.

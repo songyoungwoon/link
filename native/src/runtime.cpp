@@ -1,4 +1,5 @@
 #include "link/runtime.hpp"
+#include "link/model.hpp"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -34,7 +35,7 @@ Runtime::Runtime(std::shared_ptr<const World> world,LogFn log):world_(std::move(
   for(const auto& definition:world_->nodes) {
     if(index_.contains(definition.id))throw Error(definition.location,"Duplicate runtime ID: "+definition.id);
     index_.emplace(definition.id,nodes_.size());
-    nodes_.push_back({definition,definition.transform,definition.state,{}});
+    nodes_.push_back({definition,definition.transform,definition.state,{},{}});
   }
   for(std::size_t i=0;i<nodes_.size();++i) {
     const auto& definition=nodes_[i].definition;
@@ -57,8 +58,8 @@ Runtime::~Runtime() {
   endPhase(0);
   count.activeBindings-=bindings_.size();--count.activeWorlds;++count.destroyedWorlds;
 }
-void Runtime::invoke(Binding& binding,const std::string& hook,const std::vector<Value>& args) {
-  try{if(particles_)binding.instance->invoke(hook,args,&phaseSteps_,65536);else binding.instance->invoke(hook,args);}
+void Runtime::invoke(Binding& binding,const std::string& hook,const std::vector<Value>& args,bool sharedBudget) {
+  try{if(particles_||sharedBudget)binding.instance->invoke(hook,args,&phaseSteps_,65536);else binding.instance->invoke(hook,args);}
   catch(const std::exception& error){binding.active=false;
     if(log_)log_(true,"[node="+nodes_[binding.node].definition.id+" binding="+binding.source+" hook="+hook+"] "+error.what());
   }
@@ -73,6 +74,17 @@ void Runtime::update(double seconds) {
   if(!started_)return;
   const double delta=std::isfinite(seconds)?std::clamp(seconds,0.0,.05):0.0;
   ++count.updates;
+  for(auto& node:nodes_)if(node.animation.playing){
+    const auto asset=world_->models.find(node.definition.geometry.model);
+    if(asset==world_->models.end())continue;
+    const auto clip=std::find_if(asset->second->animations.begin(),asset->second->animations.end(),[&](const auto& item){return item.name==node.animation.clip;});
+    if(clip==asset->second->animations.end())continue;
+    node.animation.time+=delta*node.animation.speed;
+    if(clip->duration>0){
+      if(node.animation.loop)node.animation.time=std::fmod(node.animation.time,clip->duration);
+      else if(node.animation.time>=clip->duration){node.animation.time=clip->duration;node.animation.playing=false;}
+    }else node.animation.playing=false;
+  }
   beginPhase();
   for(auto& binding:bindings_)if(binding->active)invoke(*binding,"onUpdate",{binding->context,delta});
   endPhase(delta);
@@ -92,6 +104,18 @@ std::string Runtime::interact(const std::string& elementId) {
     i=nodes_[i].definition.parent;
   }
   return elementId;
+}
+bool Runtime::input(const std::string& action,const std::string& source) {
+  if(!started_||action!="menu"||(source!="keyboard"&&source!="controller")||
+     std::find(world_->extensions.begin(),world_->extensions.end(),"input-v1")==world_->extensions.end())return false;
+  const Value event=Value::Map{{"action",action},{"phase","pressed"},{"source",source}};
+  bool delivered=false;
+  beginPhase();
+  for(auto& binding:bindings_)if(binding->active&&binding->instance->hasHook("onInput")) {
+    delivered=true;invoke(*binding,"onInput",{binding->context,event},true);
+  }
+  endPhase(0);
+  return delivered;
 }
 const World& Runtime::world()const{return *world_;}
 const std::vector<RuntimeNode>& Runtime::nodes()const{return nodes_;}
@@ -179,6 +203,22 @@ Value Runtime::api(std::size_t bindingIndex,const std::string& method,const std:
       if(limit<1||limit>64||std::floor(limit)!=limit)throw std::runtime_error("Neighbor limit must be an integer between 1 and 64");
       return numericIds(particles_->neighbors(args[0].string(),particleId(1),args[2].number(),static_cast<std::size_t>(limit)));
     }
+  }
+  if(method=="playAnimation"||method=="stopAnimation"){
+    if(std::find(world_->extensions.begin(),world_->extensions.end(),"models-v1")==world_->extensions.end())throw std::runtime_error("Animation API requires models-v1");
+    countArgs(args,method=="playAnimation"?2:1,method=="playAnimation"?4:1);
+    auto& node=find(args[0].string());
+    if(node.definition.kind!=Kind::Element||node.definition.geometry.type!=Geometry::Type::Model)throw std::runtime_error("Animation target must be a model Element");
+    if(method=="stopAnimation"){node.animation={};return true;}
+    const auto asset=world_->models.find(node.definition.geometry.model);
+    if(asset==world_->models.end())throw std::runtime_error("Model asset is unavailable");
+    const auto& name=args[1].string();
+    if(std::none_of(asset->second->animations.begin(),asset->second->animations.end(),[&](const auto& clip){return clip.name==name;}))throw std::runtime_error("Unknown model animation: "+name);
+    const bool loop=args.size()>2?args[2].boolean():true;
+    const double speed=args.size()>3?args[3].number():1.;
+    if(speed<=0||speed>4)throw std::runtime_error("Animation speed must be greater than zero and at most 4");
+    if(node.animation.clip==name&&node.animation.playing&&node.animation.loop==loop&&node.animation.speed==speed)return true;
+    node.animation={name,0,speed,loop,true};return true;
   }
   if(method=="getSharedState"){
     countArgs(args,0,0);return sharedState_?Value(*sharedState_):Value();

@@ -109,3 +109,7 @@ JSON Schema는 형태와 일부 수치 범위를 검사합니다. 존재하지 �
 정적 검증은 Script를 실행하지 않습니다. 재생 중 분기·연산량·클릭 반응·입자 알고리즘·이미지 디코딩 성공까지 검증했다고 표현하지 마세요. 성공한 patch도 Architect의 Play와 Browser에서 의도한 동작을 확인해야 합니다.
 
 이 방식은 현재 로컬 문서 편집을 재현 가능하게 연결하는 출발점입니다. 모델 품질을 보증하거나 여러 AI가 동시에 편집하는 트랜잭션, 원격 서버에 자동 배포하는 시스템을 제공하는 것은 아닙니다.
+
+## 브라우저의 모델 확장과 편집 프로필
+
+Windows LINK Browser는 [models-v1](../models-v1.md)의 GLB 모델·애니메이션을 지원합니다. 위 표와 JSON patch 템플릿의 geometry 목록은 별도 Architect/LINKAuthor의 현재 편집 프로필입니다. 그 편집기와 schema는 아직 model geometry를 지원하지 않습니다. 모델 세계는 원본 GLB와 Element·Script·Style 문서를 직접 준비해 최신 Browser로 검증하세요.

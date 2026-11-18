@@ -1,0 +1,16 @@
+{
+  "project": "cgltf",
+  "repository": "https://github.com/jkuhlmann/cgltf",
+  "tag": "v1.15",
+  "license": "MIT",
+  "files": {
+    "cgltf.h": {
+      "source": "https://raw.githubusercontent.com/jkuhlmann/cgltf/v1.15/cgltf.h",
+      "sha256": "e378a21c084bf1f288bb799de827bb26906efb024255f1ecf1705ea13f11c6ec"
+    },
+    "LICENSE": {
+      "source": "https://raw.githubusercontent.com/jkuhlmann/cgltf/v1.15/LICENSE",
+      "sha256": "f619925f80ef862497aaf8e8155ef218fa6a2190055129523ca3df9119a9ba95"
+    }
+  }
+}

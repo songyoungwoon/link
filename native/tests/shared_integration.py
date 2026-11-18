@@ -39,7 +39,35 @@ class Fixture(socketserver.ThreadingTCPServer):
         for index,kind in enumerate(['slime']*4+['wolf']*2+['golem','warden']):
             suffix=index if kind=='slime' else index-4 if kind=='wolf' else 0
             monsters.append(dict(id=f'{kind}_{suffix}',active=True,position=[0,0,-10],yaw=0,hp=20,maxHp=20,kind=kind,attack=0,respawnIn=0))
-        return dict(tick=self.tick,time=time.time(),self=next(copy.deepcopy(p) for p in players if p['id']==identity),players=players,monsters=monsters,notice='\ud55c\uae00 notice \U0001f30d')
+        state=dict(tick=self.tick,time=time.time(),self=next(copy.deepcopy(p) for p in players if p['id']==identity),players=players,monsters=monsters,notice='\ud55c\uae00 notice \U0001f30d')
+        if self.mode=='exploration' or self.mode.startswith('invalid-'):
+            for identity,kind,x,z in [('slime_4','slime',118,108),('slime_5','slime',-118,-138),('wolf_2','wolf',-90,95),('wolf_3','wolf',100,-130)]:
+                state['monsters'].append(dict(id=identity,active=True,position=[x,0,z],yaw=0,hp=20,maxHp=20,kind=kind,attack=0,respawnIn=0))
+            catalog=['moonleaf','sunbloom','wildberry','slime_gel','wolf_fang','ancient_shard']
+            state['inventory']=[dict(item=item,count=index+1) for index,item in enumerate(catalog)]
+            state['resources']=[dict(id=f'herb_{index}',kind=catalog[index%3],position=[-110+index*14,0,100-index*15],active=index%2==0,respawnIn=0 if index%2==0 else 42.5) for index in range(16)]
+            if self.mode=='invalid-inventory-duplicate': state['inventory'][1]['item']='moonleaf'
+            if self.mode=='invalid-inventory-catalog': state['inventory'][0]['item']='dragon_egg'
+            if self.mode=='invalid-inventory-count': state['inventory'][0]['count']=100
+            if self.mode=='invalid-inventory-fraction': state['inventory'][0]['count']=1.5
+            if self.mode=='invalid-inventory-boolean': state['inventory'][0]['count']=True
+            if self.mode=='invalid-inventory-zero': state['inventory'][0]['count']=0
+            if self.mode=='invalid-inventory-shape': state['inventory'][0]['token']=SECRET
+            if self.mode=='invalid-inventory-slots': state['inventory']=[dict(item='moonleaf',count=1) for _ in range(17)]
+            if self.mode=='invalid-resource-duplicate': state['resources'][1]['id']='herb_0'
+            if self.mode=='invalid-resource-id': state['resources'][0]['id']='herb_00'
+            if self.mode=='invalid-resource-kind': state['resources'][0]['kind']='slime_gel'
+            if self.mode=='invalid-resource-position': state['resources'][0]['position']=[121,0,0]
+            if self.mode=='invalid-resource-height': state['resources'][0]['position'][1]=1
+            if self.mode=='invalid-resource-timer': state['resources'][0]['respawnIn']=86401
+            if self.mode=='invalid-resource-active': state['resources'][0]['active']=1
+            if self.mode=='invalid-resource-shape': state['resources'][0]['token']=SECRET
+            if self.mode=='invalid-resource-slots': state['resources']=[dict(id=f'herb_{index}',kind='moonleaf',position=[0,0,0],active=True,respawnIn=0) for index in range(25)]
+            if self.mode=='invalid-monster-duplicate': state['monsters'][1]['id']='slime_0'
+            if self.mode=='invalid-monster-kind': state['monsters'][0]['kind']='dragon'
+            if self.mode=='invalid-monster-id': state['monsters'][0]['id']='slime_24'
+            if self.mode=='invalid-monster-slots': state['monsters']=[dict(id=f'slime_{index}',kind='slime',active=True,position=[0,0,0],yaw=0,hp=20,maxHp=20,attack=0,respawnIn=0) for index in range(25)]
+        return state
 
 class Handler(socketserver.BaseRequestHandler):
     def exact(self,count):
@@ -110,6 +138,8 @@ class Handler(socketserver.BaseRequestHandler):
                         if set(action)!={'kind','target','seq'} or not isinstance(action['seq'],int) or action['seq']<=0: raise AssertionError('bad action')
                         server.actions.append(action)
                     state=server.snapshot(record['id'])
+                if server.mode=='state-replay': self.send(19,request,state,id=request-1);return
+                if server.mode=='tick-replay': state['tick']=0
                 self.send(19,request,state);expected+=1
         except (ConnectionError,EOFError,OSError):
             pass
@@ -131,7 +161,7 @@ def run_probe(probe,address,*args):
 def fixture_case(probe,mode,*args):
     server=Fixture(mode); thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
-        report=run_probe(probe,f'link://127.0.0.1:{server.server_address[1]}/sao',*args)
+        report=run_probe(probe,f'link://127.0.0.1:{server.server_address[1]}/link-game',*args)
         if server.failures: raise AssertionError('Fixture rejected native client: '+','.join(server.failures))
         return report,server
     finally:
@@ -144,9 +174,15 @@ def main():
     assert report['unicodeNotice'] is True and server.actions
     assert all(action['kind']=='rest' and action['target']=='rest_shrine' for action in server.actions)
     report,_=fixture_case(probe,'fragmented');assert report['snapshots']>=2
+    report,server=fixture_case(probe,'exploration','--exploration','--action','gather','herb_0')
+    assert report['monsterCount']==12 and report['resourceCount']==16 and report['inventoryStacks']==6 and report['actionQueued']
+    assert server.actions and all(action['kind']=='gather' and action['target']=='herb_0' for action in server.actions)
     report,_=fixture_case(probe,'normal','--queue-stress');assert report['queued']==32
     report,_=fixture_case(probe,'silent','--stop-after-ms','40');assert report['stopMs']<500
-    for mode in ('oversize','wrong-id','wrong-version','wrong-flags','wrong-type','missing-field','token-in-snapshot','mismatched-self','duplicate-key','unquoted-key','trailing-comma','nan-number','fail-reflection'):
+    for mode in ('oversize','wrong-id','wrong-version','wrong-flags','wrong-type','missing-field','token-in-snapshot','mismatched-self','duplicate-key','unquoted-key','trailing-comma','nan-number','fail-reflection','state-replay','tick-replay',
+                 'invalid-inventory-duplicate','invalid-inventory-catalog','invalid-inventory-count','invalid-inventory-fraction','invalid-inventory-boolean','invalid-inventory-zero','invalid-inventory-shape','invalid-inventory-slots',
+                 'invalid-resource-duplicate','invalid-resource-id','invalid-resource-kind','invalid-resource-position','invalid-resource-height','invalid-resource-timer','invalid-resource-active','invalid-resource-shape','invalid-resource-slots',
+                 'invalid-monster-duplicate','invalid-monster-kind','invalid-monster-id','invalid-monster-slots'):
         report,_=fixture_case(probe,mode,'--expect-error');assert report['rejected']
     if options.server:
         script=options.server.resolve()
@@ -162,12 +198,12 @@ def main():
                         with socket.create_connection(('127.0.0.1',port),timeout=.15): break
                     except OSError: time.sleep(.05)
                 else: raise AssertionError('Disposable RPG server startup timed out')
-                report=run_probe(probe,f'link://127.0.0.1:{port}/sao','--two-players','--resume-test','--action','rest','rest_shrine','--duration-ms','800')
+                report=run_probe(probe,f'link://127.0.0.1:{port}/link-game','--two-players','--resume-test','--action','rest','rest_shrine','--duration-ms','800')
                 assert report['maximumPlayers']==2 and report['resumed']
             finally:
                 process.terminate()
                 try: process.wait(timeout=5)
                 except subprocess.TimeoutExpired: process.kill();process.wait(timeout=5)
-    print('PASS shared LINK: strict bounded frames/JSON, Unicode, two players, action queue, resume, fragmentation, cancellation, secret-safe rejection'+(', real RPG server' if options.server else ''))
+    print('PASS shared LINK: strict bounded frames/JSON, Unicode, two players, expanded bounds/monsters/inventory/resources, gather action, queue, resume, fragmentation, cancellation, secret-safe malformed/replay rejection'+(', real RPG server' if options.server else ''))
 
 if __name__=='__main__': main()

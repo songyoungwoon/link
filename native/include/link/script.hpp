@@ -13,6 +13,7 @@ public:
   void invoke(const std::string& hook,const std::vector<Value>& arguments,
               std::size_t* sharedRemaining=nullptr,std::size_t maxSteps=Limits::evalSteps);
   const Value::Map& storage() const;
+  bool hasHook(const std::string& hook) const;
 private: struct Impl; std::unique_ptr<Impl> impl_;
 };
 } // namespace linkworld

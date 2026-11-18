@@ -95,6 +95,8 @@ ctest --preset release
 
 `shared-state-v1` 세계는 원격 LINK 서버의 플레이어·몬스터 상태를 받아 Script와 화면에 연결합니다. 행동은 서버로 전달하고 체력·보상은 서버가 판정합니다. [공유 상태·Script 연결 규격](docs/shared-state-v1.md)을 참고하세요. 같은 PC에서 여러 캐릭터를 시험할 때에는 `--profile alice --player-name Alice`처럼 다른 프로필을 사용합니다.
 
+[input-v1](docs/input-v1.md)을 선언한 세계는 PC 뷰포트의 **Tab** 또는 Quest 컨트롤러의 **왼손 Y**를 메뉴 입력으로 받습니다. ASTERFALL에서는 개인 스테이터스 창을 열고 닫습니다.
+
 ## Windows PC VR (실험적)
 
 OpenXR 모드로 Windows PC에서 기존 LINK 세계를 렌더링하고 Quest Link·Air Link로 연결한 헤드셋에서 봅니다. `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-vr.ps1 -Test`로 별도 빌드한 뒤 [LINK_VR_START.cmd](LINK_VR_START.cmd)로 `build/vr`의 작은 `vr-room` 예제를 엽니다. **F8**로 VR을 켜고 끄며 **F9**로 시점을 다시 맞춥니다. 최신 기본 빌드의 일반 `LINK_START.cmd`에서도 월드를 연 뒤 **F8**로 VR을 시작할 수 있습니다. World Standards v0.1과 LINK TCP는 그대로 유지합니다. [VR 설정·조작·진단 안내](docs/vr.md)를 참고하세요. Quest 3와 Air Link에서 기존 공간의 VR 사용은 사용자 실기기 확인을 마쳤으며, 새로운 게임의 실기기 성능은 별도로 확인합니다. 합성 런타임 검사는 실기기 검증과 구분합니다.
@@ -161,6 +163,14 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 
 사진 원본은 읽기 입력이며 데모는 별도 표시용 사본을 사용합니다. 준비 방법은 [데모·자산 안내](docs/exhibition.md)를 따릅니다. 사진 공간은 세계가 담을 수 있는 콘텐츠의 한 예제입니다.
 
+## 모델·재질·조명
+
+자체 포함 GLB 모델을 Element로 배치하고 Script로 뼈대 애니메이션을 재생합니다. 모델 재질은 기본색·노멀·거칠기/금속성·AO·발광 텍스처를 지원하며 Style로 셀 명암·외곽선 또는 PBR을 선택합니다. [모델 제작·지원 범위](docs/models-v1.md)를 참고하세요.
+
+선택 확장 [lighting-v1](docs/lighting-v1.md)은 모델에 방향광 그림자, HDR 환경 조명, 최대 4개 점광원과 ACES 노출을 적용합니다. 기존 세계의 조명은 유지하며 새 기능은 LINK 자체 렌더러를 확장합니다.
+
+별도 `link-game` 프로젝트에는 캐릭터 동작을 보는 Moon Garden과 석조 재질·조명을 확인하는 **Stone Sanctum**이 있습니다. 해당 서버를 시작한 뒤 `LINK_GAME_SANCTUM.cmd`를 실행하거나 `link://서버주소:8002/stone-sanctum`으로 접속합니다. 현재 대상은 Windows PC/OpenXR이며 Quest 단독 앱은 후속 범위입니다.
+
 ## LINK가 향하는 곳
 
 장기 목표는 제작 규격의 상호운용성과 여러 구현을 갖춘 연결된 세계의 생태계입니다. 다음 과제가 남아 있습니다.
@@ -175,6 +185,9 @@ python .\link_server.py --host 0.0.0.0 --port 8000 --worlds "C:\LINK\worlds"
 **세계를 만들고, 경계를 탐색하고, 세계가 연결되는 방식을 함께 다듬어 주세요.**
 
 [제작 가이드](docs/guides/README.md) · [World Standards](docs/link-world-v0.1.md) · [로컬 프로토콜](docs/link-local-v0.1.md) · [LINK TCP 프로토콜](docs/link-protocol-v0.1.md) · [LAN 연결 안내](docs/link-lan-v0.1.md) · [LINK Browser 실행](#link-browser-실행)
+
+
+NPC가 협력하는 LINK 서버 사이를 이동하고, 각 브라우저가 같은 ID·위치·애니메이션을 표시하는 실험 규격을 추가했습니다. [NPC 이동 규격](docs/npc-travel-v1.md)과 별도 `link-game`의 두 서버 시연을 참고하세요.
 
 ## 라이선스
 

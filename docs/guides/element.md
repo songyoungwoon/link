@@ -117,8 +117,9 @@ visible: true;
 | Plane | `{type:"plane",size:[3,2]}` | 로컬 XY 평면, 앞쪽 법선 +Z |
 | Cylinder | `{type:"cylinder",radius:1,radiusTop:.7,height:2}` | Y축 방향, 아래·위 반지름과 전체 높이 |
 | Frame | `{type:"frame",size:[3,2],border:.06,depth:.08}` | XY 방향의 속이 빈 직사각 테두리 |
+| Model | `{type:"model",source:"models/stone.glb"}` | `models-v1` 확장, 자체 포함 GLB 모델 |
 
-치수는 모두 0 초과 1,000 이하입니다. Cylinder의 `radiusTop`만 0을 허용하여 원뿔 꼭짓점을 만들 수 있습니다. Frame의 `border`는 더 작은 바깥 치수의 절반보다 작아야 합니다. Plane을 수평 바닥처럼 놓으려면 보통 `rotation:[-90,0,0];`을 씁니다.
+기본 형상의 치수는 모두 0 초과 1,000 이하입니다. Cylinder의 `radiusTop`만 0을 허용하여 원뿔 꼭짓점을 만들 수 있습니다. Frame의 `border`는 더 작은 바깥 치수의 절반보다 작아야 합니다. Plane을 수평 바닥처럼 놓으려면 보통 `rotation:[-90,0,0];`을 씁니다.
 
 많은 작은 개체를 다루려면 선택 확장 `particles-v1`의 `geometry: {type:"particles",capacity:128,radius:.055,cellSize:.6};`를 사용할 수 있습니다. world.link에 `extensions: ["particles-v1"];` 선언이 필요하며 개별 입자는 일반 노드가 아닙니다. [입자 제작 가이드](particles.md)에서 생성·상태·이웃 검색과 별도 실행 예산을 설명합니다.
 
@@ -178,3 +179,9 @@ portals: [{
 전체 노드는 최대 500개, 부모 깊이는 루트를 1로 세어 최대 16입니다. `world.link`는 64KiB, Element·Style 문서는 각각 1MiB, Script는 파일당 128KiB·최대 16개입니다. 큰 공간을 만들기 전에 작은 장면에서 문서 로드와 상호작용을 확인하면 오류 위치를 찾기 쉽습니다.
 
 다음으로 [Style 가이드](style.md)에서 `material`·`class`·`id`가 같은 큐브에 어떻게 적용되는지 확인합니다.
+
+## GLB 모델
+
+`models-v1`을 선언하면 `geometry: {type: "model", source: "models/hero.glb"};`로 외부 제작한 3D 모델을 배치할 수 있습니다. GLB에는 기본색·노멀·거칠기/금속성·AO·발광 맵과 뼈대 애니메이션을 포함할 수 있습니다. [모델 제작·애니메이션 가이드](../models-v1.md)를 참고하세요.
+
+사실적인 재질과 빛을 확인하려면 `lighting-v1`도 선언하고 `world.environment.lighting`에 HDR 환경광·방향광 그림자·점광원·노출을 설정합니다. 조명 확장은 모델에 적용되며 기본 형상의 기존 조명을 바꾸지 않습니다. [조명 가이드](../lighting-v1.md)와 별도 `link-game` 프로젝트의 `stone-sanctum` 예제를 참고하세요.

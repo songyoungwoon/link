@@ -55,9 +55,11 @@ world {
 
 `views`는 최대 128개 맵의 배열입니다. 각 맵에는 비어 있지 않은 문자열 `name`, 세 성분 벡터 `position`, `target`만 들어가며 세 필드는 모두 필수입니다. 좌표의 각 성분은 유한수이고 절댓값이 1,000,000 이하입니다. 목록 순서를 유지하며 진입 카메라 `entry`를 바꾸지 않습니다. `name`은 표시 문자열이고 노드 ID가 아닙니다. 이 기능은 저장된 관찰 위치이며 카메라 경로·보간 애니메이션을 선언하지 않습니다. 현재 셸은 이 메타데이터를 내부 검증에 사용하며 사용자 화면에 시점 선택 콤보 상자·이전/다음 시점 버튼을 표시하지 않습니다.
 
-`environment`는 선택 맵이며 허용 필드는 `background`, `grid`, `fog`입니다. `background`는 `#RRGGBB` 문자열, `grid`는 bool입니다. 기본값은 배경 `#111c21`, 격자 표시 `true`, 거리 안개 없음입니다. `grid:false`는 공간의 관찰용 격자를 숨깁니다. 잘못된 타입·색상·알 수 없는 필드·중복 키는 준비 단계 오류입니다.
+`environment`는 선택 맵이며 허용 필드는 `background`, `grid`, `fog`, `lighting`입니다. `background`는 `#RRGGBB` 문자열, `grid`는 bool입니다. 기본값은 배경 `#111c21`, 격자 표시 `true`, 거리 안개 없음입니다. `grid:false`는 공간의 관찰용 격자를 숨깁니다. 잘못된 타입·색상·알 수 없는 필드·중복 키는 준비 단계 오류입니다.
 
 `fog`를 지정하면 `{color:"#08171F",start:85,end:280}`처럼 선형 거리 안개를 선언합니다. `start`와 `end`는 필수 유한수이며 0~500 범위, start < end입니다. 선택 `color`는 `#RRGGBB`이고 생략하면 배경색을 사용합니다. 시작 거리까지 원래 색을 유지하고 끝 거리에서 안개색에 도달하며, 공간 전환 때 새 환경 설정을 적용합니다.
+
+`lighting`은 `lighting-v1` 확장을 선언한 월드의 선택 조명 맵입니다. `sunDirection`·`sunColor`·`sunIntensity`, `skyColor`·`groundColor`·`ambientIntensity`, `exposure`, `environmentMap`·`environmentIntensity`, `shadow`, `points`를 지원합니다. 새 조명은 GLB 모델에 적용하며 기존 기본 형상의 렌더링을 유지합니다. 기본값·범위·HDR 경로·그림자 규칙은 [lighting-v1](../../docs/lighting-v1.md)을 따릅니다. world 최상위 `lighting`은 허용하지 않습니다.
 
 ### 1인칭 걷기와 포탈
 
@@ -126,6 +128,7 @@ scene {
 | cylinder | `{type:"cylinder",radius:1,radiusTop:.7,height:3}` | Y축 방향, 중심 원점. 아래쪽 반지름 `radius`, 위쪽 반지름 `radiusTop`, 높이 `height` |
 | frame | `{type:"frame",size:[3,2],border:.06,depth:.08}` | XY 방향 직사각 테두리. size는 바깥 가로·세로, border는 테두리 너비, depth는 Z방향 두께 |
 | particles | `{type:"particles",capacity:128,radius:.055,cellSize:.6}` | `particles-v1` 확장 필수. capacity 1~2,048 정수, radius·cellSize는 0 초과 1,000 이하 |
+| model | `{type:"model",source:"models/hero.glb"}` | `models-v1` 확장 필수. 자체 포함 GLB 2.0, [지원 프로필](../../docs/models-v1.md) |
 
 cylinder의 아래 반지름과 높이는 0 초과 1,000 이하이며 위 반지름만 0 이상 1,000 이하입니다. `radiusTop:0`으로 원뿔 끝을 표현합니다. frame의 크기·border·depth는 모두 0 초과 1,000 이하이며 border는 더 작은 바깥 크기의 절반보다 작아야 합니다. frame은 안쪽이 빈 테두리이고 image가 들어가는 plane과 별도 Element로 배치합니다. 바닥 plane은 보통 `rotation:[-90,0,0]`을 사용합니다.
 
@@ -311,7 +314,7 @@ KiB는 1,024 bytes입니다. 논리 데이터 크기는 숫자 8 bytes, bool·nu
 
 ## 실험 확장 particles-v1
 
-`world.link`에 `extensions: ["particles-v1"];`를 선언하면 입자 형상과 API를 사용할 수 있습니다. 지원 확장은 `particles-v1`과 별도 [공유 게임 프로파일](../../docs/shared-state-v1.md)의 `shared-state-v1`이며 중복·미지원 확장과 확장 없이 사용한 particles 형상은 준비 단계에서 거절합니다. version은 "0.1"을 유지하고 기존 LINK TCP 전송 프레임은 바꾸지 않습니다. 확장이 없는 기존 문서의 평가 예산은 그대로입니다.
+`world.link`에 `extensions: ["particles-v1"];`를 선언하면 입자 형상과 API를 사용할 수 있습니다. 지원 확장은 [모델 조명](../../docs/lighting-v1.md)의 `lighting-v1`, [모델·애니메이션](../../docs/models-v1.md)의 `models-v1`, `particles-v1`, [의미 기반 입력](../../docs/input-v1.md)의 `input-v1`, 별도 [공유 게임 프로파일](../../docs/shared-state-v1.md)의 `shared-state-v1`, [NPC 서버 간 이동](../../docs/npc-travel-v1.md)의 `npc-travel-v1`이며 중복·미지원 확장과 확장 없이 사용한 particles 형상은 준비 단계에서 거절합니다. version은 "0.1"을 유지하고 기존 LINK TCP 전송 프레임은 바꾸지 않습니다. 확장이 없는 기존 문서의 평가 예산은 그대로입니다.
 
 particles Element는 선언 capacity만큼의 입자 데이터를 담는 잎이며 입자는 개별 노드가 아닙니다. 시스템당 capacity 2,048, 공간 전체 선언 capacity 합계 8,192입니다. position·velocity는 해당 Element의 로컬 Vec3이고 각 성분 절댓값 1,000,000 이하입니다. 반지름은 0 초과 1,000 이하, color는 #RRGGBB, 입자 state는 추정 1,024 bytes 이하의 맵이며, 루트 맵·컨테이너·스칼라·null을 포함한 재귀 Value 개수 최대 64, 루트 깊이 0 기준 최대 깊이 16을 적용합니다. 부모 transform·visible을 렌더링에 적용합니다. 현재 렌더러는 입자 집합을 카메라를 향한 원판으로 그립니다. opacity·emission 광륜·wireframe을 시스템 Style에서 적용하고, 조명을 받지 않는 원판에는 roughness·metalness·textBackground를 적용하지 않습니다. wireframe에서는 광륜을 생략합니다. 개별 입자의 메시·노드 클릭·물리 충돌은 제공하지 않습니다. 입자 집합 클릭은 시스템 Element의 targetId로 기존 소유 Script에 전달합니다.
 
@@ -365,3 +368,19 @@ systemId는 particles Element의 문자열 ID입니다. 입자 ID는 Runtime 전
 ## 실험 공유 게임 프로파일 shared-state-v1
 
 `extensions:["shared-state-v1"]`은 첫 협동 RPG의 원격 상태 연결을 허용합니다. `ctx.getSharedState()`·`ctx.sendAction(kind,payload)`·`ctx.getViewer()`·`ctx.setText(id,text)`와 `str(value)`를 사용할 수 있습니다. 이 API와 프레임·권한·자원 한계는 [공유 상태 연결 규격](../../docs/shared-state-v1.md)에 설명합니다. 기존 문서와 Script 생명주기는 유지하며, 이 프로파일은 실험용 게임 스키마입니다.
+
+## 선택 입력 프로파일 input-v1
+
+`extensions:["input-v1"]`은 `on onInput(ctx,event)`로 의미 기반 입력을 받습니다. 현재 `event.action="menu"`, `phase="pressed"`, `source="keyboard"|"controller"`를 제공합니다. PC Tab과 Quest 왼손 Y는 같은 개인 메뉴 동작으로 전달합니다. 전체 계약과 평가 예산은 [입력 연결 규격](../../docs/input-v1.md)을 참고하세요.
+
+## models-v1
+
+Optional `extensions: ["models-v1"]` enables self-contained GLB 2.0 triangle models with CPU skeletal animation. Element geometry uses `{type: "model", source: "models/hero.glb"}`. Script adds `ctx.playAnimation(id, clip, loop=true, speed=1)` and `ctx.stopAnimation(id)`. Model Style adds `shading: "pbr" | "toon"` and `outline: 0..0.04`. Embedded base color, normal, metallic-roughness, occlusion and emissive maps use UV0 and repeat wrapping. See the [implementation profile and limits](../../docs/models-v1.md).
+
+## lighting-v1
+
+`extensions: ["models-v1", "lighting-v1"]` and `environment.lighting` enable model-only directional PCF shadows, HDR irradiance/GGX environment lighting, up to four unshadowed point lights, and ACES exposure. The HDR source limit is 8 MiB, 2048 pixels per axis, and 2,097,152 pixels total; finite linear RGB up to 1,000,000 is retained in RGB32F. Prepared irradiance is 64×32; specular prefilter has nine mip levels from 256×128 to 1×1. Shadow resolution is 512, 1024 or 2048. Model rendering retains the 32 MiB GPU budget without this lighting profile and uses a 192 MiB combined model/environment/shadow budget with it. The other GLB source, geometry and image bounds remain unchanged. Existing worlds and primitive lighting retain their earlier rendering behavior. See [lighting settings and exact bounds](../../docs/lighting-v1.md).
+
+## npc-travel-v1
+
+`extensions:["npc-travel-v1"]`은 서버가 소유한 NPC의 읽기 전용 관찰 연결을 허용합니다. `ctx.getSharedState()`는 `{tick,time,world,npcs}`를 제공하고, 각 공간의 Script가 `kind`를 로컬 모델에 대응시켜 위치·회전·애니메이션을 표시합니다. NPC 인계와 경로 계산은 서버에서 실행하며, 브라우저가 꺼져 있어도 계속됩니다. 플레이어 토큰·입력·카메라는 전송하지 않습니다. 현재 `shared-state-v1`과 함께 선언하면 준비 단계에서 거절합니다. GLB를 표현에 사용하면 `models-v1`도 선언합니다. [관찰 메시지·한계·인계 규칙](../../docs/npc-travel-v1.md)을 따릅니다.

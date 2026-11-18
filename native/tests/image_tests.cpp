@@ -135,6 +135,14 @@ int main(){
     check(covered>100&&antialiased>20,"Hologram contains visible glyph coverage and antialiased alpha edges");
     const auto explicitPlaque=linkworld::rasterText("사진 보기",5,"#F5F1E8",true);
     check(explicitPlaque.rgba==text.rgba,"Explicit textBackground true preserves the legacy plaque raster exactly");
+    for(double aspect:{10.75,11.47}){
+      const auto compact=linkworld::rasterText("HHHH\nHHHH",aspect,"#FFFFFF",false);
+      std::vector<std::size_t> bands;bool inBand=false;
+      for(unsigned y=0;y<compact.height;++y){std::size_t ink=0;for(unsigned x=0;x<compact.width;++x)if(compact.rgba[(static_cast<std::size_t>(y)*compact.width+x)*4+3])++ink;
+        if(ink){if(!inBand)bands.push_back(0);bands.back()+=ink;inBand=true;}else inBand=false;
+      }
+      check(bands.size()==2&&bands[0]==bands[1],"Both compact status lines must retain complete identical glyph coverage");
+    }
     testNativeUploads();
     const auto base=std::filesystem::canonical(std::filesystem::current_path());
     const auto bad=base/("link-corrupt-image-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".jpg");

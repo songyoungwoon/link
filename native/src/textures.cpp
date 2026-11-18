@@ -82,8 +82,23 @@ CpuImage rasterText(const std::string& text,double aspect,const std::string& col
   // requested RGB in every transparent texel to avoid dark bilinear edge fringes.
   const auto background=textBackground?RGB((rgb>>16)&255,(rgb>>8)&255,rgb&255):RGB(0,0,0);
   HBRUSH brush=CreateSolidBrush(background);RECT area{0,0,static_cast<LONG>(result.width),static_cast<LONG>(result.height)};FillRect(dc,&area,brush);DeleteObject(brush);
-  int lines=1;for(char c:text)if(c=='\n')++lines;int fontSize=std::clamp(int(result.height)/(lines+1),18,72);
-  HFONT font=CreateFontW(-fontSize,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,HANGUL_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,DEFAULT_PITCH,L"Malgun Gothic");auto oldFont=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);double luminance=.2126*((rgb>>16)&255)+.7152*((rgb>>8)&255)+.0722*(rgb&255);SetTextColor(dc,textBackground?(luminance>140?RGB(60,57,49):RGB(242,235,215)):RGB(255,255,255));RECT bounds{38,16,static_cast<LONG>(result.width)-38,static_cast<LONG>(result.height)-16};RECT measured=bounds;DrawTextW(dc,content.c_str(),static_cast<int>(content.size()),&measured,DT_CENTER|DT_WORDBREAK|DT_NOPREFIX|DT_CALCRECT);bounds.top=std::max<LONG>(12,(result.height-(measured.bottom-measured.top))/2);DrawTextW(dc,content.c_str(),static_cast<int>(content.size()),&bounds,DT_CENTER|DT_WORDBREAK|DT_NOPREFIX);
+  int lines=1;for(char c:text)if(c=='\n')++lines;
+  const int initialSize=std::clamp(int(result.height)/(lines+1),18,72);
+  const auto oldFont=GetCurrentObject(dc,OBJ_FONT);HFONT font=nullptr;
+  RECT bounds{38,16,static_cast<LONG>(result.width)-38,static_cast<LONG>(result.height)-16},measured=bounds;
+  // GDI line metrics include leading. Fit inside the padded content rectangle
+  // so compact multiline panels keep the final line of text intact.
+  for(int size=initialSize;size>=8;--size){
+    const auto next=CreateFontW(-size,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,HANGUL_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,DEFAULT_PITCH,L"Malgun Gothic");
+    if(!next){SelectObject(dc,oldFont);if(font)DeleteObject(font);SelectObject(dc,oldBitmap);DeleteObject(bitmap);DeleteDC(dc);throw std::runtime_error("Could not create plaque text font");}
+    SelectObject(dc,next);if(font)DeleteObject(font);font=next;measured=bounds;
+    DrawTextW(dc,content.c_str(),static_cast<int>(content.size()),&measured,DT_CENTER|DT_WORDBREAK|DT_NOPREFIX|DT_CALCRECT);
+    if(measured.bottom-measured.top<=bounds.bottom-bounds.top&&measured.right-measured.left<=bounds.right-bounds.left)break;
+  }
+  SetBkMode(dc,TRANSPARENT);double luminance=.2126*((rgb>>16)&255)+.7152*((rgb>>8)&255)+.0722*(rgb&255);
+  SetTextColor(dc,textBackground?(luminance>140?RGB(60,57,49):RGB(242,235,215)):RGB(255,255,255));
+  bounds.top+=std::max<LONG>(0,((bounds.bottom-bounds.top)-(measured.bottom-measured.top))/2);
+  DrawTextW(dc,content.c_str(),static_cast<int>(content.size()),&bounds,DT_CENTER|DT_WORDBREAK|DT_NOPREFIX);
   GdiFlush();result.rgba.resize(static_cast<std::size_t>(result.width)*result.height*4);auto* bgra=static_cast<unsigned char*>(bits);for(std::size_t i=0;i<result.rgba.size();i+=4){
     if(textBackground){result.rgba[i]=bgra[i+2];result.rgba[i+1]=bgra[i+1];result.rgba[i+2]=bgra[i];result.rgba[i+3]=255;}
     else{result.rgba[i]=static_cast<std::uint8_t>((rgb>>16)&255);result.rgba[i+1]=static_cast<std::uint8_t>((rgb>>8)&255);result.rgba[i+2]=static_cast<std::uint8_t>(rgb&255);result.rgba[i+3]=std::max({bgra[i],bgra[i+1],bgra[i+2]});}

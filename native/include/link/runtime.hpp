@@ -3,7 +3,8 @@
 #include "script.hpp"
 #include "particles.hpp"
 namespace linkworld {
-struct RuntimeNode { NodeDefinition definition; Transform transform; Value::Map state; StylePatch overrideStyle; };
+struct ModelPlayback { std::string clip;double time=0,speed=1;bool loop=true,playing=false; };
+struct RuntimeNode { NodeDefinition definition; Transform transform; Value::Map state; StylePatch overrideStyle; ModelPlayback animation; };
 struct RuntimeCounters { std::size_t activeWorlds=0,activeBindings=0,createdWorlds=0,destroyedWorlds=0,updates=0; };
 RuntimeCounters counters();
 class Runtime {
@@ -13,6 +14,8 @@ public:
   Runtime(const Runtime&)=delete; Runtime& operator=(const Runtime&)=delete;
   void start(); void update(double seconds);
   std::string interact(const std::string& elementId);
+  // Browser-originated semantic press; requires input-v1 and an active onInput handler.
+  bool input(const std::string& action,const std::string& source="keyboard");
   const World& world() const;
   const std::vector<RuntimeNode>& nodes() const;
   RuntimeNode& find(const std::string& id);
@@ -40,6 +43,6 @@ private:
   std::uint32_t randomState_=0x4C494E4B;
   void beginPhase(); void endPhase(double);
   Value api(std::size_t binding,const std::string&,const std::vector<Value>&);
-  void invoke(Binding&,const std::string&,const std::vector<Value>&);
+  void invoke(Binding&,const std::string&,const std::vector<Value>&,bool sharedBudget=false);
 };
 } // namespace linkworld

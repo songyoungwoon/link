@@ -95,6 +95,8 @@ Or choose the repository's demo worlds:
 
 Worlds opting into `shared-state-v1` can receive player/monster snapshots and send interaction intents to a remote LINK server. Combat and rewards are server-owned. See the [shared state and Script bridge](docs/shared-state-v1.md). Use distinct profiles, such as `--profile alice --player-name Alice`, to test multiple characters on one PC.
 
+Worlds may also opt into [input-v1](docs/input-v1.md) for semantic menu input: **Tab** in the desktop viewport or **left Y** on a Quest controller. ASTERFALL uses it to open and close a personal status panel.
+
 ## Windows PC VR (experimental)
 
 The OpenXR mode renders existing LINK worlds on a Windows PC for a headset connected through Quest Link or Air Link. Build separately with `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-vr.ps1 -Test`, then run [LINK_VR_START.cmd](LINK_VR_START.cmd) to open the small `vr-room` example from `build/vr`. **F8** toggles VR; **F9** recenters. With an up-to-date default build, you can also open `LINK_START.cmd`, enter a world, and press **F8** to start VR. World Standards v0.1 and LINK TCP stay the same. See [VR setup, controls, and diagnostics](docs/vr.md). A user has confirmed existing worlds work on Quest 3 through Air Link. New game performance still requires headset testing; synthetic runtime tests remain separate.
@@ -161,6 +163,14 @@ The included worlds exercise the same browser and runtime:
 
 Photo originals are read-only inputs; the demo uses separate display copies. [Demo and asset notes](docs/exhibition.md) cover preparation. The gallery is one example of what a world can contain.
 
+## Models, materials and lighting
+
+LINK loads self-contained GLB models and plays skeletal animation clips from Script. Model materials support base color, normal, metallic-roughness, occlusion and emissive textures, with toon or PBR shading selected in Style. See the [models-v1 authoring profile](docs/models-v1.md).
+
+The optional [lighting-v1 profile](docs/lighting-v1.md) adds model-only directional shadows, HDR environment lighting, up to four point lights, and ACES exposure. Existing worlds retain their earlier lighting. These features extend LINK's native renderer.
+
+The separate `link-game` project provides Moon Garden for character animation and **Stone Sanctum** for textured stone and lighting. Run its server, then `LINK_GAME_SANCTUM.cmd`, or open `link://SERVER:8002/stone-sanctum`. The current target is Windows PC/OpenXR; a standalone Quest app remains future work.
+
 ## Where LINK is heading
 
 The long-term goal is a connected-world ecosystem with interoperable authoring and multiple implementations. Work ahead includes:
@@ -175,6 +185,9 @@ These are project directions beyond the current local and LAN prototype. An open
 **Build a world. Explore the boundaries. Help shape how worlds connect.**
 
 [Authoring guides](docs/guides/README.md) · [World Standards](docs/link-world-v0.1.md) · [Local protocol](docs/link-local-v0.1.md) · [LINK TCP protocol](docs/link-protocol-v0.1.md) · [LAN setup](docs/link-lan-v0.1.md) · [Run LINK Browser](#run-link-browser)
+
+
+NPCs can now travel between cooperating LINK servers while browsers observe their durable identity, position and animation. See the experimental [NPC travel profile](docs/npc-travel-v1.md) and the sibling `link-game` two-server demo.
 
 ## License
 

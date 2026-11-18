@@ -122,7 +122,35 @@ const Value& required(const Value::Map& map,const char* key){const auto found=ma
 void keys(const Value::Map& map,std::initializer_list<const char*> allowed){if(map.size()!=allowed.size())fail("Shared LINK returned an unexpected snapshot shape.");for(const auto* name:allowed)required(map,name);}
 double number(const Value::Map& map,const char* key,double low,double high,bool integer=false){const auto value=required(map,key).number();if(value<low||value>high||(integer&&std::floor(value)!=value))fail("Shared LINK snapshot number is outside its contract.");return value;}
 std::string text(const Value::Map& map,const char* key,std::size_t limit,bool empty=false){const auto& value=required(map,key).string();if(!textOkay(value,limit,empty))fail("Shared LINK snapshot text is invalid.");return value;}
-void pose(const Value::Map& map,bool monster=false){const auto p=valueVec3(required(map,"position"));if(p[0]<-31.000001||p[0]>31.000001||p[2]<-39.000001||p[2]>35.000001||p[1]<-0.000001||p[1]>4.000001||(monster&&std::abs(p[1])>0.000001))fail("Shared LINK snapshot position is outside world bounds.");number(map,"yaw",-1000000,1000000);}
+void position(const Value::Map& map,bool ground=false){
+  const auto p=valueVec3(required(map,"position"));
+  if(p[0]<-120.000001||p[0]>120.000001||p[2]<-140.000001||p[2]>110.000001||p[1]<-0.000001||p[1]>4.000001||(ground&&std::abs(p[1])>0.000001))
+    fail("Shared LINK snapshot position is outside world bounds.");
+}
+void pose(const Value::Map& map,bool monster=false){position(map,monster);number(map,"yaw",-1000000,1000000);}
+bool indexedId(std::string_view id,std::string_view prefix){
+  if(!id.starts_with(prefix))return false;const auto suffix=id.substr(prefix.size());
+  if(suffix.empty()||(suffix.size()>1&&suffix.front()=='0'))return false;
+  unsigned index=0;const auto parsed=std::from_chars(suffix.data(),suffix.data()+suffix.size(),index);
+  return parsed.ec==std::errc{}&&parsed.ptr==suffix.data()+suffix.size()&&index<24;
+}
+bool itemKind(std::string_view id,bool harvestable=false){
+  constexpr std::array<std::string_view,6> items{"moonleaf","sunbloom","wildberry","slime_gel","wolf_fang","ancient_shard"};
+  const auto end=items.begin()+(harvestable?3:6);return std::find(items.begin(),end,id)!=end;
+}
+void exploration(const Value::Map& map){
+  if(const auto found=map.find("inventory");found!=map.end()){
+    const auto& inventory=found->second.array();if(inventory.size()>16)fail("Shared LINK inventory exceeds its slot budget.");std::set<std::string> ids;
+    for(const auto& item:inventory){const auto& entry=item.map();keys(entry,{"item","count"});const auto id=text(entry,"item",32);
+      if(!itemKind(id)||!ids.insert(id).second)fail("Shared LINK inventory has an invalid or duplicate item.");number(entry,"count",1,99,true);}
+  }
+  if(const auto found=map.find("resources");found!=map.end()){
+    const auto& resources=found->second.array();if(resources.size()>24)fail("Shared LINK resources exceed their entity budget.");std::set<std::string> ids;
+    for(const auto& item:resources){const auto& resource=item.map();keys(resource,{"id","kind","position","active","respawnIn"});const auto id=text(resource,"id",32);
+      if(!indexedId(id,"herb_")||!ids.insert(id).second||!itemKind(text(resource,"kind",32),true))fail("Shared LINK resource identity or kind is invalid.");
+      required(resource,"active").boolean();position(resource,true);number(resource,"respawnIn",0,86400);}
+  }
+}
 void player(const Value::Map& map){
   keys(map,{"id","slot","active","name","position","yaw","hp","maxHp","level","xp","gold","weapon","kills","quest","attack","respawn"});
   const bool active=required(map,"active").boolean();text(map,"id",64,!active);text(map,"name",128,!active);number(map,"slot",0,7,true);pose(map);
@@ -131,14 +159,42 @@ void player(const Value::Map& map){
   const auto weapon=text(map,"weapon",16);if(weapon!="starter"&&weapon!="iron"&&weapon!="star")fail("Shared LINK snapshot weapon is unsupported.");
 }
 Value::Map snapshot(const Value::Map& map,const std::string& playerId){
-  keys(map,{"tick","time","self","players","monsters","notice"});number(map,"tick",0,integerLimit,true);number(map,"time",0,integerLimit);text(map,"notice",4096,true);
+  constexpr std::array<std::string_view,8> fields{"tick","time","self","players","monsters","notice","inventory","resources"};
+  for(const auto* field:{"tick","time","self","players","monsters","notice"})required(map,field);
+  for(const auto& [key,value]:map){(void)value;if(std::find(fields.begin(),fields.end(),key)==fields.end())fail("Shared LINK returned an unexpected snapshot shape.");}
+  number(map,"tick",0,integerLimit,true);number(map,"time",0,integerLimit);text(map,"notice",4096,true);exploration(map);
   const auto& self=required(map,"self").map();player(self);if(!required(self,"active").boolean()||required(self,"id").string()!=playerId)fail("Shared LINK snapshot identity does not match the joined player.");
   const auto& players=required(map,"players").array();if(players.size()!=8)fail("Shared LINK snapshot requires eight player slots.");std::set<int> slots;std::set<std::string> ids;bool foundSelf=false;
   for(const auto& item:players){const auto& p=item.map();player(p);if(!slots.insert(static_cast<int>(required(p,"slot").number())).second)fail("Shared LINK snapshot has duplicate player slots.");const auto& id=required(p,"id").string();if(!id.empty()&&!ids.insert(id).second)fail("Shared LINK snapshot has duplicate player identities.");if(id==playerId){if(!(item==Value(self)))fail("Shared LINK self and player slot disagree.");foundSelf=true;}}
   if(!foundSelf)fail("Shared LINK snapshot omits the joined player slot.");
-  const auto& monsters=required(map,"monsters").array();if(monsters.size()!=8)fail("Shared LINK snapshot requires eight monster slots.");
-  const std::array<const char*,8> expected{"slime_0","slime_1","slime_2","slime_3","wolf_0","wolf_1","golem_0","warden_0"};std::set<std::string> monsterIds;
-  for(const auto& item:monsters){const auto& m=item.map();keys(m,{"id","active","position","yaw","hp","maxHp","kind","attack","respawnIn"});const auto id=text(m,"id",32);if(std::find(expected.begin(),expected.end(),id)==expected.end()||!monsterIds.insert(id).second)fail("Shared LINK snapshot has invalid monster identities.");required(m,"active").boolean();pose(m,true);const auto maximum=number(m,"maxHp",1,1000000000);number(m,"hp",0,maximum);number(m,"attack",0,integerLimit,true);number(m,"respawnIn",0,integerLimit);const auto kind=text(m,"kind",16);if(id.substr(0,id.find('_'))!=kind)fail("Shared LINK snapshot monster kind is invalid.");}
+  const auto& monsters=required(map,"monsters").array();if(monsters.size()>24)fail("Shared LINK snapshot exceeds its monster budget.");
+  std::set<std::string> monsterIds;
+  for(const auto& item:monsters){
+    const auto& m=item.map();keys(m,{"id","active","position","yaw","hp","maxHp","kind","attack","respawnIn"});const auto id=text(m,"id",32),kind=text(m,"kind",16);
+    if((kind!="slime"&&kind!="wolf"&&kind!="golem"&&kind!="warden")||!indexedId(id,kind+"_")||!monsterIds.insert(id).second)fail("Shared LINK snapshot has invalid monster identities.");
+    required(m,"active").boolean();pose(m,true);const auto maximum=number(m,"maxHp",1,1000000000);number(m,"hp",0,maximum);number(m,"attack",0,integerLimit,true);number(m,"respawnIn",0,86400);
+  }
+  return map;
+}
+// NPC observation is deliberately independent from the RPG player contract.
+// The server owns simulation and transfer. Scripts only present local model slots.
+bool npcKey(std::string_view value,std::size_t maximum){
+  return !value.empty()&&value.size()<=maximum&&std::all_of(value.begin(),value.end(),[](unsigned char c){return (c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='_'||c=='-'||c=='.'||c==':';});
+}
+Value::Map npcSnapshot(const Value::Map& map,const std::string& world){
+  keys(map,{"tick","time","world","npcs"});number(map,"tick",0,integerLimit,true);number(map,"time",0,integerLimit);
+  if(text(map,"world",128)!=world)fail("NPC LINK snapshot belongs to another world.");
+  const auto& npcs=required(map,"npcs").array();if(npcs.size()>16)fail("NPC LINK snapshot exceeds its entity budget.");
+  std::set<std::string> ids;
+  for(const auto& value:npcs){
+    const auto& npc=value.map();keys(npc,{"id","kind","name","position","yaw","animation","epoch","journey"});
+    const auto id=text(npc,"id",128),kind=text(npc,"kind",64);
+    if(!npcKey(id,128)||!npcKey(kind,64)||!ids.insert(id).second)fail("NPC LINK snapshot identity or kind is invalid.");
+    text(npc,"name",128);text(npc,"animation",64);
+    const auto position=valueVec3(required(npc,"position"));
+    if(std::any_of(position.begin(),position.end(),[](double v){return !std::isfinite(v)||std::abs(v)>1000000;}))fail("NPC LINK position is outside its contract.");
+    number(npc,"yaw",-1000000,1000000);number(npc,"epoch",1,integerLimit,true);number(npc,"journey",0,integerLimit,true);
+  }
   return map;
 }
 std::uint32_t readU32(const char* bytes){std::uint32_t value=0;for(int i=0;i<4;++i)value=(value<<8)|static_cast<unsigned char>(bytes[i]);return value;}
@@ -156,7 +212,7 @@ void closeSocket(Socket value){::close(value);}
 }
 
 struct SharedSession::Impl {
-  RemoteLink remote;std::string name;
+  RemoteLink remote;std::string name;SharedProfile profile=SharedProfile::Game;
   mutable std::mutex mutex;std::condition_variable wake;std::jthread worker;
   std::string bearer,id,failure;bool online=false,stopped=false;
   Vec3 position{0,1.65,28};double yaw=0;bool suppliedPose=false;
@@ -281,18 +337,23 @@ struct SharedSession::Impl {
     std::uint32_t nextId=1;
     try{
       connect(stop);std::string secret;{std::lock_guard lock(mutex);secret=bearer;}
-      auto deadline=Clock::now()+std::chrono::seconds(4);sendFrame(joinMessage,0,{{"version",1},{"world",remote.world},{"token",secret},{"name",name}},deadline,stop);
-      const auto joined=receiveFrame(joinedMessage,0,deadline,stop);keys(joined,{"token","playerId","snapshot"});
-      const auto joinedToken=required(joined,"token").string(),joinedId=text(joined,"playerId",64);if(!tokenOkay(joinedToken,false))fail("Shared LINK returned an invalid bearer credential.");auto initial=snapshot(required(joined,"snapshot").map(),joinedId);
+      auto deadline=Clock::now()+std::chrono::seconds(4);const bool observer=profile==SharedProfile::NpcTravel;
+      const Value::Map join=observer?Value::Map{{"version",1},{"world",remote.world},{"profile","npc-travel-v1"}}:Value::Map{{"version",1},{"world",remote.world},{"token",secret},{"name",name}};
+      sendFrame(joinMessage,0,join,deadline,stop);const auto joined=receiveFrame(joinedMessage,0,deadline,stop);
+      Value::Map initial;std::string joinedToken,joinedId;
+      if(observer){keys(joined,{"snapshot"});initial=npcSnapshot(required(joined,"snapshot").map(),remote.world);}
+      else{keys(joined,{"token","playerId","snapshot"});joinedToken=required(joined,"token").string();joinedId=text(joined,"playerId",64);if(!tokenOkay(joinedToken,false))fail("Shared LINK returned an invalid bearer credential.");initial=snapshot(required(joined,"snapshot").map(),joinedId);}
       auto previousTick=number(initial,"tick",0,integerLimit,true);
-      {std::lock_guard lock(mutex);bearer=joinedToken;id=joinedId;online=true;latest=initial;if(!suppliedPose){position=valueVec3(required(required(initial,"self").map(),"position"));yaw=required(required(initial,"self").map(),"yaw").number();}}
+      {std::lock_guard lock(mutex);bearer=joinedToken;id=joinedId;online=true;latest=initial;if(!observer&&!suppliedPose){position=valueVec3(required(required(initial,"self").map(),"position"));yaw=required(required(initial,"self").map(),"yaw").number();}}
       auto next=Clock::now()+std::chrono::milliseconds(50);
       while(!stop.stop_requested()){
         Vec3 posePosition;double poseYaw;Value action;
         {std::unique_lock lock(mutex);wake.wait_until(lock,next,[&]{return stop.stop_requested();});if(stop.stop_requested())break;posePosition=position;poseYaw=yaw;if(!actions.empty()){action=std::move(actions.front());actions.pop_front();}}
         const auto sent=Clock::now();deadline=sent+std::chrono::seconds(2);
-        sendFrame(stepMessage,nextId,{{"position",vecValue(posePosition)},{"yaw",poseYaw},{"action",std::move(action)}},deadline,stop);
-        auto state=snapshot(receiveFrame(stateMessage,nextId,deadline,stop),joinedId);const auto tick=number(state,"tick",0,integerLimit,true);if(tick<previousTick)fail("Shared LINK snapshot tick moved backwards.");previousTick=tick;
+        const Value::Map step=observer?Value::Map{}:Value::Map{{"position",vecValue(posePosition)},{"yaw",poseYaw},{"action",std::move(action)}};
+        sendFrame(stepMessage,nextId,step,deadline,stop);
+        const auto received=receiveFrame(stateMessage,nextId,deadline,stop);
+        auto state=observer?npcSnapshot(received,remote.world):snapshot(received,joinedId);const auto tick=number(state,"tick",0,integerLimit,true);if(tick<previousTick)fail("Shared LINK snapshot tick moved backwards.");previousTick=tick;
         {std::lock_guard lock(mutex);latest=std::move(state);}
         if(nextId==std::numeric_limits<std::uint32_t>::max())fail("Shared LINK request sequence is exhausted.");++nextId;next=sent+std::chrono::milliseconds(50);
       }
@@ -301,15 +362,18 @@ struct SharedSession::Impl {
     close(nextId);{std::lock_guard lock(mutex);online=false;stopped=true;actions.clear();}
   }
 };
-SharedSession::SharedSession(std::string address,std::string token,std::string name):impl_(std::make_unique<Impl>()){
+SharedSession::SharedSession(std::string address,std::string token,std::string name,SharedProfile profile):impl_(std::make_unique<Impl>()){
   try{impl_->remote=parseRemoteLink(address);}catch(...){throw std::invalid_argument("Shared LINK requires link://IPv4[:port]/world.");}
-  if(!tokenOkay(token,true))throw std::invalid_argument("Shared LINK bearer credential is invalid.");if(!textOkay(name,128))throw std::invalid_argument("Shared LINK player name is invalid.");impl_->bearer=std::move(token);impl_->name=std::move(name);
+  if(profile!=SharedProfile::Game&&profile!=SharedProfile::NpcTravel)throw std::invalid_argument("Shared LINK profile is unsupported.");
+  if(profile==SharedProfile::NpcTravel&&!token.empty())throw std::invalid_argument("NPC observation does not accept player credentials.");
+  if(!tokenOkay(token,true))throw std::invalid_argument("Shared LINK bearer credential is invalid.");if(!textOkay(name,128))throw std::invalid_argument("Shared LINK player name is invalid.");impl_->bearer=std::move(token);impl_->name=std::move(name);impl_->profile=profile;
   impl_->worker=std::jthread([state=impl_.get()](std::stop_token stop){state->run(stop);});
 }
 SharedSession::~SharedSession(){stop();}
-void SharedSession::updatePose(Vec3 position,double yaw){if(!std::isfinite(yaw)||std::abs(yaw)>1000000||std::any_of(position.begin(),position.end(),[](double n){return !std::isfinite(n)||std::abs(n)>1000000;}))throw std::invalid_argument("Shared LINK pose must be finite and bounded.");std::lock_guard lock(impl_->mutex);impl_->position=position;impl_->yaw=yaw;impl_->suppliedPose=true;}
+void SharedSession::updatePose(Vec3 position,double yaw){if(impl_->profile==SharedProfile::NpcTravel)return;if(!std::isfinite(yaw)||std::abs(yaw)>1000000||std::any_of(position.begin(),position.end(),[](double n){return !std::isfinite(n)||std::abs(n)>1000000;}))throw std::invalid_argument("Shared LINK pose must be finite and bounded.");std::lock_guard lock(impl_->mutex);impl_->position=position;impl_->yaw=yaw;impl_->suppliedPose=true;}
 bool SharedSession::sendAction(const std::string& kind,Value::Map payload){
-  if(kind!="attack"&&kind!="equip"&&kind!="rest"&&kind!="claim")throw std::invalid_argument("Shared LINK action kind is unsupported.");
+  if(impl_->profile==SharedProfile::NpcTravel)return false;
+  if(kind!="attack"&&kind!="equip"&&kind!="rest"&&kind!="claim"&&kind!="gather")throw std::invalid_argument("Shared LINK action kind is unsupported.");
   const auto found=payload.find("target");if(payload.size()!=1||found==payload.end()||!std::holds_alternative<std::string>(found->second.data)||!textOkay(found->second.string(),128))throw std::invalid_argument("Shared LINK action requires one bounded target.");
   std::lock_guard lock(impl_->mutex);if(impl_->stopped||impl_->worker.get_stop_token().stop_requested()||impl_->actions.size()>=actionLimit||impl_->nextAction>static_cast<std::uint64_t>(integerLimit))return false;
   payload.emplace("kind",kind);payload.emplace("seq",static_cast<double>(impl_->nextAction++));impl_->actions.push_back(std::move(payload));return true;

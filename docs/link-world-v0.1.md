@@ -32,7 +32,7 @@ styleDocument = {"defaults", "{", {field}, "}"
 hook = "on", hookName, "(", parameters, ")", block;
 ```
 
-전체 ID는 공간 안에서 유일합니다. Element는 box·sphere·plane·cylinder·frame과 선택 확장의 particles 형상을 담는 잎이며 상태·Script를 갖지 않습니다. plane은 선택 `image` 또는 `text` 필드를 지원하고 두 필드는 함께 사용할 수 없습니다. 현재 사진 공간은 28개의 image plane과 액자를 사용하며 문구용 text plane은 배치하지 않습니다. Hello World!의 문자는 box 형상을 묶어 두께를 표현합니다. Object와 Component는 데이터 state, 초기 config, Script 하나를 가집니다. 오른손 Y-up, m·초·degree XYZ이며 변환은 `T × Rx × Ry × Rz × S`, 부모 visible도 자식에 적용됩니다.
+전체 ID는 공간 안에서 유일합니다. Element는 box·sphere·plane·cylinder·frame과 선택 확장의 particles·model 형상을 담는 잎이며 상태·Script를 갖지 않습니다. plane은 선택 `image` 또는 `text` 필드를 지원하고 두 필드는 함께 사용할 수 없습니다. 현재 사진 공간은 28개의 image plane과 액자를 사용하며 문구용 text plane은 배치하지 않습니다. Hello World!의 문자는 box 형상을 묶어 두께를 표현합니다. Object와 Component는 데이터 state, 초기 config, Script 하나를 가집니다. 오른손 Y-up, m·초·degree XYZ이며 변환은 `T × Rx × Ry × Rz × S`, 부모 visible도 자식에 적용됩니다.
 
 진입 문서는 선택 `views`로 이름 있는 카메라 위치 메타데이터를, `environment`로 배경색·격자 표시를 지정합니다. `views`는 내부 검증에 유지하며 현재 사용자 화면에는 시점 선택 콤보 상자·이전/다음 시점 버튼을 제공하지 않습니다. `walk`는 고정 눈높이의 수평 1인칭 이동 범위·속도를, `portals`는 진입 감지 상자와 대상 LINK를 선언합니다. 두 기능을 선언하지 않은 Room A/B는 기존 관찰 카메라와 동작을 유지합니다. 이미지 경로는 각 공간 안으로 제한하며 파일당 16 MiB·고유 참조 128개로 제한합니다. 로컬 파일은 canonical 포함 검사를, 원격 파일은 같은 공간의 LINK 리소스 경로와 임시 스냅샷 검사를 거칩니다. 원격 공간의 다운로드 총합은 64 MiB입니다. 실제 이미지 디코딩과 텍스처 생성은 렌더러가 담당합니다. 자세한 형상·이미지·텍스트·시점·걷기·포탈 문법은 위 언어 명세를 따릅니다.
 
@@ -67,7 +67,7 @@ Runtime이 노드·상태·Script 인스턴스를 소유하고 공유된 불변 
 
 ## 렌더러 한계
 
-OpenGL 고정 기능 조명에서 roughness는 shininess, metalness는 specular 강도로 근사합니다. opacity<1은 blending을 켜고 깊이 쓰기를 끈 후 요소 중심의 카메라 깊이순으로 정렬합니다. 복잡하게 교차하는 투명 형상의 완전한 정렬은 보장하지 않습니다. opacity=0은 렌더·클릭 대상에서 제외합니다. plane은 양면입니다.
+기본 형상의 OpenGL 고정 기능 조명에서 roughness는 shininess, metalness는 specular 강도로 근사합니다. GLB 모델은 아래 `models-v1`·`lighting-v1`의 별도 셰이더 재질과 조명 규칙을 따릅니다. opacity<1은 blending을 켜고 깊이 쓰기를 끈 후 요소 중심의 카메라 깊이순으로 정렬합니다. 복잡하게 교차하는 투명 형상의 완전한 정렬은 보장하지 않습니다. opacity=0은 렌더·클릭 대상에서 제외합니다. plane은 양면입니다.
 
 창 크기·DPI 변경 시 viewport와 글꼴 배치를 갱신하고 최소화·0 크기 타깃에서는 렌더링을 건너뜁니다. 현재 구현은 Windows 네이티브 셸을 대상으로 하며, 다른 OS·다중 모니터 사이의 DPI 이동·장시간 성능은 지원 범위를 확장할 때 별도 확인이 필요합니다.
 
@@ -82,3 +82,18 @@ API는 `spawnParticle`, `particleIds`, `getParticle`, `setParticle`, `removePart
 확장 공간의 바인딩 콜백은 65,536 평가 단계, 공간 전체 한 단계는 262,144 평가 단계입니다. 단계당 생성 256회·생성과 변경·삭제 합계 4,096회·이웃 후보 검사 100,000회와 기존 문서·저장소 예산을 적용합니다. API 계약·반복 범위·수학 함수와 예제는 [입자 제작 가이드](guides/particles.md), 실제 실행 공간은 [PARTICLE LIFE](particle-life.md)에서 확인합니다.
 
 이는 제한된 군집·인공생명 알고리즘의 실행 기반입니다. 현재 입자는 일괄 렌더링하는 카메라 방향 원판이며, 사용자 메시·자동 충돌·물리학·생물학·의식·방문자 간 공유 시뮬레이션은 제공하지 않습니다.
+## models-v1 모델 확장
+
+`extensions:["models-v1"]`을 선언한 세계는 Element의 `{type:"model",source:"models/hero.glb"}`와 Script의 이름 기반 클립 재생을 사용할 수 있습니다. 셀 셰이딩·PBR과 내장 base-color·normal·metallic-roughness·occlusion·emissive 맵을 지원합니다. 파일·뼈대·리소스 예산을 포함한 [구현 프로필](models-v1.md)을 참고하세요.
+
+## lighting-v1 모델 조명 확장
+
+`extensions:["models-v1","lighting-v1"]`과 `environment.lighting`은 모델에 단일 방향광 PCF 그림자, HDR diffuse irradiance·GGX specular 환경광, 최대 4개의 그림자 없는 점광원과 ACES 노출을 적용합니다. 이 필드는 world 최상위가 아닌 environment 맵 안에 둡니다. 확장을 사용하지 않는 기존 월드와 기본 형상의 조명은 유지합니다.
+
+HDR 소스는 최대 8 MiB·각 축 2,048픽셀·총 2,097,152픽셀이고 그림자 해상도는 512·1024·2048입니다. 조명 프로필을 적용한 모델·환경광·그림자 GPU 예산은 합계 192 MiB이며 기본 모델 프로필의 32 MiB와 다른 예산입니다. 파일·메시·내장 이미지의 소스 예산과 기존 원격 월드 64 MiB 전송 예산은 유지합니다. [필드·기본값·검증 규칙](lighting-v1.md)을 따릅니다.
+
+실시간 전역 조명·화면 공간 반사·LOD 스트리밍·지형 충돌·Quest 단독 APK는 이 프로필에 포함되지 않습니다. 첫 조명 예제는 별도 `link-game` 프로젝트의 `stone-sanctum`이며 `LINK_GAME_SANCTUM.cmd`로 접속합니다.
+
+## npc-travel-v1 서버 간 NPC 이동
+
+`extensions:["npc-travel-v1"]`은 같은 ID의 NPC가 협력 서버의 포탈을 통과해 다른 LINK 주소로 이동하는 실험 프로파일입니다. 서버가 ID·상태·소유권을 인계하고 브라우저는 현재 세계의 NPC를 로컬 모델로 표현합니다. NPC 이동에 따라 사용자 카메라를 움직이거나 주소를 자동 전환하지 않습니다. 두 서버와 각 세계가 이 프로파일을 지원해야 하며, 기존 공유 RPG 세션과는 별도 프로파일입니다. [규격과 검증 범위](npc-travel-v1.md)를 참고하세요.

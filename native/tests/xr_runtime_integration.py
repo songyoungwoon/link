@@ -43,7 +43,7 @@ def run(executable: Path, runtime: Path, output: Path) -> None:
         world.mkdir(parents=True)
         (world / "world.link").write_text('''world {
 version: "0.1"; id: "syntheticvr"; name: "Synthetic OpenXR QA";
-elements: "scene.element"; style: "appearance.style"; scripts: ["beacon.script"];
+elements: "scene.element"; style: "appearance.style"; scripts: ["beacon.script"]; extensions:["input-v1"];
 entry: {position:[0,1.65,0],target:[0,1.65,-2]};
 environment: {background:"#1F3041",grid:false};
 walk: {min:[-2,0,-3],max:[2,3,2],eyeHeight:1.65,speed:1};
@@ -55,7 +55,7 @@ material marker {color:"#84B3D9";roughness:.5;}
 ''', encoding="utf-8")
         (world / "scene.element").write_text('''scene {
 object room {
-component beacon {state:{clicks:0};script:"beacon.script";
+component beacon {state:{clicks:0,menus:0};script:"beacon.script";
 element target {geometry:{type:"box",size:[.55,.55,.3]};position:[0,1.5,-2];}
 }
 component surroundings {
@@ -65,13 +65,16 @@ element asymmetric_marker {geometry:{type:"box",size:[.32,1.3,.3]};position:[-.9
 }
 }
 ''', encoding="utf-8")
-        (world / "beacon.script").write_text('''on onStart(ctx) {ctx.setState({clicks:0});}
+        (world / "beacon.script").write_text('''on onStart(ctx) {ctx.setState({clicks:0,menus:0});}
 on onUpdate(ctx,deltaSeconds) {}
 on onInteract(ctx,event) {ctx.setState({clicks:ctx.getState().clicks+1});ctx.log("synthetic beacon clicked");}
+on onInput(ctx,event) {if(event.action=="menu" && event.phase=="pressed") {ctx.setState({menus:ctx.getState().menus+1});ctx.log("synthetic menu toggled");}}
 on onDestroy(ctx) {}
 ''', encoding="utf-8")
         environment = os.environ.copy()
         environment.pop("LINK_XR_TEST_VISIBLE_ONLY", None)
+        environment.pop("LINK_XR_TEST_UNTRACKED_CONTROLLERS", None)
+        environment.pop("LINK_XR_TEST_REJECT_BINDINGS", None)
         environment["XR_RUNTIME_JSON"] = str(manifest)
         environment["LINK_XR_TEST_REPORT"] = str(runtime_report.resolve())
         process = subprocess.run([
@@ -94,10 +97,18 @@ on onDestroy(ctx) {}
         require(app.get("trackedHeadSamples", 0) >= 120, "Backend must receive tracked head poses")
         require(app.get("leftControllerSamples", 0) > 0 and app.get("rightControllerSamples", 0) > 0, "Both controller actions must be handled")
         require(app.get("focusedInputFrames") == 108, "Only the 108 frames after runtime focus may accept input")
+        require(app.get("rigMovementFrames", 0) > 0 and app.get("rigMovedDistance", 0) > .05, "Active left stick must actually move the VR rig")
+        require(app.get("rigTurnFrames", 0) > 0 and app.get("rigTurnRadians", 0) > .1, "Active right stick must actually rotate the VR rig")
+        require("touch_controller" in app.get("leftInteractionProfile", "") and "touch_controller" in app.get("rightInteractionProfile", ""), "Both active interaction profiles must be reported")
+        require(bool(app.get("bindingStatus")), "Binding registration status must be reported")
+        require(stats.get("profileQueries", 0) >= 2, "Backend must query both active controller profiles")
+        require(stats.get("moveStickSamples") == 31 and stats.get("turnStickSamples") == 6, "Both movement and snap-turn input sequences must run")
         require("OpenXR input: waiting-focus" in log and "OpenXR input: ready" in log, "Browser must expose both waiting-focus and ready states")
         require(log.index("OpenXR input: waiting-focus") < log.index("OpenXR input: ready"), "Input readiness must follow the runtime focus transition")
         require(app.get("triggerInteractions") == 2, f"Expected two trigger edges; hold/loss must not retrigger: {app}")
         require(log.count("synthetic beacon clicked") == 2, "Controller raycast must execute the beacon's Script twice")
+        require(app.get("menuInteractions") == 2, f"Expected two menu edges; hold/focus/loss/inactive must not retrigger: {app}")
+        require(log.count("synthetic menu toggled") == 2, "Menu action must execute the opted-in Script hook twice")
         require(stats.get("runtime") == RUNTIME_NAME and stats.get("syntheticRuntime") is True, "Runtime report identity is invalid")
         require(stats.get("orderErrors") == 0, f"OpenXR order validation failed: {stats}")
         require(stats.get("resourcesReleased") is True, f"OpenXR teardown retained resources: {stats}")
@@ -110,6 +121,10 @@ on onDestroy(ctx) {}
         require(stats.get("unfocusedInputCalls") == 0 and stats.get("focusedSyncs") == 108, "Input and feedback must wait for runtime focus")
         require(stats.get("focusHeldSamples") == 2 and stats.get("focusNeutralSamples") == 5, "Focus return must initially report held trigger, then neutral rearm")
         require(stats["haptics"] == 2, "Each accepted trigger edge must produce selection feedback")
+        require(stats.get("menuTouchBindings") == 1 and stats.get("menuIndexBindings") == 1, "Menu must bind Touch left Y and Index left B once each")
+        require(stats.get("menuActionQueries") == 108, "Menu may be queried only during the 108 focused frames")
+        require(stats.get("menuFocusHeldSamples") == 2 and stats.get("menuHeldAfterLossSamples") == 10 and stats.get("menuNeutralSamples") == 10, "A held menu button must stay single-shot across controller pose loss and rearm after release")
+        require(stats.get("menuInactiveSamples") == 3 and stats.get("menuHeldAfterInactiveSamples") == 7, "Menu source reactivation while held must wait for its own neutral sample")
         require(stats["trackingLossSamples"] > 0 and stats["heldAfterLossSamples"] > 0 and stats["neutralSamples"] > 0, "Tracking-loss/rearm sequence was not exercised")
         require(stats.get("eyeTexturesWritten") is True, "Both OpenGL eye textures must overwrite the known zero initialization")
         require(stats["leftEyeHash"] != "0" and stats["rightEyeHash"] != "0", "Both OpenGL eye textures must be rendered")
@@ -137,23 +152,86 @@ on onDestroy(ctx) {}
         require(visible_app.get("syntheticRuntime") is True and visible_app.get("headsetFramesVerified") is False, "Visible-only execution remains synthetic")
         require(visible_app.get("humanComfortVerified") is False, "Visible-only execution cannot verify comfort")
         require(visible_app.get("submittedFrames") == 120 and visible_app.get("trackedHeadSamples") == 120, "Visible-only scenario must render while retaining head tracking")
-        require(visible_app.get("focusedInputFrames") == 0 and visible_app.get("triggerInteractions") == 0, "Unfocused rendering must never accept interactions")
+        require(visible_app.get("focusedInputFrames") == 0 and visible_app.get("triggerInteractions") == 0 and visible_app.get("menuInteractions") == 0, "Unfocused rendering must never accept trigger or menu interactions")
         require(visible_app.get("leftControllerSamples") == 0 and visible_app.get("rightControllerSamples") == 0, "Controller samples must wait for focus")
+        require(visible_app.get("rigMovementFrames", 0) == 0 and visible_app.get("rigTurnFrames", 0) == 0 and visible_app.get("rigMovedDistance", 0) == 0 and visible_app.get("rigTurnRadians", 0) == 0, "Unfocused rendering must never move or rotate the VR rig")
         require("Unknown Sources" in visible_app.get("failure", "") and "Meta Quest Link" in visible_app.get("failure", ""), "Visible-only failure must explain the platform setting")
         require("OpenXR input: waiting-focus" in visible_log and "OpenXR input: ready" not in visible_log, "Visible-only status must remain waiting-focus")
-        require("synthetic beacon clicked" not in visible_log, "No Script interaction may occur without focus")
+        require("synthetic beacon clicked" not in visible_log and "synthetic menu toggled" not in visible_log, "No Script interaction or menu event may occur without focus")
         require(visible_stats.get("visibleOnly") is True and visible_stats.get("unfocusedFrames") == 120 and visible_stats.get("focusedFrames") == 0, "Visible-only runtime must withhold focus for every rendered frame")
-        require(visible_stats.get("focusedSyncs") == 0 and visible_stats.get("unfocusedInputCalls") == 0 and visible_stats.get("haptics") == 0, "Visible-only runtime must receive no input sync or feedback")
+        require(visible_stats.get("focusedSyncs") == 0 and visible_stats.get("unfocusedInputCalls") == 0 and visible_stats.get("haptics") == 0 and visible_stats.get("menuActionQueries") == 0, "Visible-only runtime must receive no input sync or feedback")
         require(visible_stats.get("orderErrors") == 0 and visible_stats.get("resourcesReleased") is True, "Focus failure must cleanly release runtime resources")
         require(visible_stats["waitFrames"] == visible_stats["beginFrames"] == visible_stats["endFrames"] == 120, "Visible-only frames must remain balanced")
         require(visible_stats["acquiredImages"] == visible_stats["waitedImages"] == visible_stats["releasedImages"] == 240, "Visible-only eye image ownership must remain balanced")
         require(visible_stats.get("eyeTexturesWritten") is True and visible_stats["leftEyeHash"] != visible_stats["rightEyeHash"], "Visible-only runtime must still render real stereo images")
+        # Button/stick validity is independent of the aim pose. Exercise valid
+        # but untracked poses first, then completely inactive pose actions.
+        untracked_app_path = output / "browser-untracked-controllers.json"
+        untracked_runtime_path = output / "runtime-untracked-controllers.json"
+        for path in (untracked_app_path, untracked_runtime_path):
+            path.unlink(missing_ok=True)
+        untracked_environment = environment.copy()
+        untracked_environment["LINK_XR_TEST_UNTRACKED_CONTROLLERS"] = "1"
+        untracked_environment["LINK_XR_TEST_REPORT"] = str(untracked_runtime_path.resolve())
+        untracked_process = subprocess.run([
+            str(executable.resolve()), "--worlds", str(world.parent),
+            "--open", "link://local/syntheticvr", "--vr-smoke", str(untracked_app_path.resolve()),
+        ], env=untracked_environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
+        untracked_log = untracked_process.stdout.decode("utf-8", errors="replace")
+        (output / "browser-untracked-controllers.log").write_text(untracked_log, encoding="utf-8")
+        require(untracked_process.returncode == 0, f"Valid controller inputs must survive missing aim tracking:\n{untracked_log}")
+        require(untracked_app_path.is_file() and untracked_runtime_path.is_file(), "Untracked-controller scenario must report and tear down")
+        untracked_app = json.loads(untracked_app_path.read_text(encoding="utf-8-sig"))
+        untracked_stats = json.loads(untracked_runtime_path.read_text(encoding="utf-8-sig"))
+        require(untracked_app.get("passed") is True and untracked_app.get("syntheticRuntime") is True and untracked_app.get("headsetFramesVerified") is False, "Untracked-controller scenario remains synthetic")
+        require(untracked_app.get("submittedFrames") == 120 and untracked_app.get("focusedInputFrames") == 108 and untracked_app.get("trackedHeadSamples") == 120, "Untracked-controller scenario must keep rendering and head tracking")
+        require(untracked_app.get("leftControllerSamples") == 0 and untracked_app.get("rightControllerSamples") == 0, "Neither untracked nor inactive aim poses may produce interaction rays")
+        require(untracked_app.get("triggerInteractions") == 0 and untracked_stats.get("haptics") == 0 and "synthetic beacon clicked" not in untracked_log, "Trigger selection must remain suppressed without a tracked aim ray")
+        require(untracked_app.get("menuInteractions") == 2 and untracked_log.count("synthetic menu toggled") == 2, "Menu actions must work with valid-untracked and inactive aim poses")
+        require(untracked_app.get("rigMovementFrames", 0) > 0 and untracked_app.get("rigMovedDistance", 0) > .05, "Valid left-stick input must move even while aim pose action is inactive")
+        require(untracked_app.get("rigTurnFrames", 0) > 0 and untracked_app.get("rigTurnRadians", 0) > .1, "Valid right-stick input must rotate even while aim pose action is inactive")
+        require(untracked_stats.get("untrackedControllers") is True and untracked_stats.get("validUntrackedPoseSamples", 0) > 0 and untracked_stats.get("inactivePoseSamples", 0) > 0, "Both valid-untracked and inactive pose states must be exercised")
+        require(untracked_stats.get("moveStickSamples") == 31 and untracked_stats.get("turnStickSamples") == 6, "Inactive-pose scenario must still query active stick actions")
+        require(untracked_stats.get("unfocusedInputCalls") == 0 and untracked_stats.get("focusedSyncs") == 108, "Missing aim poses must never weaken the application-focus gate")
+        require(untracked_stats.get("orderErrors") == 0 and untracked_stats.get("resourcesReleased") is True, "Untracked-controller scenario must release all runtime resources")
+        require(untracked_stats["waitFrames"] == untracked_stats["beginFrames"] == untracked_stats["endFrames"] == 120 and untracked_stats["acquiredImages"] == untracked_stats["waitedImages"] == untracked_stats["releasedImages"] == 240, "Untracked-controller frame and image ownership must remain balanced")
+        require(untracked_stats.get("eyeTexturesWritten") is True and untracked_stats["leftEyeHash"] != untracked_stats["rightEyeHash"], "Untracked-controller scenario must still render distinct stereo images")
+        # Do not silently open an inputless session if the runtime rejects every
+        # suggested interaction profile. Initialization failure must unwind it.
+        rejected_app_path = output / "browser-rejected-bindings.json"
+        rejected_runtime_path = output / "runtime-rejected-bindings.json"
+        for path in (rejected_app_path, rejected_runtime_path):
+            path.unlink(missing_ok=True)
+        rejected_environment = environment.copy()
+        rejected_environment["LINK_XR_TEST_REJECT_BINDINGS"] = "1"
+        rejected_environment["LINK_XR_TEST_REPORT"] = str(rejected_runtime_path.resolve())
+        rejected_process = subprocess.run([
+            str(executable.resolve()), "--worlds", str(world.parent),
+            "--open", "link://local/syntheticvr", "--vr-smoke", str(rejected_app_path.resolve()),
+        ], env=rejected_environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
+        rejected_log = rejected_process.stdout.decode("utf-8", errors="replace")
+        (output / "browser-rejected-bindings.log").write_text(rejected_log, encoding="utf-8")
+        require(rejected_process.returncode == 2, f"Rejected controller bindings must fail initialization with exit 2:\n{rejected_log}")
+        require(rejected_app_path.is_file() and rejected_runtime_path.is_file(), "Rejected-binding failure must report and destroy the runtime")
+        rejected_app = json.loads(rejected_app_path.read_text(encoding="utf-8-sig"))
+        rejected_stats = json.loads(rejected_runtime_path.read_text(encoding="utf-8-sig"))
+        require(rejected_app.get("passed") is False and rejected_app.get("headsetFramesVerified") is False, "Rejected bindings cannot report VR success or headset verification")
+        cause = rejected_app.get("failure", "")
+        require("no controller interaction profile could be bound" in cause and all(label + " rejected" in cause for label in ("Touch", "Index", "Simple")), "Failure must identify every rejected interaction profile")
+        require(rejected_app.get("submittedFrames") == 0 and rejected_app.get("focusedInputFrames") == 0 and rejected_app.get("triggerInteractions") == 0 and rejected_app.get("menuInteractions") == 0, "Rejected bindings must not start rendering or accepting input")
+        require(rejected_app.get("rigMovementFrames", 0) == 0 and rejected_app.get("rigTurnFrames", 0) == 0, "Rejected bindings must not move or rotate the VR rig")
+        require(rejected_stats.get("rejectBindings") is True and rejected_stats.get("rejectedBindingSuggestions") == 3, "All three suggested profiles must be rejected by the fixture")
+        require(rejected_stats.get("waitFrames") == 0 and rejected_stats.get("focusedSyncs") == 0 and rejected_stats.get("haptics") == 0, "Initialization failure must precede all frame and action work")
+        require(rejected_stats.get("orderErrors") == 0 and rejected_stats.get("resourcesReleased") is True, "Rejected-binding initialization must clean up its spaces, action set, session and instance")
+        require(rejected_stats["createdSwapchains"] == rejected_stats["destroyedSwapchains"] and rejected_stats["createdSpaces"] == rejected_stats["destroyedSpaces"], "Rejected-binding failure must not retain partially initialized child resources")
         combined = {"passed": True, "kind": "synthetic-openxr-integration", "syntheticRuntime": True,
                     "headsetFramesVerified": False, "humanComfortVerified": False,
                     "browser": app, "runtime": stats,
-                    "visibleOnly": {"browser": visible_app, "runtime": visible_stats}}
+                    "visibleOnly": {"browser": visible_app, "runtime": visible_stats},
+                    "untrackedControllers": {"browser": untracked_app, "runtime": untracked_stats},
+                    "rejectedBindings": {"browser": rejected_app, "runtime": rejected_stats}}
         (output / "validation.json").write_text(json.dumps(combined, indent=2) + "\n", encoding="utf-8")
-        print(f"PASS synthetic OpenXR: {stats['submittedFrames']} stereo frames, 12 unfocused frames, focus/trigger rearm, two raycast trigger edges, tracking-loss rearm, real GL eye textures, visible-only failure guidance, balanced teardown. No headset validation.")
+        print(f"PASS synthetic OpenXR: {stats['submittedFrames']} stereo frames, 12 unfocused frames, focus/trigger/menu rearm, two raycast trigger edges and two Script menu events, tracking-loss/inactive-source rearm, actual stick locomotion and turning, untracked/inactive-aim button and stick independence, real GL eye textures, visible-only failure guidance, all-profile binding rejection, balanced teardown. No headset validation.")
 
 
 def main() -> None:

@@ -15,3 +15,11 @@ Valve Corporation, LunarG, and other upstream contributors. Its bundled
 JsonCpp component is available under the Public Domain/MIT terms provided
 by Baptiste Lepilleur and The JsonCpp Authors. See third_party/openxr-sdk
 in source distributions and licenses/openxr beside built executables.
+
+The GLB models-v1 importer bundles cgltf, Copyright (c) 2018 Johannes Kuhlmann,
+under the MIT License. See third_party/cgltf in source distributions and
+licenses/cgltf beside built executables.
+
+HDR environment decoding bundles stb_image by Sean Barrett and contributors
+under its MIT/Public Domain dual terms. See third_party/stb_image in source
+distributions and licenses/stb_image beside built executables.

@@ -61,13 +61,14 @@ on onDestroy(ctx) {
 }
 ```
 
-## 3. 네 생명주기 훅
+## 3. 생명주기와 선택 입력 훅
 
 | 훅 | 실행 시점 | 예제에서 하는 일 |
 | --- | --- | --- |
 | `on onStart(ctx)` | 공간 인스턴스 시작 시 한 번 | 바인딩 저장소 초기화, 대상 ID 확인 |
 | `on onUpdate(ctx, deltaSeconds)` | 활성 바인딩의 매 갱신 | 시간에 비례하여 회전 |
 | `on onInteract(ctx, event)` | 이 바인딩에 전달된 클릭 | 선택 상태·횟수 갱신, 색 전환 |
+| `on onInput(ctx, event)` | `input-v1`을 선언한 세계의 단발 메뉴 입력 | 개인 메뉴 열기·닫기. [입력 연결 규격](../input-v1.md) 참고 |
 | `on onDestroy(ctx)` | 공간 인스턴스 종료 시 한 번 시도 | 정리 로그 기록 |
 
 `on` 다음의 훅 이름과 매개변수 이름·개수까지 위 표와 같아야 합니다. `onUpdate(ctx, dt)`처럼 임의로 이름을 바꾸면 파싱 오류입니다. 한 파일에 같은 훅을 두 번 선언할 수 없습니다. 필요 없는 훅은 생략할 수 있지만 최소 하나는 있어야 합니다.
@@ -178,3 +179,11 @@ Script는 이 전용 문법의 AST 인터프리터입니다. JavaScript나 Lua�
 ## 공유 게임 상태와 동적 안내문
 
 실험적 `shared-state-v1` 세계에서는 `ctx.getSharedState()`로 서버 상태를 읽고 `ctx.sendAction("attack",{target:"slime_0"})`처럼 행동 의도를 보냅니다. `ctx.getViewer()`는 로컬 머리·무기 위치를, `ctx.setText(id,text)`는 기존 text plane의 변경을 지원합니다. 숫자는 `str(value)`로 문자열로 바꿉니다. 체력과 보상은 서버가 결정합니다. [프로파일과 전체 제한](../shared-state-v1.md)을 확인하세요.
+
+## 모델 애니메이션
+
+`models-v1` 월드에서 `ctx.playAnimation("hero_model", "Walk", true, 1)`과 `ctx.stopAnimation("hero_model")`로 GLB 클립을 제어합니다. [인자·재생 규칙](../models-v1.md#script-이름으로-애니메이션-재생)을 확인하세요.
+
+## 서버가 이동시키는 NPC 표시
+
+`npc-travel-v1` 세계의 `ctx.getSharedState()`는 플레이어·몬스터 대신 `npcs` 목록을 제공합니다. NPC의 `kind`에 대응하는 로컬 모델 슬롯을 만들고, `position`·`yaw`·`animation`을 표시하며 목록에서 사라지면 숨깁니다. `id`는 서버를 넘어 유지되고 `epoch`·`journey`는 이동에 따라 증가합니다. 인계 요청은 Script API로 제공하지 않으며 서버가 처리합니다. [NPC 관찰 계약](../npc-travel-v1.md)을 따릅니다.

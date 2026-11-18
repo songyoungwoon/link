@@ -8,7 +8,7 @@ option(LINK_OPENXR "Build Windows PC VR support with the bundled OpenXR loader" 
 find_package(Threads REQUIRED)
 
 add_library(link_core
-  native/src/core.cpp native/src/text.cpp native/src/loader.cpp
+  native/src/core.cpp native/src/text.cpp native/src/loader.cpp native/src/model.cpp native/src/lighting.cpp native/src/environment.cpp
   native/src/vr.cpp native/src/particles.cpp native/src/script.cpp native/src/runtime.cpp native/src/navigation.cpp native/src/walk.cpp native/src/remote.cpp native/src/shared.cpp)
 target_include_directories(link_core PUBLIC native/include)
 target_link_libraries(link_core PUBLIC Threads::Threads)
@@ -48,7 +48,7 @@ if(WIN32)
     add_library(link_xr native/src/xr_stub.cpp)
     target_link_libraries(link_xr PUBLIC link_core)
   endif()
-  add_executable(LINK native/src/desktop.cpp native/src/textures.cpp)
+  add_executable(LINK native/src/desktop.cpp native/src/textures.cpp native/src/model_renderer.cpp)
   target_compile_definitions(LINK PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0A00)
   target_link_libraries(LINK PRIVATE link_core link_xr opengl32 gdi32 user32 comctl32 shell32 windowscodecs ole32)
   add_custom_command(TARGET LINK POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -56,6 +56,16 @@ if(WIN32)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${CMAKE_SOURCE_DIR}/LICENSE" "${CMAKE_SOURCE_DIR}/NOTICE" "${CMAKE_SOURCE_DIR}/ASSET_LICENSE.md"
       "$<TARGET_FILE_DIR:LINK>"
+    VERBATIM)
+  add_custom_command(TARGET LINK POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:LINK>/licenses/cgltf"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/third_party/cgltf/LICENSE" "$<TARGET_FILE_DIR:LINK>/licenses/cgltf/LICENSE"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/third_party/cgltf/SOURCE.json" "$<TARGET_FILE_DIR:LINK>/licenses/cgltf/SOURCE.json"
+    VERBATIM)
+  add_custom_command(TARGET LINK POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:LINK>/licenses/stb_image"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/third_party/stb_image/LICENSE" "$<TARGET_FILE_DIR:LINK>/licenses/stb_image/LICENSE"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/third_party/stb_image/SOURCE.json" "$<TARGET_FILE_DIR:LINK>/licenses/stb_image/SOURCE.json"
     VERBATIM)
   if(LINK_OPENXR)
     add_custom_command(TARGET LINK POST_BUILD
@@ -75,12 +85,30 @@ if(WIN32)
 endif()
 
 enable_testing()
+add_executable(link_lighting_tests native/tests/lighting_tests.cpp)
+target_link_libraries(link_lighting_tests PRIVATE link_core)
+add_test(NAME link_lighting_contract COMMAND link_lighting_tests)
+set_tests_properties(link_lighting_contract PROPERTIES TIMEOUT 30)
+add_executable(link_environment_tests native/tests/environment_tests.cpp)
+target_link_libraries(link_environment_tests PRIVATE link_core)
+add_test(NAME link_hdr_environment COMMAND link_environment_tests)
+set_tests_properties(link_hdr_environment PROPERTIES TIMEOUT 30)
+add_executable(link_model_tests native/tests/model_tests.cpp)
+target_link_libraries(link_model_tests PRIVATE link_core)
+add_test(NAME link_models COMMAND link_model_tests)
+set_tests_properties(link_models PROPERTIES TIMEOUT 30)
+add_executable(link_model_runtime_tests native/tests/model_runtime_tests.cpp)
+target_link_libraries(link_model_runtime_tests PRIVATE link_core)
+add_test(NAME link_model_runtime COMMAND link_model_runtime_tests)
+set_tests_properties(link_model_runtime PROPERTIES TIMEOUT 30)
 add_executable(link_shared_runtime_tests native/tests/shared_runtime_tests.cpp)
 target_link_libraries(link_shared_runtime_tests PRIVATE link_core)
 add_test(NAME link_shared_runtime COMMAND link_shared_runtime_tests)
 set_tests_properties(link_shared_runtime PROPERTIES TIMEOUT 30)
 add_executable(link_shared_world_probe native/tests/shared_world_probe.cpp)
 target_link_libraries(link_shared_world_probe PRIVATE link_core)
+add_executable(link_npc_travel_probe native/tests/npc_travel_probe.cpp)
+target_link_libraries(link_npc_travel_probe PRIVATE link_core)
 add_executable(link_shared_probe native/tests/shared_probe.cpp)
 target_link_libraries(link_shared_probe PRIVATE link_core)
 add_executable(link_vr_tests native/tests/vr_tests.cpp)
@@ -117,6 +145,10 @@ if(WIN32)
     endif()
   endif()
   if(Python3_Interpreter_FOUND)
+    add_test(NAME link_npc_travel_transport COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_SOURCE_DIR}/native/tests/npc_travel_integration.py"
+      --probe "$<TARGET_FILE:link_npc_travel_probe>")
+    set_tests_properties(link_npc_travel_transport PROPERTIES TIMEOUT 60)
     add_test(NAME link_shared_transport COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_SOURCE_DIR}/native/tests/shared_integration.py"
       --probe "$<TARGET_FILE:link_shared_probe>")
@@ -137,6 +169,11 @@ if(WIN32)
 endif()
 
 if(WIN32)
+  add_executable(link_model_renderer_tests native/tests/model_renderer_tests.cpp native/src/model_renderer.cpp)
+  target_link_libraries(link_model_renderer_tests PRIVATE link_core opengl32 gdi32 user32 windowscodecs ole32)
+  target_compile_definitions(link_model_renderer_tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  add_test(NAME link_model_graphics_state COMMAND link_model_renderer_tests)
+  set_tests_properties(link_model_graphics_state PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
   add_executable(link_image_tests native/tests/image_tests.cpp native/src/textures.cpp)
   target_link_libraries(link_image_tests PRIVATE link_core opengl32 gdi32 user32 windowscodecs ole32)
   target_compile_definitions(link_image_tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN LINK_SOURCE_DIR="${CMAKE_SOURCE_DIR}/native")

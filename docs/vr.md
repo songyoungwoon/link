@@ -69,6 +69,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-vr.ps1 -Test
 .\build\vr\Release\LINK.exe --vr --vr-turn smooth --vr-turn-speed 60
 ```
 
+메뉴 입력은 [input-v1](input-v1.md)의 `onInput`으로 전달합니다. 버튼은 놓았다 다시 눌러야 재입력되며, 입력 포커스·추적을 잃은 동안에는 전달하지 않습니다. 이번 버전은 컨트롤러 입력을 구현하며 맨손 추적·제스처 판정은 포함하지 않습니다.
+
 ## 작은 VR 예제
 
 기본 `link://local/vr-room`은 고정된 방과 바닥·벽 표식, 중앙의 빛 구체로 구성한 작은 확인용 월드입니다. 왼쪽 stick으로 천천히 이동하고 중앙 구체를 광선으로 가리킨 뒤 trigger를 누르면 색과 발광이 바뀝니다. 오른쪽 프레임의 포탈은 로컬 `hello-world`로 이어집니다. `walk`와 기존 Script 상호작용을 그대로 사용합니다.
@@ -81,13 +83,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-vr.ps1 -Test
 | 왼쪽 thumbstick | 머리가 향하는 수평 방향을 기준으로 전후·좌우 이동 |
 | 오른쪽 thumbstick 좌우 | 선택한 snap 또는 smooth 회전 |
 | 왼쪽 또는 오른쪽 컨트롤러 광선 + trigger | 가리킨 Element에 기존 Script 상호작용 전달 |
+| 왼쪽 **Y** | `input-v1` 월드의 메뉴 토글 입력. ASTERFALL에서는 스테이터스 열기·닫기 |
 | 오른쪽 **B** | VR 종료 |
 | 왼쪽 **X** 또는 오른쪽 **A** | 현재 월드의 `entry`를 기준으로 시점 다시 맞추기 |
+| **Tab** | PC 뷰포트에서 같은 메뉴 입력. 주소 입력 중에는 전달하지 않음 |
 | **F8** | VR 시작·종료 |
 | **F9** | 현재 월드의 `entry`를 기준으로 시점 다시 맞추기 |
 | 데스크톱 메뉴 | VR 시작·종료, 시점 다시 맞추기, Snap·Smooth 선택 |
 
-왼쪽 stick의 인공 이동은 `walk`가 있는 월드에서만 동작합니다. `walk`가 없는 관찰 월드는 실제 머리 위치 이동과 회전을 사용합니다. 회전은 실제 머리 위치를 중심으로 적용합니다. 입력 포커스나 추적을 잃으면 이동·회전·선택을 중지하며 snap은 stick을 중립으로 되돌린 뒤 다시 입력합니다.
+왼쪽 stick의 인공 이동은 `walk`가 있는 월드에서만 동작합니다. `walk`가 없는 관찰 월드는 실제 머리 위치 이동과 회전을 사용합니다. 회전은 실제 머리 위치를 중심으로 적용합니다. 입력 포커스나 머리 추적을 잃으면 인공 이동·회전·선택을 중지하며 snap은 stick을 중립으로 되돌린 뒤 다시 입력합니다. 컨트롤러의 위치 추적만 잠시 끊겼을 때에는 광선 선택을 멈추고, 활성 스틱·메뉴·종료·재정렬 버튼은 계속 처리합니다. 머리 방향을 기준으로 하는 이동과 버튼은 컨트롤러의 추적 위치를 요구하지 않습니다.
 
 최신 OpenXR API 경로에서는 바닥 기준 `STAGE` 공간을 우선 사용하고, 사용할 수 없으면 `LOCAL`로 전환합니다. 런타임이 요청한 API 버전을 지원하지 않아 OpenXR 1.0으로 다시 연결하는 경우에는 `LOCAL`을 사용합니다. 바닥 기준이 없는 `LOCAL`에서는 월드의 `walk.eyeHeight`, 없으면 1.65m를 눈높이로 근사해 머리·양쪽 눈·컨트롤러 pose를 같은 기준으로 보정합니다. 실제 바닥 높이와 재정렬을 기기에서 확인하세요. 물리적으로 움직인 머리 위치를 월드의 `walk` 상자로 강제 이동시키지 않습니다.
 
@@ -165,3 +169,11 @@ JSON의 `passed`와 `failure`, 제출·추적·입력 포커스 표본 수를 �
 `XR_KHR_opengl_enable`을 활성화하고 같은 instance·system에 대해 `xrGetOpenGLGraphicsRequirementsKHR`를 호출한 뒤 세션을 생성합니다. 보고된 최소 OpenGL 버전은 충족해야 하며 최대 값은 런타임이 알고 있는 테스트 버전입니다. [OpenGL 요구 버전 조회](https://registry.khronos.org/OpenXR/specs/1.1/man/html/xrGetOpenGLGraphicsRequirementsKHR.html), [요구 버전 구조체](https://registry.khronos.org/OpenXR/specs/1.1/man/html/XrGraphicsRequirementsOpenGLKHR.html)를 참고하세요.
 
 Windows 세션은 실제 `HDC`·`HGLRC`를 전달합니다. 런타임과 context의 GPU가 다르면 `XR_ERROR_GRAPHICS_DEVICE_INVALID`가 발생할 수 있습니다. [Windows OpenGL binding](https://registry.khronos.org/OpenXR/specs/1.1/man/html/XrGraphicsBindingOpenGLWin32KHR.html)의 장치·동기화 요구를 확인하세요.
+
+## 입력이 반응하지 않을 때의 진단
+
+하단의 VR 상태는 앱 입력 포커스, 머리 추적, 컨트롤러 액션 활성 상태를 구분합니다. `VR 입력 포커스 대기`이면 헤드셋의 Meta 시스템 메뉴를 닫고 LINK VR 화면으로 돌아오세요. `VR 컨트롤러 입력 연결 대기`이면 컨트롤러 전원과 연결 상태를 확인합니다. `광선 추적 대기(스틱·버튼 사용 가능)`는 위치 추적이 필요한 선택만 대기하는 상태입니다.
+
+VR 프레임이 진행되는 동안 `%LOCALAPPDATA%/LINK/diagnostics/vr-input.log`에 상태가 바뀔 때와 약 1초 간격으로 입력 상태를 기록합니다. 세션 포커스, 위치 추적 플래그, 좌우 입력 프로필과 바인딩 성공·거절 결과를 담습니다. 실제 위치·방향 좌표와 접속 토큰은 기록하지 않습니다. 파일은 약 1 MiB를 넘으면 다시 시작합니다. `--vr-input-log PATH`로 별도 경로를 지정할 수 있으며, `--vr-smoke report.json` 검사는 `report.input.log`를 사용합니다.
+
+합성 OpenXR 검사는 실제 rig 이동 거리와 회전량까지 검사하며, 컨트롤러 위치가 미추적 또는 비활성인 상태에서도 유효한 스틱과 메뉴 액션이 처리되는지 확인합니다. 포커스가 없는 경우에는 계속 동작을 막습니다. 이 검사는 실기기 성공을 의미하지 않습니다.

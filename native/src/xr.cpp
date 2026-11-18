@@ -128,25 +128,26 @@ struct OpenXrSession::Impl {
   XrSpace appSpace=XR_NULL_HANDLE,viewSpace=XR_NULL_HANDLE;
   XrActionSet actionSet=XR_NULL_HANDLE;
   XrAction aimAction=XR_NULL_HANDLE,selectAction=XR_NULL_HANDLE,clickAction=XR_NULL_HANDLE;
-  XrAction stickAction=XR_NULL_HANDLE,exitAction=XR_NULL_HANDLE,recenterAction=XR_NULL_HANDLE,hapticAction=XR_NULL_HANDLE;
+  XrAction stickAction=XR_NULL_HANDLE,exitAction=XR_NULL_HANDLE,recenterAction=XR_NULL_HANDLE,menuAction=XR_NULL_HANDLE,hapticAction=XR_NULL_HANDLE;
   std::array<XrPath,2> handPaths{XR_NULL_PATH,XR_NULL_PATH};
   std::array<XrSpace,2> aimSpaces{XR_NULL_HANDLE,XR_NULL_HANDLE};
   std::array<bool,2> previousSelect{false,false},previousAnalogSelect{false,false};
-  std::array<bool,2> previousExit{false,false},previousRecenter{false,false};
+  std::array<bool,2> previousExit{false,false},previousRecenter{false,false},previousMenu{false,false};
   std::array<bool,2> selectArmed{false,false},clickArmed{false,false};
-  std::array<bool,2> exitArmed{false,false},recenterArmed{false,false};
+  std::array<bool,2> exitArmed{false,false},recenterArmed{false,false},menuArmed{false,false};
   std::array<EyeChain,2> chains;
   std::array<XrView,2> views{};
   XrSessionState state=XR_SESSION_STATE_UNKNOWN;
   XrEnvironmentBlendMode blendMode=XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
   bool runningFlag=false,exitFlag=false,floorLevel=false,spaceChangePending=false,legacyApi=false;
   XrTime lastDisplayTime=0,spaceChangeTime=0;
-  std::string name;
+  std::string name,bindings;
+  std::array<std::string,2> profiles;bool profilesDirty=true;
   Frame frame;
 
   void resetInput() noexcept {
-    previousSelect={};previousAnalogSelect={};previousExit={};previousRecenter={};
-    selectArmed={};clickArmed={};exitArmed={};recenterArmed={};
+    previousSelect={};previousAnalogSelect={};previousExit={};previousRecenter={};previousMenu={};
+    selectArmed={};clickArmed={};exitArmed={};recenterArmed={};menuArmed={};
   }
   void requireOwner() const {
     if(owner!=std::this_thread::get_id())throw std::runtime_error("OpenXR: use the session on its owning WGL thread.");
@@ -186,15 +187,42 @@ struct OpenXrSession::Impl {
     info.actionType=type;info.countSubactionPaths=2;info.subactionPaths=handPaths.data();
     check(xrCreateAction(actionSet,&info,&action),"xrCreateAction");
   }
-  void suggest(const char* profile,const std::vector<std::pair<XrAction,const char*>>& bindings) {
+  std::string resultName(XrResult result) const {
+    char symbol[XR_MAX_RESULT_STRING_SIZE]{};
+    if(instance&&XR_SUCCEEDED(xrResultToString(instance,result,symbol)))return symbol;
+    return "result "+std::to_string(static_cast<int>(result));
+  }
+  bool suggest(const char* profile,const std::vector<std::pair<XrAction,const char*>>& bindingsToSuggest) {
     std::vector<XrActionSuggestedBinding> suggestions;
-    suggestions.reserve(bindings.size());
-    for(const auto& binding:bindings)suggestions.push_back({binding.first,path(binding.second)});
+    suggestions.reserve(bindingsToSuggest.size());
+    for(const auto& binding:bindingsToSuggest)suggestions.push_back({binding.first,path(binding.second)});
     auto info=xrStruct<XrInteractionProfileSuggestedBinding>(XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING);
     info.interactionProfile=path(profile);info.countSuggestedBindings=static_cast<std::uint32_t>(suggestions.size());info.suggestedBindings=suggestions.data();
-    XrResult result=xrSuggestInteractionProfileBindings(instance,&info);
-    // A runtime need not recognize every vendor's interaction profile.
+    const XrResult result=xrSuggestInteractionProfileBindings(instance,&info);
+    const char* label=std::strstr(profile,"oculus/")?"Touch":std::strstr(profile,"valve/")?"Index":"Simple";
+    if(!bindings.empty())bindings+="; ";
+    bindings+=label;bindings+=XR_SUCCEEDED(result)?" accepted":" rejected ("+resultName(result)+")";
+    // Optional profiles may be unavailable, but retain their exact result so an
+    // unbound real controller cannot be mistaken for a successfully bound one.
     if(result!=XR_ERROR_PATH_UNSUPPORTED&&result!=XR_ERROR_PATH_INVALID)check(result,"xrSuggestInteractionProfileBindings");
+    return XR_SUCCEEDED(result);
+  }
+  void refreshProfiles() {
+    profilesDirty=false;
+    for(std::size_t hand=0;hand<profiles.size();++hand){
+      auto current=xrStruct<XrInteractionProfileState>(XR_TYPE_INTERACTION_PROFILE_STATE);
+      XrResult result=xrGetCurrentInteractionProfile(session,handPaths[hand],&current);
+      if(XR_FAILED(result)){profiles[hand]="query failed ("+resultName(result)+")";continue;}
+      if(current.interactionProfile==XR_NULL_PATH){profiles[hand]="unbound";continue;}
+      std::uint32_t count=0;result=xrPathToString(instance,current.interactionProfile,0,&count,nullptr);
+      if(XR_FAILED(result)){profiles[hand]="path query failed ("+resultName(result)+")";continue;}
+      std::array<char,XR_MAX_PATH_LENGTH> text{};
+      if(!count||count>text.size()){profiles[hand]="invalid profile path length";continue;}
+      result=xrPathToString(instance,current.interactionProfile,static_cast<std::uint32_t>(text.size()),&count,text.data());
+      if(XR_FAILED(result)){profiles[hand]="path read failed ("+resultName(result)+")";continue;}
+      if(!count||count>text.size()||text[count-1]!='\0'){profiles[hand]="invalid profile path";continue;}
+      profiles[hand].assign(text.data(),count-1);
+    }
   }
   void createActions();
   void createSpaces();
@@ -221,24 +249,30 @@ void OpenXrSession::Impl::createActions() {
   createAction(stickAction,"thumbstick","Move and turn",XR_ACTION_TYPE_VECTOR2F_INPUT);
   createAction(exitAction,"exit_vr","Leave VR",XR_ACTION_TYPE_BOOLEAN_INPUT);
   createAction(recenterAction,"recenter","Recenter world",XR_ACTION_TYPE_BOOLEAN_INPUT);
+  createAction(menuAction,"menu_action","World menu",XR_ACTION_TYPE_BOOLEAN_INPUT);
   createAction(hapticAction,"haptic","Selection feedback",XR_ACTION_TYPE_VIBRATION_OUTPUT);
   const std::vector<std::pair<XrAction,const char*>> touch{
     {aimAction,"/user/hand/left/input/aim/pose"},{aimAction,"/user/hand/right/input/aim/pose"},
     {selectAction,"/user/hand/left/input/trigger/value"},{selectAction,"/user/hand/right/input/trigger/value"},
     {stickAction,"/user/hand/left/input/thumbstick"},{stickAction,"/user/hand/right/input/thumbstick"},
     {exitAction,"/user/hand/right/input/b/click"},
+    {menuAction,"/user/hand/left/input/y/click"},
     {recenterAction,"/user/hand/left/input/x/click"},{recenterAction,"/user/hand/right/input/a/click"},
     {hapticAction,"/user/hand/left/output/haptic"},{hapticAction,"/user/hand/right/output/haptic"}
   };
-  suggest("/interaction_profiles/oculus/touch_controller",touch);
+  unsigned accepted=suggest("/interaction_profiles/oculus/touch_controller",touch)?1u:0u;
   auto indexBindings=touch;
-  for(auto& binding:indexBindings)if(std::strcmp(binding.second,"/user/hand/left/input/x/click")==0)binding.second="/user/hand/left/input/a/click";
-  suggest("/interaction_profiles/valve/index_controller",indexBindings);
-  suggest("/interaction_profiles/khr/simple_controller",{
+  for(auto& binding:indexBindings){
+    if(std::strcmp(binding.second,"/user/hand/left/input/x/click")==0)binding.second="/user/hand/left/input/a/click";
+    else if(std::strcmp(binding.second,"/user/hand/left/input/y/click")==0)binding.second="/user/hand/left/input/b/click";
+  }
+  if(suggest("/interaction_profiles/valve/index_controller",indexBindings))++accepted;
+  if(suggest("/interaction_profiles/khr/simple_controller",{
     {aimAction,"/user/hand/left/input/aim/pose"},{aimAction,"/user/hand/right/input/aim/pose"},
     {clickAction,"/user/hand/left/input/select/click"},{clickAction,"/user/hand/right/input/select/click"},
     {hapticAction,"/user/hand/left/output/haptic"},{hapticAction,"/user/hand/right/output/haptic"}
-  });
+  }))++accepted;
+  if(!accepted)throw std::runtime_error("OpenXR: no controller interaction profile could be bound. "+bindings);
   auto attach=xrStruct<XrSessionActionSetsAttachInfo>(XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO);
   attach.countActionSets=1;attach.actionSets=&actionSet;
   check(xrAttachSessionActionSets(session,&attach),"xrAttachSessionActionSets");
@@ -405,6 +439,11 @@ void OpenXrSession::Impl::pollEvents() {
     if(event.type==XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING) {
       exitFlag=true;runningFlag=false;return;
     }
+    if(event.type==XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED) {
+      const auto& change=*reinterpret_cast<const XrEventDataInteractionProfileChanged*>(&event);
+      if(change.session==session){profilesDirty=true;resetInput();}
+      continue;
+    }
     if(event.type==XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING) {
       const auto& change=*reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(&event);
       const auto usedType=floorLevel?XR_REFERENCE_SPACE_TYPE_STAGE:XR_REFERENCE_SPACE_TYPE_LOCAL;
@@ -416,6 +455,7 @@ void OpenXrSession::Impl::pollEvents() {
     const auto& changed=*reinterpret_cast<const XrEventDataSessionStateChanged*>(&event);
     if(changed.session!=session)continue;
     state=changed.state;
+    if(state==XR_SESSION_STATE_FOCUSED)profilesDirty=true;
     if(state!=XR_SESSION_STATE_FOCUSED) {
       resetInput();
     }
@@ -448,6 +488,7 @@ void OpenXrSession::Impl::syncInput() {
   if(result==XR_SESSION_NOT_FOCUSED) { resetInput();return; }
   check(result,"xrSyncActions");
   frame.inputFocused=true;
+  if(profilesDirty)refreshProfiles();
   for(std::size_t hand=0;hand<2;++hand) {
     auto& input=frame.hands[hand];
     auto get=xrStruct<XrActionStateGetInfo>(XR_TYPE_ACTION_STATE_GET_INFO);
@@ -486,7 +527,7 @@ void OpenXrSession::Impl::syncInput() {
     get.action=stickAction;
     auto stick=xrStruct<XrActionStateVector2f>(XR_TYPE_ACTION_STATE_VECTOR2F);
     check(xrGetActionStateVector2f(session,&get,&stick),"xrGetActionStateVector2f");
-    input.stickActive=usable&&stick.isActive&&std::isfinite(stick.currentState.x)&&std::isfinite(stick.currentState.y);
+    input.stickActive=stick.isActive&&std::isfinite(stick.currentState.x)&&std::isfinite(stick.currentState.y);
     if(input.stickActive)input.thumbstick={std::clamp(stick.currentState.x,-1.0f,1.0f),std::clamp(stick.currentState.y,-1.0f,1.0f)};
     auto booleanState=[&](XrAction action) {
       get.action=action;
@@ -495,17 +536,19 @@ void OpenXrSession::Impl::syncInput() {
       return valueState;
     };
     const auto pressed=[&](const XrActionStateBoolean& button,bool& armed,bool& previous) {
-      if(!usable||button.isActive!=XR_TRUE) { armed=false;previous=false;return false; }
+      if(button.isActive!=XR_TRUE) { armed=false;previous=false;return false; }
       const bool down=button.currentState==XR_TRUE;
       if(!down)armed=true;
       const bool edge=armed&&down&&!previous;previous=down;return edge;
     };
-    const auto exitState=booleanState(exitAction),recenterState=booleanState(recenterAction);
+    const auto exitState=booleanState(exitAction),recenterState=booleanState(recenterAction),menuState=booleanState(menuAction);
     // Keep independent latches even when another hand already requested an edge.
     const bool exitPressed=pressed(exitState,exitArmed[hand],previousExit[hand]);
     const bool recenterPressed=pressed(recenterState,recenterArmed[hand],previousRecenter[hand]);
+    const bool menuPressed=pressed(menuState,menuArmed[hand],previousMenu[hand]);
     frame.exitPressed=frame.exitPressed||exitPressed;
     frame.recenterPressed=frame.recenterPressed||recenterPressed;
+    frame.menuPressed=frame.menuPressed||menuPressed;
   }
 }
 
@@ -654,11 +697,11 @@ void OpenXrSession::Impl::cleanup() noexcept {
   if(actionSet)xrDestroyActionSet(actionSet);actionSet=XR_NULL_HANDLE;
   if(session)xrDestroySession(session);session=XR_NULL_HANDLE;
   if(instance)xrDestroyInstance(instance);instance=XR_NULL_HANDLE;
-  aimAction=selectAction=clickAction=stickAction=exitAction=recenterAction=hapticAction=XR_NULL_HANDLE;
+  aimAction=selectAction=clickAction=stickAction=exitAction=recenterAction=menuAction=hapticAction=XR_NULL_HANDLE;
   runningFlag=false;exitFlag=false;floorLevel=false;legacyApi=false;spaceChangePending=false;
   state=XR_SESSION_STATE_UNKNOWN;system=XR_NULL_SYSTEM_ID;lastDisplayTime=0;spaceChangeTime=0;
   resetInput();handPaths={XR_NULL_PATH,XR_NULL_PATH};
-  frame=Frame{};name.clear();context=nullptr;dc=nullptr;gl=Gl{};
+  frame=Frame{};name.clear();bindings.clear();profiles={};profilesDirty=true;context=nullptr;dc=nullptr;gl=Gl{};
 }
 
 OpenXrSession::OpenXrSession():impl_(std::make_unique<Impl>()) {}
@@ -686,6 +729,8 @@ const char* OpenXrSession::sessionStateName() const noexcept {
 }
 bool OpenXrSession::exitRequested() const noexcept { return impl_->exitFlag; }
 const std::string& OpenXrSession::runtimeName() const noexcept { return impl_->name; }
+const std::array<std::string,2>& OpenXrSession::interactionProfiles() const noexcept { return impl_->profiles; }
+const std::string& OpenXrSession::bindingStatus() const noexcept { return impl_->bindings; }
 OpenXrSession::Frame OpenXrSession::beginFrame() { return impl_->beginFrame(); }
 void OpenXrSession::bindEye(std::size_t eyeIndex) {
   impl_->currentContext();

@@ -40,6 +40,7 @@ public:
     float selectValue=0;
     bool selectDown=false,selectPressed=false,selectReleased=false;
     std::array<float,2> thumbstick{0,0};
+    // Stick/button activity is independent of the controller aim tracking flags.
     bool stickActive=false;
   };
   struct Frame {
@@ -53,7 +54,7 @@ public:
     Pose head;
     std::array<Eye,2> eyes;
     std::array<Hand,2> hands; // 0: left, 1: right.
-    bool exitPressed=false,recenterPressed=false;
+    bool exitPressed=false,recenterPressed=false,menuPressed=false;
   };
 
   OpenXrSession();
@@ -73,6 +74,8 @@ public:
   const char* sessionStateName() const noexcept;
   bool exitRequested() const noexcept;
   const std::string& runtimeName() const noexcept;
+  const std::array<std::string,2>& interactionProfiles() const noexcept;
+  const std::string& bindingStatus() const noexcept;
   Frame beginFrame();
   void bindEye(std::size_t eyeIndex);
   // Optional desktop preview; call after both eye renders and before endFrame().

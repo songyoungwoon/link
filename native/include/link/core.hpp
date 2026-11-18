@@ -34,14 +34,16 @@ struct Value {
 inline constexpr std::size_t noParent=static_cast<std::size_t>(-1);
 using Vec3=std::array<double,3>;
 struct Transform { Vec3 position{0,0,0},rotation{0,0,0},scale{1,1,1}; bool visible=true; };
-struct Material { std::string color="#c4d9d0"; double roughness=.65,metalness=0,opacity=1,emission=0; bool wireframe=false,textBackground=true; };
+struct Material { std::string color="#c4d9d0"; double roughness=.65,metalness=0,opacity=1,emission=0; bool wireframe=false,textBackground=true; std::string shading="pbr";double outline=0;bool authoredRoughness=false,authoredMetalness=false; };
 using StylePatch=Value::Map;
 struct StyleRule { enum class Kind { Class,Id }; Kind kind; std::string selector; StylePatch properties; };
+struct ModelAsset;
 struct Geometry {
-  enum class Type { Box,Sphere,Plane,Cylinder,Frame,Particles };
+  enum class Type { Box,Sphere,Plane,Cylinder,Frame,Particles,Model };
   Type type=Type::Box; Vec3 size{1,1,1}; double radius=.5;
   double radiusTop=.5,height=1,border=.06,depth=.08;
   std::size_t capacity=256; double cellSize=.6;
+  std::string model;Vec3 modelMin{-.5,0,-.5},modelMax{.5,2,.5};
 };
 enum class Kind { Object,Component,Element };
 struct NodeDefinition {
@@ -56,6 +58,16 @@ struct Viewpoint { std::string name; Vec3 position,target; };
 struct WalkSettings { Vec3 min{-3,0,-30},max{3,4,3}; double eyeHeight=1.65,speed=3.4; };
 struct Portal { std::string id,address; Vec3 position,size; };
 struct FogSettings { std::string color="#111c21"; double start=80,end=250; };
+struct EnvironmentLighting;
+struct PointLight {Vec3 position{0,2,0};std::string color="#FFBB77";double intensity=10,range=5;};
+struct ShadowSettings {bool enabled=true;unsigned resolution=2048;Vec3 center{0,2,-5};double extent=16,bias=.0008,normalBias=.015;};
+struct LightingSettings {
+  Vec3 sunDirection{-.55,.78,.30};std::string sunColor="#FFE3BE",skyColor="#9BBBD6",groundColor="#5E4B36";
+  double sunIntensity=3.2,ambientIntensity=.35,exposure=1,environmentIntensity=.65;
+  std::string environmentMap;std::filesystem::path environmentFile;
+  std::shared_ptr<const EnvironmentLighting> environment;
+  ShadowSettings shadow;std::vector<PointLight> points;
+};
 struct World {
   // Owns remote snapshot files for every renderer and viewer using this World.
   std::shared_ptr<void> resourceOwner;
@@ -64,12 +76,14 @@ struct World {
   StylePatch defaults; std::map<std::string,StylePatch> materials; std::vector<StyleRule> rules;
   std::map<std::string,std::shared_ptr<const ScriptProgram>> programs;
   std::map<std::string,std::filesystem::path> images;
+  std::map<std::string,std::shared_ptr<const ModelAsset>> models;
   std::vector<Viewpoint> views;
   std::optional<WalkSettings> walk;
   std::vector<Portal> portals;
   std::vector<std::string> extensions;
   std::string background="#111c21";
   std::optional<FogSettings> fog;
+  std::optional<LightingSettings> lighting;
   bool grid=true;
 };
 struct Limits {
