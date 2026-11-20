@@ -32,7 +32,7 @@ styleDocument = {"defaults", "{", {field}, "}"
 hook = "on", hookName, "(", parameters, ")", block;
 ```
 
-전체 ID는 공간 안에서 유일합니다. Element는 box·sphere·plane·cylinder·frame과 선택 확장의 particles·model 형상을 담는 잎이며 상태·Script를 갖지 않습니다. plane은 선택 `image` 또는 `text` 필드를 지원하고 두 필드는 함께 사용할 수 없습니다. 현재 사진 공간은 28개의 image plane과 액자를 사용하며 문구용 text plane은 배치하지 않습니다. Hello World!의 문자는 box 형상을 묶어 두께를 표현합니다. Object와 Component는 데이터 state, 초기 config, Script 하나를 가집니다. 오른손 Y-up, m·초·degree XYZ이며 변환은 `T × Rx × Ry × Rz × S`, 부모 visible도 자식에 적용됩니다.
+전체 ID는 공간 안에서 유일합니다. Element는 box·sphere·plane·cylinder·frame과 선택 확장의 particles·model 형상을 담는 잎이며 상태·Script를 갖지 않습니다. plane은 선택 `image` 또는 `text` 필드를 지원하고 두 필드는 함께 사용할 수 없습니다. 현재 사진 공간은 27개의 image plane과 액자를 사용하며 문구용 text plane은 배치하지 않습니다. Hello World!의 문자는 box 형상을 묶어 두께를 표현합니다. Object와 Component는 데이터 state, 초기 config, Script 하나를 가집니다. 오른손 Y-up, m·초·degree XYZ이며 변환은 `T × Rx × Ry × Rz × S`, 부모 visible도 자식에 적용됩니다.
 
 진입 문서는 선택 `views`로 이름 있는 카메라 위치 메타데이터를, `environment`로 배경색·격자 표시를 지정합니다. `views`는 내부 검증에 유지하며 현재 사용자 화면에는 시점 선택 콤보 상자·이전/다음 시점 버튼을 제공하지 않습니다. `walk`는 고정 눈높이의 수평 1인칭 이동 범위·속도를, `portals`는 진입 감지 상자와 대상 LINK를 선언합니다. 두 기능을 선언하지 않은 Room A/B는 기존 관찰 카메라와 동작을 유지합니다. 이미지 경로는 각 공간 안으로 제한하며 파일당 16 MiB·고유 참조 128개로 제한합니다. 로컬 파일은 canonical 포함 검사를, 원격 파일은 같은 공간의 LINK 리소스 경로와 임시 스냅샷 검사를 거칩니다. 원격 공간의 다운로드 총합은 64 MiB입니다. 실제 이미지 디코딩과 텍스처 생성은 렌더러가 담당합니다. 자세한 형상·이미지·텍스트·시점·걷기·포탈 문법은 위 언어 명세를 따릅니다.
 

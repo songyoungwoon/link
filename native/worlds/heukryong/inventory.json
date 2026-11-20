@@ -2,7 +2,7 @@
     "version":  1,
     "long_edge":  1280,
     "jpeg_quality":  90,
-    "count":  28,
+    "count":  27,
     "photographs":  [
                         {
                             "category":  "cat",
@@ -381,20 +381,6 @@
                             "upright_width":  3000,
                             "upright_height":  4000,
                             "exif_orientation":  6
-                        },
-                        {
-                            "category":  "owner",
-                            "index":  1,
-                            "source":  "image/songyoungwoon/songyoungwoon.jpg",
-                            "source_sha256":  "2b129e9c39e9edf8aa0c7ecc4b52f6b085b9af7a2dfdc381fcc70fc0c4fa9e2c",
-                            "asset":  "assets/owner-001.jpg",
-                            "width":  500,
-                            "height":  1280,
-                            "original_width":  904,
-                            "original_height":  2316,
-                            "upright_width":  904,
-                            "upright_height":  2316,
-                            "exif_orientation":  0
                         }
                     ]
 }

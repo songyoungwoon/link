@@ -4,3 +4,8 @@ build/
 __pycache__/
 *.py[cod]
 .gradle/
+
+# Personal portraits are not distributed with the exhibition.
+/image/songyoungwoon/
+/image/나/
+/native/worlds/heukryong/assets/owner-*

@@ -28,25 +28,22 @@ void testExhibition(){
   const auto source=std::filesystem::path(u8"" LINK_SOURCE_DIR);
   const auto root=source/"worlds";
   const auto catSources=source.parent_path()/"image"/std::filesystem::path(u8"흑룡이");
-  const auto ownerSources=source.parent_path()/"image"/"songyoungwoon";
   const auto derivatives=root/"heukryong"/"assets";
-  // Exported source packages can omit personal originals; selected display copies
+  // Exported source packages can omit originals; selected display copies
   // are sufficient to build and verify the native viewer in that case.
   const auto expectedCats=std::filesystem::is_directory(catSources)?sourcePhotos(catSources):sourcePhotos(derivatives,"cat-");
-  const auto expectedOwners=std::filesystem::is_directory(ownerSources)?sourcePhotos(ownerSources):sourcePhotos(derivatives,"owner-");
-  const auto expectedPhotos=expectedCats+expectedOwners;
+  const auto expectedPhotos=expectedCats;
   check(expectedCats>0,"The corridor has current source photographs");
   const auto gallery=loadWorld("link://local/heukryong",root);
   check(gallery->name=="사진 공간","Gallery uses a neutral navigation label");
   check(gallery->images.size()==expectedPhotos,"Gallery inventory matches the photographs currently selected in the source folders");
-  std::size_t cats=0,portraits=0;
+  std::size_t cats=0;
   for(const auto& [key,path]:gallery->images){
     if(key.starts_with("assets/cat-"))++cats;
-    else if(key.starts_with("assets/owner-"))++portraits;
-    else check(false,"Photo inventory contains only the selected source categories");
+    else check(false,"Photo inventory contains only cat photographs");
   }
-  check(cats==expectedCats&&portraits==expectedOwners,"Category counts follow the current source photographs");
-  check(sourcePhotos(derivatives,"cat-")==expectedCats&&sourcePhotos(derivatives,"owner-")==expectedOwners,"No obsolete numbered display copies remain after changing the selection");
+  check(cats==expectedCats,"Only the current cat photographs are included");
+  check(sourcePhotos(derivatives,"cat-")==expectedCats&&sourcePhotos(derivatives)==expectedCats,"No obsolete numbered display copies remain after changing the selection");
   check(gallery->nodes.size()<=Limits::nodes,"Corridor respects native node budget");
   check(gallery->views.size()>=expectedPhotos,"Each photograph has an individual viewing position");
   std::size_t framed=0,photoCount=0,leftCats=0,rightCats=0;
@@ -62,10 +59,9 @@ void testExhibition(){
       const auto& frame=gallery->nodes[node.parent];
       check(std::abs(frame.transform.position[1]-1.72)<.001,"Photographs hang at a comfortable eye height");
       check(std::abs(std::abs(frame.transform.rotation[1])-90)<.001,"Photos face inward from the corridor side walls");
-      if(node.image.starts_with("assets/cat-")){
-        if(frame.transform.position[0]<0)++leftCats;else ++rightCats;
-        furthestPhotoZ=std::min(furthestPhotoZ,frame.transform.position[2]);
-      }else check(frame.transform.position[2]>0,"Personal portrait remains by the entrance");
+      check(node.image.starts_with("assets/cat-"),"Every displayed photograph belongs to the cat exhibition");
+      if(frame.transform.position[0]<0)++leftCats;else ++rightCats;
+      furthestPhotoZ=std::min(furthestPhotoZ,frame.transform.position[2]);
     }
     check(node.text.empty(),"Corridor contains no decorative text or dedication plaques");
   }

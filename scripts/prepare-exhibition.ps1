@@ -30,8 +30,7 @@ if (-not $exhibitEncoder) { throw 'System.Drawing JPEG encoder is unavailable.' 
 $exhibitRows = [Collections.Generic.List[object]]::new()
 $exhibitKeep = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 $exhibitFolders = @(
-    @{ Folder = ([string][char]0xD751 + [char]0xB8E1 + [char]0xC774); Category = 'cat'; Required = $true },
-    @{ Folder = 'songyoungwoon'; Category = 'owner'; Required = $false }
+    @{ Folder = ([string][char]0xD751 + [char]0xB8E1 + [char]0xC774); Category = 'cat'; Required = $true }
 )
 foreach ($exhibitGroup in $exhibitFolders) {
     $exhibitFolder = Join-Path (Join-Path $exhibitRepository 'image') $exhibitGroup.Folder
@@ -101,6 +100,7 @@ $exhibitJson = $exhibitInventory | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText((Join-Path $exhibitWorld 'inventory.json'), $exhibitJson, [Text.UTF8Encoding]::new($false))
 # Only remove obsolete numbered derivatives inside this exact generated directory.
 # Source photographs and any unrelated files are never deletion candidates.
+# Legacy personal display copies can be removed here but are never source inputs.
 $exhibitRemoved = 0
 foreach ($exhibitStale in @(Get-ChildItem -LiteralPath $exhibitAssets -File | Where-Object { $_.Name -match '^(cat|owner)-[0-9]{3}\.jpg$' -and -not $exhibitKeep.Contains($_.Name) })) {
     $exhibitStalePath = [IO.Path]::GetFullPath($exhibitStale.FullName)

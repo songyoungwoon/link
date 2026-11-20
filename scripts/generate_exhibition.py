@@ -102,11 +102,8 @@ def gallery():
     inventory = json.loads((folder / "inventory.json").read_text(encoding="utf-8-sig"))
     photos = inventory["photographs"]
     cats = [item for item in photos if item["category"] == "cat"]
-    owners = [item for item in photos if item["category"] == "owner"]
-    if not cats or len(photos) != len(cats) + len(owners):
-        raise ValueError("The corridor requires cat photographs and optional personal portraits only.")
-    if len(owners) > 2:
-        raise ValueError("The entrance has space for at most two personal portraits.")
+    if not cats or len(photos) != len(cats):
+        raise ValueError("The exhibition accepts cat photographs only.")
     if len(photos) > 84:
         raise ValueError("Select at most 84 photos to keep the framed corridor within the native geometry budget.")
     identifiers = [item["asset"] for item in photos]
@@ -157,9 +154,6 @@ def gallery():
         row, side_index = divmod(index, 2)
         side = -1 if side_index == 0 else 1
         frame(photo, [side * 3.12, 1.72, -2.4 - row * 3.4], 90 if side < 0 else -90, f"사진 {index + 1:03}")
-    for index, photo in enumerate(owners):
-        side = -1 if index == 0 else 1
-        frame(photo, [side * 3.12, 1.72, 2], 90 if side < 0 else -90, f"인물 사진 {index + 1:02}", 1.95, 2.12)
     scene.view("복도 중간", [0, 1.65, -(rows // 2) * 3.4], [0, 1.65, portal_z])
     scene.view("포탈", [0, 1.65, portal_z + 6], [0, 1.65, portal_z])
 

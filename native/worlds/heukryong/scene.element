@@ -787,27 +787,6 @@ scene {
         name: "사진 027";
       }
     }
-    component frame_owner_001 {
-      name: "인물 사진 01";
-      position: [-3.12,1.72,2.0];
-      rotation: [0,90,0];
-      element rim_owner_001 {
-        geometry: {"type":"frame","size":[0.99875,2.12],"border":0.055,"depth":0.09};
-        style: "oak";
-      }
-      element mat_owner_001 {
-        geometry: {"type":"plane","size":[0.89875,2.02]};
-        style: "mat";
-        position: [0.0,0.0,0.047];
-      }
-      element photo_owner_001 {
-        geometry: {"type":"plane","size":[0.71875,1.84]};
-        style: "photograph";
-        position: [0.0,0.0,0.058];
-        image: "assets/owner-001.jpg";
-        name: "인물 사진 01";
-      }
-    }
     component portal_geometry {
       name: "포탈";
       position: [0,0,-51.6];
